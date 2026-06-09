@@ -1,0 +1,55 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 26,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-msvc-vcpkg",
+      "displayName": "Windows MSVC x64 with vcpkg",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/../.tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-system",
+      "displayName": "Windows MSVC x64 with system packages",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-msvc-vcpkg-debug",
+      "configurePreset": "windows-msvc-vcpkg",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-msvc-vcpkg-release",
+      "configurePreset": "windows-msvc-vcpkg",
+      "configuration": "Release"
+    },
+    {
+      "name": "windows-msvc-system-debug",
+      "configurePreset": "windows-msvc-system",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-msvc-system-release",
+      "configurePreset": "windows-msvc-system",
+      "configuration": "Release"
+    }
+  ]
+}

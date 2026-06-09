@@ -1,0 +1,4 @@
+interface:
+  display_name: "WebView2 LAN Runtime"
+  short_description: "Handle WebView2 and LAN runtime."
+  default_prompt: "Use this skill when implementing WebView2 hosting, local server binding, LAN access, remote clients, or runtime adapters."

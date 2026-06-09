@@ -1,0 +1,190 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "frontend: install",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend: dev",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": [
+          {
+            "regexp": "^(.*)$",
+            "message": 1
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:.*http://127.0.0.1:5173"
+        }
+      }
+    },
+    {
+      "label": "frontend: dev lan",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "dev:lan"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": [
+          {
+            "regexp": "^(.*)$",
+            "message": 1
+          }
+        ],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:.*http://localhost:5173|Network:.*http://.*:5173"
+        }
+      }
+    },
+    {
+      "label": "frontend: typecheck",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "typecheck"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "frontend: typecheck watch",
+      "type": "shell",
+      "command": "npx",
+      "args": ["tsc", "-b", "--watch", "--preserveWatchOutput"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "problemMatcher": "$tsc-watch"
+    },
+    {
+      "label": "frontend: lint",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "lint"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "tools: setup vcpkg",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/setup-vcpkg.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend: build",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "build"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "group": "build",
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "backend: vcpkg install",
+      "type": "shell",
+      "command": "${workspaceFolder}/.tools/vcpkg/vcpkg.exe",
+      "args": ["install"],
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "dependsOn": ["tools: setup vcpkg"],
+      "problemMatcher": []
+    },
+    {
+      "label": "backend: configure",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--preset", "windows-msvc-vcpkg"],
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "dependsOn": ["tools: setup vcpkg"],
+      "problemMatcher": []
+    },
+    {
+      "label": "backend: build",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "windows-msvc-vcpkg-debug"],
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "dependsOn": ["backend: configure"]
+    },
+    {
+      "label": "backend: run lan",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/run-backend.ps1",
+        "-Lan"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": ["backend: build"],
+      "problemMatcher": []
+    },
+    {
+      "label": "project: check frontend",
+      "dependsOrder": "sequence",
+      "dependsOn": ["frontend: typecheck", "frontend: lint", "frontend: build"],
+      "problemMatcher": []
+    },
+    {
+      "label": "project: install dependencies",
+      "dependsOrder": "sequence",
+      "dependsOn": ["frontend: install", "backend: vcpkg install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "project: build",
+      "dependsOrder": "sequence",
+      "dependsOn": ["frontend: build", "backend: build"],
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}

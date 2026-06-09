@@ -1,0 +1,57 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Backend",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${command:cmake.launchTargetPath}",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "backend: build"
+    },
+    {
+      "name": "Debug Backend LAN",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${command:cmake.launchTargetPath}",
+      "args": ["--lan"],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "backend: build"
+    },
+    {
+      "name": "Debug Frontend in Edge",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://127.0.0.1:5173",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "preLaunchTask": "frontend: dev"
+    },
+    {
+      "name": "Debug Remote Access in Edge",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://127.0.0.1:5173/remote-access",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "preLaunchTask": "frontend: dev"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Frontend + Backend",
+      "configurations": ["Debug Backend", "Debug Frontend in Edge"],
+      "stopAll": true
+    },
+    {
+      "name": "Debug Remote Access + Backend LAN",
+      "configurations": ["Debug Backend LAN", "Debug Remote Access in Edge"],
+      "stopAll": true
+    }
+  ]
+}

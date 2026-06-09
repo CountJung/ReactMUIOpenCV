@@ -1,0 +1,4 @@
+interface:
+  display_name: "React MUI Frontend"
+  short_description: "Build the shared React MUI UI."
+  default_prompt: "Use this skill when implementing the React TypeScript MUI frontend for this project."

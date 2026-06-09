@@ -1,0 +1,4 @@
+agents:
+  display_name: "React CPP Vision Platform"
+  short_description: "Plan the full React and C++ platform."
+  default_prompt: "Use this skill to plan or implement cross-stack work in the React + TypeScript + MUI + WebView2 + C++ OpenCV project."

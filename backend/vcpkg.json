@@ -1,0 +1,22 @@
+{
+  "name": "react-mui-opencv-backend",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "cpp-httplib",
+    "ixwebsocket",
+    "nlohmann-json",
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [
+        "dshow",
+        "jpeg",
+        "msmf",
+        "png",
+        "thread"
+      ]
+    },
+    "spdlog",
+    "sqlite3"
+  ]
+}

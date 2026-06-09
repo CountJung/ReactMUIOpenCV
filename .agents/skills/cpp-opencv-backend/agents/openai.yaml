@@ -1,0 +1,4 @@
+interface:
+  display_name: "C++ OpenCV Backend"
+  short_description: "Build the C++ OpenCV backend."
+  default_prompt: "Use this skill when implementing the C++ OpenCV backend, REST API, WebSocket events, or processing jobs."

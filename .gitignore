@@ -1,0 +1,63 @@
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# VS Code local state
+.vscode/.ropeproject/
+.tools/
+.tmp/
+
+# Node / frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+frontend/.eslintcache
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# CMake / C++ build output
+build/
+out/
+backend/build/
+backend/out/
+backend/CMakeFiles/
+backend/CMakeCache.txt
+backend/cmake_install.cmake
+backend/compile_commands.json
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.lib
+*.exp
+
+# vcpkg artifacts
+vcpkg_installed/
+backend/vcpkg_installed/
+
+# Runtime data
+logs/
+data/
+temp/
+tmp/
+uploads/
+results/
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example

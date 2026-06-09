@@ -1,0 +1,23 @@
+{
+  "cmake.sourceDirectory": "${workspaceFolder}/backend",
+  "cmake.useCMakePresets": "always",
+  "cmake.configurePreset": "windows-msvc-vcpkg",
+  "cmake.buildPreset": "windows-msvc-vcpkg-debug",
+  "cmake.configureOnOpen": false,
+  "C_Cpp.default.cppStandard": "c++20",
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "typescript.tsdk": "frontend/node_modules/typescript/lib",
+  "eslint.workingDirectories": [
+    {
+      "directory": "frontend",
+      "changeProcessCWD": true
+    }
+  ],
+  "editor.formatOnSave": true,
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.vite": true,
+    "**/out": true,
+    "**/vcpkg_installed": true
+  }
+}
