@@ -17,7 +17,10 @@ Use this skill to keep the backend responsible for serving the React app, exposi
    - `image`, `video`, and `vision` for OpenCV work.
    - `jobs` for long-running processing.
    - `storage`, `logging`, and `common` for shared infrastructure.
-3. Keep route handlers thin. Put processing, security, and storage logic in services.
+3. Keep `backend/src/main.cpp` as a thin composition root only. It may parse args, construct classes, wire dependencies, start runtime servers, and return process status.
+4. Put each durable backend responsibility in a named class with matching `.h`/`.cpp` files under its ownership folder. Do not add new backend behavior directly to `main.cpp`.
+5. Keep inheritance, interface, and ownership references visible in the owning header when they are introduced, so class relationships are easy to inspect.
+6. Keep route handlers thin. Put processing, security, and storage logic in services.
 
 ## API And Events
 
@@ -25,6 +28,7 @@ Use this skill to keep the backend responsible for serving the React app, exposi
 - Use consistent JSON response and error shapes.
 - Emit WebSocket events for job lifecycle, logs, backend status, remote clients, previews, and pipeline node state.
 - Treat the backend as authoritative for jobs, progress, results, logs, connected clients, remote access, and OpenCV state.
+- Register HTTP routes in `server/ApiServer.cpp`; if route logic grows beyond request validation, service invocation, event publication, and response translation, move it into a service class.
 
 ## OpenCV And Jobs
 

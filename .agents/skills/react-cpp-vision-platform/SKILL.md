@@ -15,8 +15,9 @@ Use this skill to keep implementation aligned with `MasterPlan.md` and the stage
    - React owns UI only.
    - Runtime adapters hide Desktop vs LAN differences.
    - C++ owns static serving, REST, WebSocket, jobs, OpenCV, local file access, and remote access state.
-4. Prefer a vertical slice that includes UI, API contract, backend behavior, and verification.
-5. Update `TODO.md` when a task is completed or newly discovered.
+4. Keep `backend/src/main.cpp` as a thin composition root and place backend behavior in class-based `.h`/`.cpp` files under the planned ownership folders.
+5. Prefer a vertical slice that includes UI, API contract, backend behavior, and verification.
+6. Update `TODO.md` when a task is completed or newly discovered.
 
 ## Phase Order
 
@@ -41,6 +42,7 @@ Before editing, check whether the change crosses one of these contracts:
 - Files: arbitrary local paths are Desktop-only; LAN clients use upload sessions or server-selected libraries.
 - Security: LAN mode is off by default; external access requires PIN/token and session timeout.
 - Performance: long OpenCV work runs through jobs and emits progress.
+- Backend organization: route registration lives in `server/ApiServer.cpp`; OpenCV behavior lives under `image`, `video`, or `vision`; security state lives under `security`; shared envelopes/utilities live under `common`.
 
 ## Verification
 

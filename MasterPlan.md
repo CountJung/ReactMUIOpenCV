@@ -1156,6 +1156,17 @@ backend/
 └─ tests/
 ```
 
+백엔드 구현 규칙:
+
+```txt
+- main.cpp는 composition root로만 사용한다.
+- REST route 등록은 server/ApiServer.*에 둔다.
+- WebSocket 런타임은 server/WebSocketGateway.*에 둔다.
+- EventHub, JobQueue, LogStore, RemoteAccessManager, ImageResultStore처럼 상태를 소유하는 책임은 클래스 단위로 분리한다.
+- OpenCV 알고리즘 구현은 image, video, vision 폴더에 둔다.
+- 상속, 인터페이스, 소유 관계가 생기면 해당 header에서 참조가 보이도록 선언한다.
+```
+
 ---
 
 ## 17. OpenCV 기능 로드맵

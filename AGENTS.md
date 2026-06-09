@@ -35,6 +35,10 @@ Read `PROJECT_MAP.md`, `MasterPlan.md`, and `TODO.md` before making architectura
 ## Backend Rules
 
 - Follow the planned `backend/src` layout from `MasterPlan.md`.
+- Keep `backend/src/main.cpp` as a thin composition root only: parse process arguments, construct services, wire dependencies, start/stop runtime servers, and return process status.
+- Do not implement REST route logic, OpenCV processing, logging stores, job queues, remote access state, or file handling directly in `main.cpp`.
+- Put each durable backend responsibility in a named class with matching `.h`/`.cpp` files under its ownership folder. Keep inheritance or interface relationships visible in the same header when they are introduced so references are easy to inspect.
+- Keep route handlers thin in `server/ApiServer.cpp`; route handlers should validate request shape, call service classes, publish events, and translate errors into the shared API envelope.
 - Keep file-system access, path validation, upload isolation, and cleanup policies in backend-owned services.
 - Default network binding to `127.0.0.1`; bind to `0.0.0.0` only when LAN Web UI Mode is explicitly enabled.
 - Require PIN or temporary token auth for LAN access, apply session timeout, and default remote clients to read-only mode.

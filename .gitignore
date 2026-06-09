@@ -55,6 +55,7 @@ temp/
 tmp/
 uploads/
 results/
+outputs/
 *.log
 
 # Environment files

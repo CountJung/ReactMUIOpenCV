@@ -40,15 +40,16 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 - [x] Add a backend job queue for long-running image and video work.
 - [x] Add `spdlog` file logging and a recent-log API.
 - [x] Wire frontend WebSocket events to TanStack Query cache invalidation or updates.
+- [x] Refactor the backend from a monolithic `main.cpp` into class-based source files under `common`, `server`, `security`, `jobs`, `logging`, `storage`, and `image`.
 
 ## Phase 4 - Image Lab
 
-- [ ] Add Desktop local image open flow through the runtime file adapter.
-- [ ] Add browser upload flow for LAN clients where allowed.
-- [ ] Implement OpenCV image operations: open, save, resize, crop, rotate, grayscale, blur, sharpen, threshold, edge detect, contour detect, histogram, color conversion, and compare.
-- [ ] Store image results by `resultId` and expose preview retrieval.
-- [ ] Build before/after comparison UI with parameter controls and error states.
-- [ ] Ensure mobile can inspect results without arbitrary local file access.
+- [x] Add Desktop local image open flow through the runtime file adapter.
+- [x] Add browser upload flow for LAN clients where allowed.
+- [x] Implement OpenCV image operations: open, save, resize, crop, rotate, grayscale, blur, sharpen, threshold, edge detect, contour detect, histogram, color conversion, and compare.
+- [x] Store image results by `resultId` and expose preview retrieval.
+- [x] Build before/after comparison UI with parameter controls and error states.
+- [x] Ensure mobile can inspect results without arbitrary local file access.
 
 ## Phase 5 - Video Lab
 
