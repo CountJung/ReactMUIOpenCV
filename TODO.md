@@ -84,6 +84,23 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 - [ ] Add user-facing firewall guidance for LAN Web UI Mode.
 - [x] Document LAN usage and developer extension points.
 
+## Phase 9 - LearnOpenCV Example Backlog
+
+These items are selected from `spmallick/learnopencv` because they fit this project's C++ OpenCV image, video, pipeline, and dashboard goals.
+
+- [ ] Add a Video Lab sample for read/write/display video basics based on LearnOpenCV `Read, Write and Display a video using OpenCV`.
+- [ ] Add frame-rate measurement and display diagnostics based on LearnOpenCV `How to find frame rate or frames per second`.
+- [ ] Add Video Lab stabilization pipeline node based on LearnOpenCV `Video Stabilization Using Point Feature Matching in OpenCV`.
+- [ ] Add optical-flow preview and pipeline node based on LearnOpenCV `Optical Flow in OpenCV`.
+- [ ] Add object tracking pipeline nodes based on LearnOpenCV `Object Tracking using OpenCV` and `MultiTracker`.
+- [ ] Add feature-based alignment/image registration operation based on LearnOpenCV `Image Alignment (Feature Based)` and `Image Alignment (ECC)`.
+- [ ] Add camera calibration utility and calibration-result storage based on LearnOpenCV `Camera Calibration using OpenCV`.
+- [ ] Add QR code scanner utility based on LearnOpenCV `OpenCV QR Code Scanner`.
+- [ ] Add shape-analysis operations for blob centroid, convex hull, Hu moments, and Hough transform based on LearnOpenCV examples.
+- [ ] Add inpainting, seamless cloning, alpha blending, exposure fusion, HDR, and non-photorealistic rendering operations as Image Lab advanced filters.
+- [ ] Add DNN-based examples behind optional model assets: face detection, YOLO object detection, text detection, pose estimation, and Mask R-CNN.
+- [ ] Add performance demo for parallel pixel access with OpenCV `forEach` and compare it with existing filter implementations.
+
 ## Guardrails
 
 - [ ] Keep LAN Web UI Mode off by default.

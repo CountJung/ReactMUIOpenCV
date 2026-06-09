@@ -12,12 +12,19 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `ENVIRONMENT.md`: Local development and dependency setup guide.
 - `.gitignore`: Git upload exclusions for generated files, build output, dependencies, logs, runtime outputs, and env files.
 - `build.ps1`: Root Release build entrypoint. Ensures frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable plus WebView2 desktop app host when the SDK is available.
-- `docs/`: User, publishing, and build/debug policy documentation.
+- `docs/`: Korean user, publishing, build/debug policy, and coding guide documentation.
 - `scripts/ensure-frontend-deps.ps1`: Conditionally runs `npm install` when frontend dependencies are missing or stale.
 - `scripts/prepare-debug.ps1`: VS Code debug preparation script for dependency checks, frontend typecheck, CMake configure, and Debug backend build.
 - `scripts/publish.ps1`: Creates `/publish/ReactMUIOpenCV`, versioned zip, and `ReactMUIOpenCV-latest.zip` from Release outputs.
 - `scripts/setup-vcpkg.ps1`: Workspace-local vcpkg bootstrap script used by VSCode tasks.
 - `scripts/run-backend.ps1`: Finds and runs the newest built backend executable to avoid hardcoded debug path issues.
+
+## Documentation
+
+- `docs/USER_GUIDE.md`: Korean end-user guide for desktop app mode, web mode, LAN mode, installation, and troubleshooting.
+- `docs/PUBLISHING.md`: Korean guide for creating `/publish` bundles and uploading zip artifacts to an external web server.
+- `docs/BUILD_AND_DEBUG_POLICY.md`: Korean policy for root Release builds, VS Code debug readiness, executable verification, and publish requirements.
+- `docs/CODING_GUIDE.md`: Korean coding guide for human contributors covering backend structure, frontend structure, API/event rules, UI rules, and verification.
 
 ## Frontend
 
