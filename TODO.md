@@ -77,8 +77,8 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 
 ## Phase 8 - Packaging And Template
 
-- [ ] Automate frontend build and copy into backend static assets.
-- [ ] Automate backend build and package output.
+- [x] Automate frontend build and copy into backend static assets.
+- [x] Automate backend build and package output.
 - [ ] Check WebView2 Runtime availability.
 - [ ] Add user-facing firewall guidance for LAN Web UI Mode.
 - [ ] Document LAN usage and developer extension points.

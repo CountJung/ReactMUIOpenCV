@@ -22,6 +22,20 @@ npm run dev
 
 The dev server uses `http://127.0.0.1:5173`. Production frontend files are emitted to `frontend/dist`.
 
+## One-command Release Build
+
+From the project root:
+
+```powershell
+.\build.ps1
+```
+
+The root build script conditionally installs frontend dependencies, builds `frontend/dist`, configures the vcpkg CMake preset, and builds the Release backend executable at:
+
+```txt
+backend/out/build/windows-msvc-vcpkg/Release/ReactMUIOpenCV.exe
+```
+
 ## Backend Setup
 
 Set `VCPKG_ROOT` to your vcpkg checkout:
@@ -46,6 +60,20 @@ Run the backend:
 ```
 
 The backend listens on `http://127.0.0.1:18730` by default. Passing `--lan` binds to `0.0.0.0`; keep that mode behind explicit user confirmation and authentication when the real LAN workflow is implemented.
+
+## VS Code Debugging
+
+Use the compound launch configurations:
+
+```txt
+Debug Frontend + Backend
+Debug Remote Access + Backend LAN
+```
+
+VS Code runs preparation tasks before debugging:
+
+- Frontend debug checks `node_modules`, installs when needed, runs `npm run typecheck`, then starts Vite on `http://127.0.0.1:5173`.
+- Backend debug bootstraps workspace-local vcpkg when needed, configures CMake, and builds the Debug backend before entering `cppvsdbg`.
 
 ## Compatibility Notes
 

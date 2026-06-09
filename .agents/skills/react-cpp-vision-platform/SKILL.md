@@ -46,6 +46,8 @@ Before editing, check whether the change crosses one of these contracts:
 
 ## Verification
 
+- For root Release builds, run `.\build.ps1`; it prepares frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable.
+- For VS Code debugging, keep launch pre-tasks wired through `scripts/prepare-debug.ps1` so frontend dependencies/typecheck and backend configure/build happen before debug entry.
 - Verify the relevant frontend build, typecheck, or lint command when available.
 - Verify CMake configure/build/tests when backend files exist.
 - For cross-stack work, verify at least `/api/health`, the corresponding frontend API call, and WebSocket behavior if events are involved.

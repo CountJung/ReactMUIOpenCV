@@ -11,7 +11,7 @@
       "cwd": "${workspaceFolder}",
       "environment": [],
       "console": "integratedTerminal",
-      "preLaunchTask": "backend: build"
+      "preLaunchTask": "debug: prepare backend"
     },
     {
       "name": "Debug Backend LAN",
@@ -23,7 +23,7 @@
       "cwd": "${workspaceFolder}",
       "environment": [],
       "console": "integratedTerminal",
-      "preLaunchTask": "backend: build"
+      "preLaunchTask": "debug: prepare backend"
     },
     {
       "name": "Debug Frontend in Edge",

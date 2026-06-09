@@ -51,5 +51,7 @@ Use this skill to keep the backend responsible for serving the React app, exposi
 ## Verification
 
 - Configure and build with CMake when backend files exist.
+- Use `.\build.ps1` from the workspace root when a Release app build is requested.
+- Use `scripts/prepare-debug.ps1 -SkipFrontend` or the VS Code `debug: prepare backend` task before backend debugging.
 - Run available backend tests.
 - For security-sensitive work, test unauthorized, read-only, control, and path traversal cases.

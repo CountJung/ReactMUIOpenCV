@@ -12,6 +12,53 @@
       "problemMatcher": []
     },
     {
+      "label": "frontend: ensure deps",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/ensure-frontend-deps.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "debug: prepare frontend",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/prepare-debug.ps1",
+        "-SkipBackend"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "debug: prepare backend",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/prepare-debug.ps1",
+        "-SkipFrontend"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
       "label": "frontend: dev",
       "type": "shell",
       "command": "npm",
@@ -19,6 +66,8 @@
       "options": {
         "cwd": "${workspaceFolder}/frontend"
       },
+      "dependsOrder": "sequence",
+      "dependsOn": ["debug: prepare frontend"],
       "isBackground": true,
       "problemMatcher": {
         "owner": "vite",
@@ -43,6 +92,8 @@
       "options": {
         "cwd": "${workspaceFolder}/frontend"
       },
+      "dependsOrder": "sequence",
+      "dependsOn": ["debug: prepare frontend"],
       "isBackground": true,
       "problemMatcher": {
         "owner": "vite",
@@ -151,6 +202,18 @@
       "dependsOn": ["backend: configure"]
     },
     {
+      "label": "backend: build release",
+      "type": "shell",
+      "command": "cmake",
+      "args": ["--build", "--preset", "windows-msvc-vcpkg-release"],
+      "options": {
+        "cwd": "${workspaceFolder}/backend"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "dependsOn": ["backend: configure"]
+    },
+    {
       "label": "backend: run lan",
       "type": "shell",
       "command": "powershell",
@@ -176,13 +239,29 @@
     {
       "label": "project: install dependencies",
       "dependsOrder": "sequence",
-      "dependsOn": ["frontend: install", "backend: vcpkg install"],
+      "dependsOn": ["frontend: ensure deps", "backend: vcpkg install"],
       "problemMatcher": []
     },
     {
       "label": "project: build",
       "dependsOrder": "sequence",
       "dependsOn": ["frontend: build", "backend: build"],
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "project: build release",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/build.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "group": "build",
       "problemMatcher": []
     }

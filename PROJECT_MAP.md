@@ -11,6 +11,9 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `AGENTS.md`: Agent operating rules for this repository.
 - `ENVIRONMENT.md`: Local development and dependency setup guide.
 - `.gitignore`: Git upload exclusions for generated files, build output, dependencies, logs, runtime outputs, and env files.
+- `build.ps1`: Root Release build entrypoint. Ensures frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable.
+- `scripts/ensure-frontend-deps.ps1`: Conditionally runs `npm install` when frontend dependencies are missing or stale.
+- `scripts/prepare-debug.ps1`: VS Code debug preparation script for dependency checks, frontend typecheck, CMake configure, and Debug backend build.
 - `scripts/setup-vcpkg.ps1`: Workspace-local vcpkg bootstrap script used by VSCode tasks.
 - `scripts/run-backend.ps1`: Finds and runs the newest built backend executable to avoid hardcoded debug path issues.
 
@@ -53,8 +56,8 @@ Agents must read this file before broad file exploration. Use it to jump directl
 
 - `.vscode/extensions.json`: Recommended extensions.
 - `.vscode/settings.json`: CMake, TypeScript, ESLint, and file visibility settings.
-- `.vscode/tasks.json`: Dependency install, vcpkg bootstrap, frontend dev/build/lint/typecheck/watch, backend configure/build/LAN run tasks.
-- `.vscode/launch.json`: Backend, backend LAN, frontend Edge, Remote Access Edge, and compound debug configurations. Backend launch uses `${command:cmake.launchTargetPath}` to avoid stale executable paths.
+- `.vscode/tasks.json`: Conditional dependency checks, vcpkg bootstrap, debug preparation, frontend dev/build/lint/typecheck/watch, backend Debug/Release configure/build/LAN run tasks, and root Release build task.
+- `.vscode/launch.json`: Backend, backend LAN, frontend Edge, Remote Access Edge, and compound debug configurations. Backend launch uses `${command:cmake.launchTargetPath}` and `debug: prepare backend`; frontend launch starts `frontend: dev`, which prepares dependencies and typechecks first.
 
 ## Runtime Ports
 
