@@ -10,6 +10,7 @@
 
 #include <httplib.h>
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -28,7 +29,8 @@ class ApiServer {
       SettingsStore& settings_store,
       RemoteAccessManager& remote_access,
       ImageResultStore& image_store,
-      PipelineStore& pipeline_store);
+      PipelineStore& pipeline_store,
+      std::filesystem::path static_root);
 
   bool listen();
 
@@ -47,6 +49,7 @@ class ApiServer {
   RemoteAccessManager& remote_access_;
   ImageResultStore& image_store_;
   PipelineStore& pipeline_store_;
+  std::filesystem::path static_root_;
   httplib::Server server_;
 };
 

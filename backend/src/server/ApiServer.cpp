@@ -23,7 +23,8 @@ ApiServer::ApiServer(
     SettingsStore& settings_store,
     RemoteAccessManager& remote_access,
     ImageResultStore& image_store,
-    PipelineStore& pipeline_store)
+    PipelineStore& pipeline_store,
+    std::filesystem::path static_root)
     : host_(std::move(host)),
       port_(port),
       ws_port_(ws_port),
@@ -34,7 +35,8 @@ ApiServer::ApiServer(
       settings_store_(settings_store),
       remote_access_(remote_access),
       image_store_(image_store),
-      pipeline_store_(pipeline_store) {
+      pipeline_store_(pipeline_store),
+      static_root_(std::move(static_root)) {
   register_routes();
   mount_static_files();
 }
@@ -375,9 +377,8 @@ void ApiServer::register_routes() {
 }
 
 void ApiServer::mount_static_files() {
-  const std::filesystem::path static_root = APP_STATIC_ROOT;
-  if (std::filesystem::exists(static_root)) {
-    server_.set_mount_point("/", static_root.string());
+  if (std::filesystem::exists(static_root_)) {
+    server_.set_mount_point("/", static_root_.string());
   } else {
     server_.Get("/", [](const httplib::Request&, httplib::Response& response) {
       response.set_content(

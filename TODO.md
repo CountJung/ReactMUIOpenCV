@@ -79,9 +79,10 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 
 - [x] Automate frontend build and copy into backend static assets.
 - [x] Automate backend build and package output.
+- [x] Publish an external web-server-ready portable install bundle under `/publish`.
 - [ ] Check WebView2 Runtime availability.
 - [ ] Add user-facing firewall guidance for LAN Web UI Mode.
-- [ ] Document LAN usage and developer extension points.
+- [x] Document LAN usage and developer extension points.
 
 ## Guardrails
 

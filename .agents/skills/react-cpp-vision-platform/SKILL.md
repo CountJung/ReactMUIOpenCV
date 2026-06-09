@@ -43,11 +43,13 @@ Before editing, check whether the change crosses one of these contracts:
 - Security: LAN mode is off by default; external access requires PIN/token and session timeout.
 - Performance: long OpenCV work runs through jobs and emits progress.
 - Backend organization: route registration lives in `server/ApiServer.cpp`; OpenCV behavior lives under `image`, `video`, or `vision`; security state lives under `security`; shared envelopes/utilities live under `common`.
+- Build/debug/publish migration: keep the root Release build script, executable-verifying debug preparation, `/publish` publishing script, and `/docs` user guides when copying these instructions to a similar project.
 
 ## Verification
 
 - For root Release builds, run `.\build.ps1`; it prepares frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable.
 - For VS Code debugging, keep launch pre-tasks wired through `scripts/prepare-debug.ps1` so frontend dependencies/typecheck and backend configure/build happen before debug entry.
+- For external distribution, run `scripts/publish.ps1`; it creates `/publish/ReactMUIOpenCV`, a versioned zip, and `ReactMUIOpenCV-latest.zip`.
 - Verify the relevant frontend build, typecheck, or lint command when available.
 - Verify CMake configure/build/tests when backend files exist.
 - For cross-stack work, verify at least `/api/health`, the corresponding frontend API call, and WebSocket behavior if events are involved.

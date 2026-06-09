@@ -12,8 +12,10 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `ENVIRONMENT.md`: Local development and dependency setup guide.
 - `.gitignore`: Git upload exclusions for generated files, build output, dependencies, logs, runtime outputs, and env files.
 - `build.ps1`: Root Release build entrypoint. Ensures frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable.
+- `docs/`: User, publishing, and build/debug policy documentation.
 - `scripts/ensure-frontend-deps.ps1`: Conditionally runs `npm install` when frontend dependencies are missing or stale.
 - `scripts/prepare-debug.ps1`: VS Code debug preparation script for dependency checks, frontend typecheck, CMake configure, and Debug backend build.
+- `scripts/publish.ps1`: Creates `/publish/ReactMUIOpenCV`, versioned zip, and `ReactMUIOpenCV-latest.zip` from Release outputs.
 - `scripts/setup-vcpkg.ps1`: Workspace-local vcpkg bootstrap script used by VSCode tasks.
 - `scripts/run-backend.ps1`: Finds and runs the newest built backend executable to avoid hardcoded debug path issues.
 
@@ -40,7 +42,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/vcpkg.json`: C++ dependency manifest.
 - `backend/src/main.cpp`: Thin composition root. Parses launch args, constructs backend services, starts WebSocket and HTTP runtimes, and reports process status.
 - `backend/src/common/`: Shared constants, random IDs/PINs, ISO time formatting, API envelopes, CORS, request parsing, and loopback detection.
-- `backend/src/server/ApiServer.*`: HTTP route registration, static React file serving, and thin request/response translation over backend services.
+- `backend/src/server/ApiServer.*`: HTTP route registration, static React file serving from a resolved source-tree or bundled `frontend/dist`, and thin request/response translation over backend services.
 - `backend/src/server/WebSocketGateway.*`: WebSocket runtime setup, client lifecycle logging, event replay, and shutdown.
 - `backend/src/server/EventHub.*`: WebSocket event envelope creation, recent event retention, and broadcast fanout.
 - `backend/src/server/NetworkInfo.*`: LAN IPv4 detection and private-address sorting.
@@ -56,8 +58,8 @@ Agents must read this file before broad file exploration. Use it to jump directl
 
 - `.vscode/extensions.json`: Recommended extensions.
 - `.vscode/settings.json`: CMake, TypeScript, ESLint, and file visibility settings.
-- `.vscode/tasks.json`: Conditional dependency checks, vcpkg bootstrap, debug preparation, frontend dev/build/lint/typecheck/watch, backend Debug/Release configure/build/LAN run tasks, and root Release build task.
-- `.vscode/launch.json`: Backend, backend LAN, frontend Edge, Remote Access Edge, and compound debug configurations. Backend launch uses `${command:cmake.launchTargetPath}` and `debug: prepare backend`; frontend launch starts `frontend: dev`, which prepares dependencies and typechecks first.
+- `.vscode/tasks.json`: Conditional dependency checks, vcpkg bootstrap, debug preparation, frontend dev/build/lint/typecheck/watch, backend Debug/Release configure/build/LAN run tasks, root Release build task, and publish task.
+- `.vscode/launch.json`: Backend, backend LAN, frontend Edge, Remote Access Edge, and compound debug configurations. Backend launch uses the explicit Debug executable path created by `debug: prepare backend`; frontend launch starts `frontend: dev`, which prepares dependencies and typechecks first.
 
 ## Runtime Ports
 
@@ -79,3 +81,4 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - Backend WebSocket events: start at `backend/src/server/EventHub.*` and `backend/src/server/WebSocketGateway.*`.
 - Backend jobs/logs: start at `backend/src/jobs/JobQueue.*` and `backend/src/logging/LogStore.*`.
 - Backend Image Lab processing: start at `backend/src/image/ImageResultStore.*` and `backend/src/image/ImageFilters.*`.
+- Build/debug/publish workflow: start at `build.ps1`, `scripts/prepare-debug.ps1`, `scripts/publish.ps1`, and `docs/BUILD_AND_DEBUG_POLICY.md`.

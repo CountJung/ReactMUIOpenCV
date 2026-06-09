@@ -37,4 +37,11 @@ if (-not $SkipBackend) {
   finally {
     Pop-Location
   }
+
+  $debugExe = Join-Path $backendDir "out\build\windows-msvc-vcpkg\Debug\ReactMUIOpenCV.exe"
+  if (-not (Test-Path $debugExe)) {
+    throw "Debug backend executable was not found at $debugExe"
+  }
+
+  Write-Host "Debug backend executable ready: $debugExe"
 }

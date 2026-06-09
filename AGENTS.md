@@ -24,6 +24,14 @@ Read `PROJECT_MAP.md`, `MasterPlan.md`, and `TODO.md` before making architectura
 - Use WebSocket events to update or invalidate TanStack Query caches.
 - Run long image/video/pipeline work through backend jobs.
 
+## Build, Debug, And Publish Rules
+
+- For this project type, VS Code debugging must prepare the program so it can run immediately: check frontend dependencies, typecheck frontend code, bootstrap backend dependencies, configure CMake, build the Debug executable, verify the executable path, and then enter the debugger.
+- Do not rely on editor-global or manually selected launch targets when a stable Debug executable path is available. Prelaunch tasks must create and verify the exact executable used by `launch.json`.
+- A root build script must build the project in Release mode. Running `.\build.ps1` from the workspace root must prepare frontend dependencies, build the production frontend bundle, configure the backend, build the Release executable, and fail clearly if the expected executable is missing.
+- If external distribution is requested, publish artifacts under `/publish` and write user-facing guide documents under `/docs`.
+- When migrating AGENTS.md, project skills, or template instructions to another similar React + C++ desktop/web project, migrate these build/debug/publish rules with them.
+
 ## Frontend Rules
 
 - Follow the planned `frontend/src` layout from `MasterPlan.md`.
@@ -48,5 +56,8 @@ Read `PROJECT_MAP.md`, `MasterPlan.md`, and `TODO.md` before making architectura
 
 - When frontend dependencies exist, run the project lint/typecheck/build commands available in `package.json`.
 - When backend targets exist, configure and build with CMake, then run available tests.
+- For debug workflow changes, run the debug preparation script and verify the exact executable referenced by VS Code exists.
+- For Release build changes, run `.\build.ps1`.
+- For publish workflow changes, run `scripts/publish.ps1` and verify the generated bundle can serve `/api/health` and the React UI.
 - For UI changes, verify both desktop-sized and mobile-sized layouts.
 - For LAN or security changes, verify binding mode, authentication, permission checks, and path traversal protections.

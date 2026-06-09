@@ -36,6 +36,24 @@ The root build script conditionally installs frontend dependencies, builds `fron
 backend/out/build/windows-msvc-vcpkg/Release/ReactMUIOpenCV.exe
 ```
 
+## Publish Bundle
+
+Create a portable install bundle under `/publish`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1
+```
+
+The publish output includes:
+
+```txt
+publish/ReactMUIOpenCV/
+publish/ReactMUIOpenCV-{version}.zip
+publish/ReactMUIOpenCV-latest.zip
+```
+
+Upload the zip files to an external web server for distribution. See `docs/PUBLISHING.md` and `docs/USER_GUIDE.md`.
+
 ## Backend Setup
 
 Set `VCPKG_ROOT` to your vcpkg checkout:
@@ -73,7 +91,8 @@ Debug Remote Access + Backend LAN
 VS Code runs preparation tasks before debugging:
 
 - Frontend debug checks `node_modules`, installs when needed, runs `npm run typecheck`, then starts Vite on `http://127.0.0.1:5173`.
-- Backend debug bootstraps workspace-local vcpkg when needed, configures CMake, and builds the Debug backend before entering `cppvsdbg`.
+- Backend debug bootstraps workspace-local vcpkg when needed, configures CMake, builds the Debug backend, verifies `backend/out/build/windows-msvc-vcpkg/Debug/ReactMUIOpenCV.exe`, and then enters `cppvsdbg`.
+- Backend launch uses the explicit Debug executable path, so selecting a CMake launch target in VS Code is not required.
 
 ## Compatibility Notes
 
