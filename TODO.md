@@ -9,7 +9,7 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 - [x] Implement the C++ app entrypoint that starts the local HTTP server on `127.0.0.1:18730`.
 - [x] Serve the React build output from the C++ static file server.
 - [x] Add `GET /api/health` and a typed frontend health API client.
-- [ ] Add a minimal WebView2 host that loads `http://127.0.0.1:18730`.
+- [x] Add a minimal WebView2 host that loads `http://127.0.0.1:18730`.
 - [ ] Verify the same UI loads in WebView2 and a desktop browser.
 
 ## Phase 1 - App Shell And Theme
@@ -53,11 +53,11 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 
 ## Phase 5 - Video Lab
 
-- [ ] Implement video open, metadata extraction, frame read, and preview frame APIs.
-- [ ] Add frame extraction and frame-by-frame filter jobs.
-- [ ] Stream progress over WebSocket.
-- [ ] Add export flow with codec failure logging.
-- [ ] Separate preview-frame processing from full-video export.
+- [x] Implement video open, metadata extraction, frame read, and preview frame APIs.
+- [x] Add frame extraction and frame-by-frame filter jobs.
+- [x] Stream progress over WebSocket.
+- [x] Add export flow with codec failure logging.
+- [x] Separate preview-frame processing from full-video export.
 
 ## Phase 6 - Vision Pipeline Flow
 

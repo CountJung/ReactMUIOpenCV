@@ -10,6 +10,8 @@ Use this skill when work touches how the same React UI runs inside the Windows W
 ## Runtime Model
 
 - Desktop mode loads `http://127.0.0.1:18730` in WebView2.
+- Web mode runs the same backend/UI in a normal browser at `http://127.0.0.1:18730`.
+- Keep desktop app mode and web mode available as separate launch/debug/publish entries when both are supported.
 - LAN Web UI Mode is off by default.
 - Enabling LAN mode switches backend binding to `0.0.0.0`, exposes a LAN URL, and requires authentication.
 - LAN clients start in read-only mode unless Control Mode is explicitly granted.
@@ -41,6 +43,8 @@ Use this skill when work touches how the same React UI runs inside the Windows W
 
 ## Verification
 
+- Verify the WebView2 app host executable builds when WebView2 SDK is available.
+- Verify web mode still serves the same React UI in a browser.
 - Verify desktop mode binds only to `127.0.0.1`.
 - Verify LAN mode requires auth before UI control.
 - Verify read-only clients cannot start jobs, change settings, delete files, or access arbitrary paths.

@@ -43,8 +43,15 @@ if (-not $SkipBackendBuild) {
 }
 
 $releaseExe = Join-Path $backendDir "out\build\windows-msvc-vcpkg\Release\ReactMUIOpenCV.exe"
+$releaseAppExe = Join-Path $backendDir "out\build\windows-msvc-vcpkg\Release\ReactMUIOpenCVApp.exe"
 if (Test-Path $releaseExe) {
   Write-Host "Release backend app built: $releaseExe"
 } elseif (-not $SkipBackendBuild) {
   throw "Release backend executable was not found at $releaseExe"
+}
+
+if (Test-Path $releaseAppExe) {
+  Write-Host "Release desktop app built: $releaseAppExe"
+} elseif (-not $SkipBackendBuild) {
+  Write-Warning "Release desktop app executable was not found at $releaseAppExe. Check WebView2 SDK availability if app mode is required."
 }

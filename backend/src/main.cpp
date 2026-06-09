@@ -9,6 +9,7 @@
 #include "server/WebSocketGateway.h"
 #include "storage/PipelineStore.h"
 #include "storage/SettingsStore.h"
+#include "video/VideoService.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -87,6 +88,7 @@ int main(int argc, char* argv[]) {
   app::SettingsStore settings_store;
   app::RemoteAccessManager remote_access(lan_mode, host, selected_ip);
   app::ImageResultStore image_store;
+  app::VideoService video_service;
   app::PipelineStore pipeline_store;
 
   app::WebSocketGateway websocket_gateway(host, app::kDefaultWsPort, event_hub, log_store);
@@ -103,6 +105,7 @@ int main(int argc, char* argv[]) {
       settings_store,
       remote_access,
       image_store,
+      video_service,
       pipeline_store,
       static_root);
 

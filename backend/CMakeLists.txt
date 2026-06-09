@@ -12,6 +12,10 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
+set(WEBVIEW2_SDK_ROOT "$ENV{USERPROFILE}/.nuget/packages/microsoft.web.webview2/1.0.3800.47/build/native" CACHE PATH "Microsoft WebView2 native SDK root")
+set(WEBVIEW2_INCLUDE_DIR "${WEBVIEW2_SDK_ROOT}/include")
+set(WEBVIEW2_LOADER_STATIC_LIB "${WEBVIEW2_SDK_ROOT}/x64/WebView2LoaderStatic.lib")
+
 add_executable(ReactMUIOpenCV
   src/common/HttpUtils.cpp
   src/common/Random.cpp
@@ -28,6 +32,7 @@ add_executable(ReactMUIOpenCV
   src/server/WebSocketGateway.cpp
   src/storage/PipelineStore.cpp
   src/storage/SettingsStore.cpp
+  src/video/VideoService.cpp
 )
 
 target_link_libraries(ReactMUIOpenCV
@@ -52,4 +57,28 @@ if(MSVC)
   target_compile_options(ReactMUIOpenCV PRIVATE /W4 /permissive-)
 else()
   target_compile_options(ReactMUIOpenCV PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+if(WIN32 AND EXISTS "${WEBVIEW2_INCLUDE_DIR}/WebView2.h" AND EXISTS "${WEBVIEW2_LOADER_STATIC_LIB}")
+  add_executable(ReactMUIOpenCVApp WIN32
+    src/host/WebViewHost.cpp
+  )
+
+  target_include_directories(ReactMUIOpenCVApp PRIVATE "${WEBVIEW2_INCLUDE_DIR}")
+  target_link_libraries(ReactMUIOpenCVApp
+    PRIVATE
+      "${WEBVIEW2_LOADER_STATIC_LIB}"
+      Ole32
+      Shell32
+      Shlwapi
+      User32
+      Winhttp
+  )
+  target_compile_definitions(ReactMUIOpenCVApp PRIVATE UNICODE _UNICODE)
+
+  if(MSVC)
+    target_compile_options(ReactMUIOpenCVApp PRIVATE /W4 /permissive-)
+  endif()
+else()
+  message(WARNING "WebView2 SDK was not found. ReactMUIOpenCVApp desktop host target will not be built.")
 endif()

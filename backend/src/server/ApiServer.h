@@ -6,6 +6,7 @@
 #include "../security/RemoteAccessManager.h"
 #include "../storage/PipelineStore.h"
 #include "../storage/SettingsStore.h"
+#include "../video/VideoService.h"
 #include "EventHub.h"
 
 #include <httplib.h>
@@ -29,6 +30,7 @@ class ApiServer {
       SettingsStore& settings_store,
       RemoteAccessManager& remote_access,
       ImageResultStore& image_store,
+      VideoService& video_service,
       PipelineStore& pipeline_store,
       std::filesystem::path static_root);
 
@@ -48,6 +50,7 @@ class ApiServer {
   SettingsStore& settings_store_;
   RemoteAccessManager& remote_access_;
   ImageResultStore& image_store_;
+  VideoService& video_service_;
   PipelineStore& pipeline_store_;
   std::filesystem::path static_root_;
   httplib::Server server_;

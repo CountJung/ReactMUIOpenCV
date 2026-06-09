@@ -74,6 +74,7 @@
         "pattern": [
           {
             "regexp": "^(.*)$",
+            "file": 1,
             "message": 1
           }
         ],
@@ -100,6 +101,7 @@
         "pattern": [
           {
             "regexp": "^(.*)$",
+            "file": 1,
             "message": 1
           }
         ],

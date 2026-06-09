@@ -79,11 +79,34 @@ Run the backend:
 
 The backend listens on `http://127.0.0.1:18730` by default. Passing `--lan` binds to `0.0.0.0`; keep that mode behind explicit user confirmation and authentication when the real LAN workflow is implemented.
 
+## Runtime Modes
+
+Desktop app mode:
+
+```powershell
+.\backend\out\build\windows-msvc-vcpkg\Debug\ReactMUIOpenCVApp.exe
+```
+
+The desktop app host starts the local backend when needed and loads `http://127.0.0.1:18730` in WebView2.
+
+Web mode:
+
+```powershell
+.\backend\out\build\windows-msvc-vcpkg\Debug\ReactMUIOpenCV.exe
+```
+
+Then open:
+
+```txt
+http://127.0.0.1:18730
+```
+
 ## VS Code Debugging
 
 Use the compound launch configurations:
 
 ```txt
+Debug Desktop App
 Debug Frontend + Backend
 Debug Remote Access + Backend LAN
 ```
@@ -92,6 +115,7 @@ VS Code runs preparation tasks before debugging:
 
 - Frontend debug checks `node_modules`, installs when needed, runs `npm run typecheck`, then starts Vite on `http://127.0.0.1:5173`.
 - Backend debug bootstraps workspace-local vcpkg when needed, configures CMake, builds the Debug backend, verifies `backend/out/build/windows-msvc-vcpkg/Debug/ReactMUIOpenCV.exe`, and then enters `cppvsdbg`.
+- Desktop app debug builds and verifies `backend/out/build/windows-msvc-vcpkg/Debug/ReactMUIOpenCVApp.exe`, then enters `cppvsdbg` for the app host.
 - Backend launch uses the explicit Debug executable path, so selecting a CMake launch target in VS Code is not required.
 
 ## Compatibility Notes

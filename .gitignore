@@ -29,6 +29,7 @@ pnpm-debug.log*
 # CMake / C++ build output
 build/
 out/
+publish/
 backend/build/
 backend/out/
 backend/CMakeFiles/

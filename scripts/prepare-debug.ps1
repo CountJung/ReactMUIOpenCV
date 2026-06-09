@@ -44,4 +44,11 @@ if (-not $SkipBackend) {
   }
 
   Write-Host "Debug backend executable ready: $debugExe"
+
+  $debugAppExe = Join-Path $backendDir "out\build\windows-msvc-vcpkg\Debug\ReactMUIOpenCVApp.exe"
+  if (Test-Path $debugAppExe) {
+    Write-Host "Debug desktop app executable ready: $debugAppExe"
+  } else {
+    Write-Warning "Debug desktop app executable was not found at $debugAppExe. Check WebView2 SDK availability if app-mode debugging is needed."
+  }
 }

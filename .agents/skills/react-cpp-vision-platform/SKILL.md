@@ -15,6 +15,7 @@ Use this skill to keep implementation aligned with `MasterPlan.md` and the stage
    - React owns UI only.
    - Runtime adapters hide Desktop vs LAN differences.
    - C++ owns static serving, REST, WebSocket, jobs, OpenCV, local file access, and remote access state.
+   - Desktop app mode and browser web mode load the same React UI through the same backend URL.
 4. Keep `backend/src/main.cpp` as a thin composition root and place backend behavior in class-based `.h`/`.cpp` files under the planned ownership folders.
 5. Prefer a vertical slice that includes UI, API contract, backend behavior, and verification.
 6. Update `TODO.md` when a task is completed or newly discovered.
@@ -44,6 +45,7 @@ Before editing, check whether the change crosses one of these contracts:
 - Performance: long OpenCV work runs through jobs and emits progress.
 - Backend organization: route registration lives in `server/ApiServer.cpp`; OpenCV behavior lives under `image`, `video`, or `vision`; security state lives under `security`; shared envelopes/utilities live under `common`.
 - Build/debug/publish migration: keep the root Release build script, executable-verifying debug preparation, `/publish` publishing script, and `/docs` user guides when copying these instructions to a similar project.
+- Runtime modes: preserve separate app-mode and web-mode launch paths when both are supported.
 
 ## Verification
 

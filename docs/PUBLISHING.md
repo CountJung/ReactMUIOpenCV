@@ -16,11 +16,13 @@ The publish script runs the root Release build first, then creates `/publish` ar
 publish/
 ├─ ReactMUIOpenCV/
 │  ├─ ReactMUIOpenCV.exe
+│  ├─ ReactMUIOpenCVApp.exe
 │  ├─ *.dll
 │  ├─ frontend/dist/
 │  ├─ docs/
 │  ├─ README.md
 │  ├─ Start-ReactMUIOpenCV.ps1
+│  ├─ Start-ReactMUIOpenCV-Web.ps1
 │  ├─ Start-ReactMUIOpenCV-LAN.ps1
 │  └─ Install-ReactMUIOpenCV.ps1
 ├─ ReactMUIOpenCV-{version}.zip
@@ -65,6 +67,8 @@ Before publishing externally:
 - Run `scripts/publish.ps1`.
 - Extract `publish/ReactMUIOpenCV-latest.zip` to a temporary folder.
 - Run `Start-ReactMUIOpenCV.ps1`.
+- Verify the desktop WebView2 app opens.
+- Run `Start-ReactMUIOpenCV-Web.ps1`.
 - Verify `http://127.0.0.1:18730/api/health` returns `ok`.
 - Verify `http://127.0.0.1:18730` shows the React UI.
 - Confirm the bundle includes `frontend/dist`.

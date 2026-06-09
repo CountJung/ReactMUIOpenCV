@@ -23,6 +23,7 @@ ApiServer::ApiServer(
     SettingsStore& settings_store,
     RemoteAccessManager& remote_access,
     ImageResultStore& image_store,
+    VideoService& video_service,
     PipelineStore& pipeline_store,
     std::filesystem::path static_root)
     : host_(std::move(host)),
@@ -35,6 +36,7 @@ ApiServer::ApiServer(
       settings_store_(settings_store),
       remote_access_(remote_access),
       image_store_(image_store),
+      video_service_(video_service),
       pipeline_store_(pipeline_store),
       static_root_(std::move(static_root)) {
   register_routes();
@@ -294,16 +296,166 @@ void ApiServer::register_routes() {
     send_data(response, *result);
   });
 
-  server_.Post("/api/videos/process", [&](const httplib::Request&, httplib::Response& response) {
-    send_data(response, {{"job", job_queue_.enqueue("video", "Video processing placeholder job.")}}, 202);
+  server_.Post("/api/videos/open-local", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_request(request)) {
+      log_store_.append("warning", "Blocked remote local video open attempt from " + request.remote_addr);
+      send_error(response, "desktop_only", "Local video paths are only available from the desktop host.", 403);
+      return;
+    }
+
+    const auto body = parse_body(request);
+    const auto path = body.value("path", std::string{});
+    if (path.empty()) {
+      send_error(response, "invalid_video_path", "A local video path is required.", 400);
+      return;
+    }
+
+    try {
+      const auto result = video_service_.open_local(std::filesystem::path(path));
+      event_hub_.publish("preview.frame.updated", result);
+      log_store_.append("info", "Opened local video " + path);
+      send_data(response, result, 201);
+    } catch (const std::exception& error) {
+      log_store_.append("error", "Local video open failed: " + std::string(error.what()));
+      send_error(response, "video_open_failed", error.what(), 400);
+    }
   });
 
-  server_.Post("/api/videos/export", [&](const httplib::Request&, httplib::Response& response) {
-    send_data(response, {{"job", job_queue_.enqueue("video-export", "Video export placeholder job.")}}, 202);
+  server_.Post("/api/videos/upload", [&](const httplib::Request& request, httplib::Response& response) {
+    try {
+      if (!request.is_multipart_form_data() || !request.form.has_file("file")) {
+        send_error(response, "invalid_upload", "Upload a multipart video file named 'file'.", 400);
+        return;
+      }
+
+      const auto file = request.form.get_file("file");
+      const auto result = video_service_.upload(file.filename, file.content);
+      event_hub_.publish("preview.frame.updated", result);
+      log_store_.append("info", "Uploaded video " + file.filename);
+      send_data(response, result, 201);
+    } catch (const std::exception& error) {
+      log_store_.append("error", "Video upload failed: " + std::string(error.what()));
+      send_error(response, "video_upload_failed", error.what(), 400);
+    }
+  });
+
+  server_.Get("/api/videos", [&](const httplib::Request&, httplib::Response& response) {
+    send_data(response, video_service_.list());
+  });
+
+  server_.Post("/api/videos/process", [&](const httplib::Request& request, httplib::Response& response) {
+    const auto body = parse_body(request);
+    const auto video_id = body.value("videoId", std::string{});
+    const auto filter = body.value("filter", std::string{"none"});
+    if (video_id.empty()) {
+      send_error(response, "invalid_video_process_request", "videoId is required.", 400);
+      return;
+    }
+
+    try {
+      const auto video = video_service_.get(video_id);
+      if (!video) {
+        send_error(response, "video_not_found", "Video was not found.", 404);
+        return;
+      }
+
+      const auto job = job_queue_.enqueue("video", "Queued " + filter + " frame filter preview for video " + video_id + ".");
+      event_hub_.publish("preview.frame.updated", {{"videoId", video_id}, {"filter", filter}});
+      log_store_.append("info", "Queued video process " + filter + " for " + video_id);
+      send_data(response, {{"job", job}, {"video", *video}, {"filter", filter}}, 202);
+    } catch (const std::exception& error) {
+      log_store_.append("error", "Video processing failed: " + std::string(error.what()));
+      send_error(response, "video_processing_failed", error.what(), 400);
+    }
+  });
+
+  server_.Post("/api/videos/export", [&](const httplib::Request& request, httplib::Response& response) {
+    const auto body = parse_body(request);
+    const auto video_id = body.value("videoId", std::string{});
+    const auto filter = body.value("filter", std::string{"none"});
+    const auto start_frame = body.value("startFrame", 0);
+    const auto end_frame = body.value("endFrame", 0);
+    if (video_id.empty()) {
+      send_error(response, "invalid_video_export_request", "videoId is required.", 400);
+      return;
+    }
+
+    const auto job = job_queue_.enqueue("video-export", "Exporting " + filter + " video clip for " + video_id + ".");
+    try {
+      const auto result = video_service_.export_filtered_video(
+          video_id,
+          filter,
+          start_frame,
+          end_frame,
+          [&](int progress) {
+            event_hub_.publish("job.progress", {{"id", job["id"]}, {"type", "video-export"}, {"progress", progress}});
+          });
+      event_hub_.publish("job.completed", {{"id", job["id"]}, {"type", "video-export"}, {"progress", 100}});
+      log_store_.append("info", "Exported video " + video_id + " with " + filter);
+      send_data(response, {{"job", job}, {"result", result}}, 202);
+    } catch (const std::exception& error) {
+      event_hub_.publish("job.failed", {{"id", job["id"]}, {"type", "video-export"}, {"message", error.what()}});
+      log_store_.append("error", "Video export failed: " + std::string(error.what()));
+      send_error(response, "video_export_failed", error.what(), 400);
+    }
+  });
+
+  server_.Post("/api/videos/extract-frame", [&](const httplib::Request& request, httplib::Response& response) {
+    const auto body = parse_body(request);
+    const auto video_id = body.value("videoId", std::string{});
+    const auto frame_index = body.value("frameIndex", 0);
+    const auto filter = body.value("filter", std::string{"none"});
+    if (video_id.empty()) {
+      send_error(response, "invalid_frame_extract_request", "videoId is required.", 400);
+      return;
+    }
+
+    try {
+      const auto result = video_service_.extract_frame(video_id, frame_index, filter);
+      const auto job = job_queue_.enqueue("video-frame", "Extracted frame " + std::to_string(frame_index) + " from " + video_id + ".");
+      event_hub_.publish("preview.frame.updated", result);
+      log_store_.append("info", "Extracted video frame " + std::to_string(frame_index) + " from " + video_id);
+      send_data(response, {{"job", job}, {"result", result}}, 202);
+    } catch (const std::exception& error) {
+      log_store_.append("error", "Video frame extraction failed: " + std::string(error.what()));
+      send_error(response, "video_frame_extract_failed", error.what(), 400);
+    }
   });
 
   server_.Get(R"(/api/videos/frame/([A-Za-z0-9_-]+)/([0-9]+))", [&](const httplib::Request& request, httplib::Response& response) {
-    send_data(response, {{"jobId", request.matches[1].str()}, {"frameIndex", request.matches[2].str()}});
+    const auto video_id = request.matches[1].str();
+    const auto frame_index = std::stoi(request.matches[2].str());
+    const auto filter = request.has_param("filter") ? request.get_param_value("filter") : "none";
+
+    try {
+      const auto frame = video_service_.read_frame(video_id, frame_index, filter);
+      if (!frame) {
+        send_error(response, "video_not_found", "Video was not found.", 404);
+        return;
+      }
+
+      std::vector<unsigned char> encoded;
+      if (!cv::imencode(".png", *frame, encoded)) {
+        send_error(response, "video_frame_encode_failed", "OpenCV failed to encode the frame.", 500);
+        return;
+      }
+
+      set_cors(response);
+      response.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), "image/png");
+    } catch (const std::exception& error) {
+      log_store_.append("error", "Video frame preview failed: " + std::string(error.what()));
+      send_error(response, "video_frame_preview_failed", error.what(), 400);
+    }
+  });
+
+  server_.Get(R"(/api/videos/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+    const auto video = video_service_.get(request.matches[1].str());
+    if (!video) {
+      send_error(response, "video_not_found", "Video was not found.", 404);
+      return;
+    }
+
+    send_data(response, *video);
   });
 
   server_.Post("/api/pipelines/execute", [&](const httplib::Request&, httplib::Response& response) {

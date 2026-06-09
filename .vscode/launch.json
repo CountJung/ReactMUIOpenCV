@@ -2,6 +2,18 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug Desktop App",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend/out/build/windows-msvc-vcpkg/Debug/ReactMUIOpenCVApp.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}/backend/out/build/windows-msvc-vcpkg/Debug",
+      "environment": [],
+      "console": "integratedTerminal",
+      "preLaunchTask": "debug: prepare backend"
+    },
+    {
       "name": "Debug Backend",
       "type": "cppvsdbg",
       "request": "launch",
@@ -44,12 +56,12 @@
   ],
   "compounds": [
     {
-      "name": "Debug Frontend + Backend",
+      "name": "Debug Web Mode (Frontend + Backend)",
       "configurations": ["Debug Backend", "Debug Frontend in Edge"],
       "stopAll": true
     },
     {
-      "name": "Debug Remote Access + Backend LAN",
+      "name": "Debug LAN Web Mode",
       "configurations": ["Debug Backend LAN", "Debug Remote Access in Edge"],
       "stopAll": true
     }

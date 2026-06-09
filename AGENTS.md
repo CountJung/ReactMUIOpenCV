@@ -13,6 +13,7 @@ Read `PROJECT_MAP.md`, `MasterPlan.md`, and `TODO.md` before making architectura
 
 - Build a Windows-first vision/media testbed using React, TypeScript, MUI, WebView2, C++20 or C++23, CMake, and OpenCV.
 - Treat the React app as the only UI surface. WebView2 and LAN browsers must load the same UI.
+- Maintain both runtime modes when this project type needs them: desktop app mode through WebView2 and web/server mode through browser access to the local backend.
 - Treat the C++ backend as the owner of OpenCV processing, static file serving, REST APIs, WebSocket events, jobs, logs, local file access, and remote access state.
 - Use `http://127.0.0.1:18730` as the desktop local URL unless the project explicitly changes it.
 
@@ -27,9 +28,11 @@ Read `PROJECT_MAP.md`, `MasterPlan.md`, and `TODO.md` before making architectura
 ## Build, Debug, And Publish Rules
 
 - For this project type, VS Code debugging must prepare the program so it can run immediately: check frontend dependencies, typecheck frontend code, bootstrap backend dependencies, configure CMake, build the Debug executable, verify the executable path, and then enter the debugger.
+- When both app and web modes exist, provide separate debug entries for desktop app mode and web/server mode. The app host must load the same local UI URL as browser web mode.
 - Do not rely on editor-global or manually selected launch targets when a stable Debug executable path is available. Prelaunch tasks must create and verify the exact executable used by `launch.json`.
 - A root build script must build the project in Release mode. Running `.\build.ps1` from the workspace root must prepare frontend dependencies, build the production frontend bundle, configure the backend, build the Release executable, and fail clearly if the expected executable is missing.
 - If external distribution is requested, publish artifacts under `/publish` and write user-facing guide documents under `/docs`.
+- Publish bundles for this project type should include app-mode and web-mode launch scripts when both modes are supported.
 - When migrating AGENTS.md, project skills, or template instructions to another similar React + C++ desktop/web project, migrate these build/debug/publish rules with them.
 
 ## Frontend Rules

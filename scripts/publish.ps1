@@ -9,6 +9,7 @@ $root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $frontendDist = Join-Path $root "frontend\dist"
 $releaseDir = Join-Path $root "backend\out\build\windows-msvc-vcpkg\Release"
 $releaseExe = Join-Path $releaseDir "ReactMUIOpenCV.exe"
+$releaseAppExe = Join-Path $releaseDir "ReactMUIOpenCVApp.exe"
 $publishRoot = Join-Path $root "publish"
 $bundleName = "ReactMUIOpenCV"
 $stageDir = Join-Path $publishRoot $bundleName
@@ -21,6 +22,10 @@ if (-not $SkipBuild) {
 
 if (-not (Test-Path $releaseExe)) {
   throw "Release executable was not found at $releaseExe"
+}
+
+if (-not (Test-Path $releaseAppExe)) {
+  throw "Release desktop app executable was not found at $releaseAppExe"
 }
 
 if (-not (Test-Path $frontendDist)) {
@@ -52,6 +57,19 @@ if (Test-Path $docsDir) {
 $startScript = @'
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
+$exe = Join-Path $root "ReactMUIOpenCVApp.exe"
+if (-not (Test-Path $exe)) {
+  throw "ReactMUIOpenCVApp.exe was not found next to this script."
+}
+
+Start-Process -FilePath $exe -WorkingDirectory $root
+'@
+
+Set-Content -Path (Join-Path $stageDir "Start-ReactMUIOpenCV.ps1") -Value $startScript -Encoding UTF8
+
+$webScript = @'
+$ErrorActionPreference = "Stop"
+$root = $PSScriptRoot
 $exe = Join-Path $root "ReactMUIOpenCV.exe"
 if (-not (Test-Path $exe)) {
   throw "ReactMUIOpenCV.exe was not found next to this script."
@@ -62,7 +80,7 @@ Start-Sleep -Seconds 2
 Start-Process "http://127.0.0.1:18730"
 '@
 
-Set-Content -Path (Join-Path $stageDir "Start-ReactMUIOpenCV.ps1") -Value $startScript -Encoding UTF8
+Set-Content -Path (Join-Path $stageDir "Start-ReactMUIOpenCV-Web.ps1") -Value $webScript -Encoding UTF8
 
 $lanScript = @'
 $ErrorActionPreference = "Stop"
@@ -118,10 +136,16 @@ $readme = @"
 
 Version: $Version
 
-Run:
+Run desktop app mode:
 
 ```powershell
 .\Start-ReactMUIOpenCV.ps1
+```
+
+Run web mode:
+
+```powershell
+.\Start-ReactMUIOpenCV-Web.ps1
 ```
 
 Install for the current Windows user:
