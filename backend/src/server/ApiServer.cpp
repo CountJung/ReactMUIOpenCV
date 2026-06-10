@@ -27,6 +27,7 @@ ApiServer::ApiServer(
     ImageResultStore& image_store,
     VideoService& video_service,
     PipelineStore& pipeline_store,
+    PipelineExecutor& pipeline_executor,
     std::filesystem::path static_root)
     : host_(std::move(host)),
       port_(port),
@@ -40,6 +41,7 @@ ApiServer::ApiServer(
       image_store_(image_store),
       video_service_(video_service),
       pipeline_store_(pipeline_store),
+      pipeline_executor_(pipeline_executor),
       static_root_(std::move(static_root)) {
   server_.set_payload_max_length(kMaxApiPayloadBytes);
   register_routes();
@@ -561,9 +563,11 @@ void ApiServer::register_routes() {
       return;
     }
 
-    const auto job = job_queue_.enqueue("pipeline", "Pipeline execution placeholder job.");
-    event_hub_.publish("pipeline.node.started", {{"jobId", job["id"]}, {"nodeId", "placeholder"}});
-    send_data(response, {{"job", job}}, 202);
+    const auto body = parse_body(request);
+    const auto document = body.contains("document") ? body["document"] : body;
+    auto execution = pipeline_executor_.execute(document);
+    pipeline_store_.record_execution(execution);
+    send_data(response, {{"execution", execution}}, 202);
   });
 
   server_.Get("/api/pipelines", [&](const httplib::Request&, httplib::Response& response) {

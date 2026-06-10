@@ -27,6 +27,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 
 - `docs/USER_GUIDE.md`: Korean end-user guide for desktop app mode, web mode, LAN mode, installation, and troubleshooting.
 - `docs/DEVELOPER_SETUP_GUIDE.md`: Korean step-by-step developer onboarding guide for first setup, VS Code debug preparation, React/C++ resource linking, Release build, and publish bundle creation.
+- `docs/PIPELINE_SCHEMA.md`: Shared Phase 6 pipeline document schema used by React Flow and the C++ `PipelineExecutor`.
 - `docs/PUBLISHING.md`: Korean guide for creating `/publish` bundles and uploading zip artifacts to an external web server.
 - `docs/BUILD_AND_DEBUG_POLICY.md`: Korean policy for root Release builds, VS Code debug readiness, executable verification, and publish requirements.
 - `docs/CODING_GUIDE.md`: Korean coding guide for human contributors covering backend structure, frontend structure, API/event rules, UI rules, and verification.
@@ -42,7 +43,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `frontend/src/app/providers.tsx`: Global providers such as TanStack Query and theme.
 - `frontend/src/app/router.tsx`: React Router route tree.
 - `frontend/src/theme/`: MUI theme tokens, component overrides, mode resolution, theme context, and theme provider.
-- `frontend/src/api/`: REST and WebSocket client code. `remoteApi.ts` owns Remote Access and Network Info calls; `imageApi.ts` owns Image Lab open/upload/process/save/result calls; `videoApi.ts` owns Video Lab open/upload/frame/extract/export calls.
+- `frontend/src/api/`: REST and WebSocket client code. `remoteApi.ts` owns Remote Access and Network Info calls; `imageApi.ts` owns Image Lab open/upload/process/save/result calls; `videoApi.ts` owns Video Lab open/upload/frame/extract/export calls; `pipelineApi.ts` owns Phase 6 pipeline document, CRUD, execution, and execution result types.
 - `frontend/src/runtime/`: Desktop vs LAN runtime detection and adapters. `fileAdapter.ts` hides local-path vs upload image/video opening.
 - `frontend/src/features/`: Route-level pages for dashboard, remote access, image/video lab, pipeline, charts, data grid, logs, and settings.
 - `frontend/src/shared/`: Reusable layouts, components, hooks, utilities, and shared types.
@@ -67,6 +68,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/src/image/ImageResultStore.*`: Image open/upload/process/save result storage, `resultId` lookup, and preview retrieval.
 - `backend/src/image/ImageFilters.*`: OpenCV image operation implementations.
 - `backend/src/video/VideoService.*`: Video open/upload metadata extraction, preview frame reading, frame extraction, filter preview, and MJPG export.
+- `backend/src/vision/PipelineExecutor.*`: Phase 6 C++ image pipeline execution over React Flow JSON, Image Lab result IDs, OpenCV operation nodes, node events, and cached intermediate results.
 
 ## VSCode
 
@@ -92,6 +94,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - Placeholder route text: start under `frontend/src/features/*`.
 - HTTP API clients: start under `frontend/src/api/*`; Image Lab calls live in `frontend/src/api/imageApi.ts`; Video Lab calls live in `frontend/src/api/videoApi.ts`.
 - Image Lab UI/runtime flow: start at `frontend/src/features/image-lab/ImageLabPage.tsx` and `frontend/src/runtime/fileAdapter.ts`.
+- Pipeline Flow UI/API flow: start at `frontend/src/features/pipeline-flow/PipelineFlowPage.tsx`, `frontend/src/api/pipelineApi.ts`, `backend/src/vision/PipelineExecutor.*`, and `docs/PIPELINE_SCHEMA.md`.
 - Video Lab UI/runtime flow: start at `frontend/src/features/video-lab/VideoLabPage.tsx`, `frontend/src/api/videoApi.ts`, and `frontend/src/runtime/fileAdapter.ts`.
 - Remote Access UI/API: start at `frontend/src/features/remote-access/RemoteAccessPage.tsx`, `frontend/src/api/remoteApi.ts`, and `backend/src/security/RemoteAccessManager.*`.
 - Backend health/static server: start at `backend/src/server/ApiServer.cpp` and `backend/src/main.cpp`.

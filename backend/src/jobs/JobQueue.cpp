@@ -2,6 +2,8 @@
 
 #include "../common/Random.h"
 
+#include <algorithm>
+
 namespace app {
 
 nlohmann::json job_to_json(const JobRecord& job) {
@@ -32,6 +34,14 @@ JobQueue::~JobQueue() {
 }
 
 nlohmann::json JobQueue::enqueue(const std::string& type, const std::string& message) {
+  return create_record(type, message, true);
+}
+
+nlohmann::json JobQueue::create_manual(const std::string& type, const std::string& message) {
+  return create_record(type, message, false);
+}
+
+nlohmann::json JobQueue::create_record(const std::string& type, const std::string& message, bool enqueue_job) {
   JobRecord job;
   job.id = random_hex(12);
   job.type = type;
@@ -44,12 +54,66 @@ nlohmann::json JobQueue::enqueue(const std::string& type, const std::string& mes
   {
     std::scoped_lock lock(mutex_);
     jobs_[job.id] = job;
-    pending_.push(job.id);
+    if (enqueue_job) {
+      pending_.push(job.id);
+    }
   }
 
   log_store_.append("info", "Queued " + type + " job " + job.id);
-  cv_.notify_one();
+  if (enqueue_job) {
+    cv_.notify_one();
+  }
   return job_to_json(job);
+}
+
+std::optional<nlohmann::json> JobQueue::start(const std::string& id, const std::string& message) {
+  return update_record(id, "running", 0, message, "job.started");
+}
+
+std::optional<nlohmann::json> JobQueue::progress(const std::string& id, int progress, const std::string& message) {
+  return update_record(id, "running", progress, message, "job.progress");
+}
+
+std::optional<nlohmann::json> JobQueue::complete(const std::string& id, const std::string& message) {
+  auto job = update_record(id, "completed", 100, message, "job.completed");
+  if (job) {
+    log_store_.append("info", "Completed pipeline job " + id);
+  }
+  return job;
+}
+
+std::optional<nlohmann::json> JobQueue::fail(const std::string& id, const std::string& message) {
+  auto job = update_record(id, "failed", 100, message, "job.failed");
+  if (job) {
+    log_store_.append("error", "Failed pipeline job " + id + ": " + message);
+  }
+  return job;
+}
+
+std::optional<nlohmann::json> JobQueue::update_record(
+    const std::string& id,
+    const std::string& status,
+    int progress,
+    const std::string& message,
+    const std::string& event_type) {
+  nlohmann::json payload;
+  {
+    std::scoped_lock lock(mutex_);
+    auto found = jobs_.find(id);
+    if (found == jobs_.end()) {
+      return std::nullopt;
+    }
+
+    auto& job = found->second;
+    job.status = status;
+    job.progress = std::clamp(progress, 0, 100);
+    job.message = message;
+    job.updated_at = Clock::now();
+    payload = job_to_json(job);
+  }
+
+  event_hub_.publish(event_type, payload);
+  return payload;
 }
 
 nlohmann::json JobQueue::list() const {

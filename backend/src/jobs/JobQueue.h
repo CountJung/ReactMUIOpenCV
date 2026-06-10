@@ -36,6 +36,11 @@ class JobQueue {
   JobQueue& operator=(const JobQueue&) = delete;
 
   nlohmann::json enqueue(const std::string& type, const std::string& message);
+  nlohmann::json create_manual(const std::string& type, const std::string& message);
+  std::optional<nlohmann::json> start(const std::string& id, const std::string& message);
+  std::optional<nlohmann::json> progress(const std::string& id, int progress, const std::string& message);
+  std::optional<nlohmann::json> complete(const std::string& id, const std::string& message);
+  std::optional<nlohmann::json> fail(const std::string& id, const std::string& message);
   nlohmann::json list() const;
   std::optional<nlohmann::json> get(const std::string& id) const;
   bool cancel(const std::string& id);
@@ -43,6 +48,13 @@ class JobQueue {
 
  private:
   void run();
+  nlohmann::json create_record(const std::string& type, const std::string& message, bool enqueue);
+  std::optional<nlohmann::json> update_record(
+      const std::string& id,
+      const std::string& status,
+      int progress,
+      const std::string& message,
+      const std::string& event_type);
 
   EventHub& event_hub_;
   LogStore& log_store_;

@@ -61,12 +61,12 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 
 ## Phase 6 - Vision Pipeline Flow
 
-- [ ] Define React Flow node types for input, processing, and output nodes.
-- [ ] Define pipeline JSON schema shared by frontend and backend.
-- [ ] Implement `PipelineExecutor` in C++.
-- [ ] Cache intermediate step results.
-- [ ] Broadcast node execution events and sync execution state across clients.
-- [ ] Limit complex node editing on mobile.
+- [x] Define React Flow node types for input, processing, and output nodes.
+- [x] Define pipeline JSON schema shared by frontend and backend.
+- [x] Implement `PipelineExecutor` in C++.
+- [x] Cache intermediate step results.
+- [x] Broadcast node execution events and sync execution state across clients.
+- [x] Limit complex node editing on mobile.
 
 ## Phase 7 - Dashboard And Showcase
 

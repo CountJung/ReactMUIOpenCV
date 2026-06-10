@@ -10,7 +10,7 @@ nlohmann::json PipelineStore::list() const {
   for (const auto& [id, pipeline] : pipelines_) {
     result.push_back({{"id", id}, {"document", pipeline.document}, {"updatedAt", to_iso_time(pipeline.updated_at)}});
   }
-  return {{"pipelines", result}};
+  return {{"pipelines", result}, {"executions", recent_executions_}};
 }
 
 nlohmann::json PipelineStore::create(const nlohmann::json& document) {
@@ -30,6 +30,15 @@ nlohmann::json PipelineStore::remove(const std::string& id) {
   std::scoped_lock lock(mutex_);
   pipelines_.erase(id);
   return {{"deleted", id}};
+}
+
+nlohmann::json PipelineStore::record_execution(const nlohmann::json& execution) {
+  std::scoped_lock lock(mutex_);
+  recent_executions_.insert(recent_executions_.begin(), execution);
+  while (recent_executions_.size() > 20) {
+    recent_executions_.pop_back();
+  }
+  return execution;
 }
 
 }  // namespace app

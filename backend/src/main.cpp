@@ -10,6 +10,7 @@
 #include "storage/PipelineStore.h"
 #include "storage/SettingsStore.h"
 #include "video/VideoService.h"
+#include "vision/PipelineExecutor.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -90,6 +91,7 @@ int main(int argc, char* argv[]) {
   app::ImageResultStore image_store;
   app::VideoService video_service;
   app::PipelineStore pipeline_store;
+  app::PipelineExecutor pipeline_executor(image_store, event_hub, job_queue, log_store);
 
   app::WebSocketGateway websocket_gateway(host, app::kDefaultWsPort, event_hub, log_store, remote_access);
   websocket_gateway.start();
@@ -107,6 +109,7 @@ int main(int argc, char* argv[]) {
       image_store,
       video_service,
       pipeline_store,
+      pipeline_executor,
       static_root);
 
   std::cout << "Backend listening on http://" << host << ":" << app::kDefaultPort << '\n';
