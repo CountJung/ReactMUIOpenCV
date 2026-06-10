@@ -9,10 +9,11 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `MasterPlan.md`: Product and architecture masterplan.
 - `TODO.md`: Phase-based execution checklist.
 - `AGENTS.md`: Agent operating rules for this repository.
+- `.agents/skills/`: Project-local Codex skills, including implementation guidance and sub-agent review roles for code warnings/errors, memory/resource leaks, security risk, and oversized source structure.
 - `ENVIRONMENT.md`: Local development and dependency setup guide.
 - `.gitignore`: Git upload exclusions for generated files, build output, dependencies, logs, runtime outputs, and env files.
 - `build.ps1`: Root Release build entrypoint. Ensures frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable plus WebView2 desktop app host when the SDK is available.
-- `docs/`: Korean user, publishing, build/debug policy, and coding guide documentation.
+- `docs/`: Korean user, developer setup, publishing, build/debug policy, and coding guide documentation.
 - `scripts/ensure-frontend-deps.ps1`: Conditionally runs `npm install` when frontend dependencies are missing or stale.
 - `scripts/prepare-debug.ps1`: VS Code debug preparation script for dependency checks, frontend typecheck, CMake configure, and Debug backend build.
 - `scripts/publish.ps1`: Creates `/publish/ReactMUIOpenCV`, versioned zip, and `ReactMUIOpenCV-latest.zip` from Release outputs.
@@ -22,6 +23,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 ## Documentation
 
 - `docs/USER_GUIDE.md`: Korean end-user guide for desktop app mode, web mode, LAN mode, installation, and troubleshooting.
+- `docs/DEVELOPER_SETUP_GUIDE.md`: Korean step-by-step developer onboarding guide for first setup, VS Code debug preparation, React/C++ resource linking, Release build, and publish bundle creation.
 - `docs/PUBLISHING.md`: Korean guide for creating `/publish` bundles and uploading zip artifacts to an external web server.
 - `docs/BUILD_AND_DEBUG_POLICY.md`: Korean policy for root Release builds, VS Code debug readiness, executable verification, and publish requirements.
 - `docs/CODING_GUIDE.md`: Korean coding guide for human contributors covering backend structure, frontend structure, API/event rules, UI rules, and verification.

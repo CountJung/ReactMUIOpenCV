@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Review Agent"
+  short_description: "Fix warnings, errors, and regressions."
+  default_prompt: "Use $code-review-agent to review and narrowly fix warnings, errors, failing checks, or regressions found outside the main task."

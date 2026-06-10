@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Structure Review Agent"
+  short_description: "Split oversized source files safely."
+  default_prompt: "Use $project-structure-review-agent to review source files over 1000 lines and split responsibilities according to this project's architecture."

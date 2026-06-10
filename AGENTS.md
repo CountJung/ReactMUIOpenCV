@@ -25,6 +25,15 @@ Read `PROJECT_MAP.md`, `MasterPlan.md`, and `TODO.md` before making architectura
 - Use WebSocket events to update or invalidate TanStack Query caches.
 - Run long image/video/pipeline work through backend jobs.
 
+## Sub-Agent Delegation Rules
+
+When the main agent discovers one of the following conditions while working, delegate the focused review or fix to the matching project sub-agent. Keep the delegated task narrow, provide the relevant files and symptoms, and do not use sub-agents to expand the requested scope without a concrete trigger.
+
+- Use `$code-review-agent` when warnings, errors, failing checks, brittle code, or regressions are found outside the immediate work scope.
+- Use `$memory-leak-review-agent` when React cleanup, async cancellation, media buffer lifetime, C++ ownership, RAII, thread shutdown, socket shutdown, file handle cleanup, OpenCV resource lifetime, or WebView2 resource lifetime looks suspicious.
+- Use `$security-review-agent` when LAN access, authentication, authorization, path handling, uploads, local file access, API validation, WebSocket events, logging, secrets, command execution, or browser/WebView2 boundaries look risky.
+- Use `$project-structure-review-agent` when any single source file exceeds 1000 lines or a file is accumulating responsibilities that should be split according to the project architecture.
+
 ## Build, Debug, And Publish Rules
 
 - For this project type, VS Code debugging must prepare the program so it can run immediately: check frontend dependencies, typecheck frontend code, bootstrap backend dependencies, configure CMake, build the Debug executable, verify the executable path, and then enter the debugger.

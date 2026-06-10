@@ -76,7 +76,7 @@ Cache-Control: public, max-age=31536000
 - `http://127.0.0.1:18730/api/health`가 `ok`를 반환하는지 확인합니다.
 - `http://127.0.0.1:18730`에서 React UI가 표시되는지 확인합니다.
 - 번들 안에 `frontend/dist`가 포함되어 있는지 확인합니다.
-- `docs/USER_GUIDE.md`, `docs/BUILD_AND_DEBUG_POLICY.md`, `docs/CODING_GUIDE.md`가 포함되어 있는지 확인합니다.
+- `docs/USER_GUIDE.md`, `docs/DEVELOPER_SETUP_GUIDE.md`, `docs/BUILD_AND_DEBUG_POLICY.md`, `docs/CODING_GUIDE.md`가 포함되어 있는지 확인합니다.
 
 ## 현재 패키징 범위
 

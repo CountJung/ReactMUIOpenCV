@@ -47,6 +47,15 @@ Before editing, check whether the change crosses one of these contracts:
 - Build/debug/publish migration: keep the root Release build script, executable-verifying debug preparation, `/publish` publishing script, and `/docs` user guides when copying these instructions to a similar project.
 - Runtime modes: preserve separate app-mode and web-mode launch paths when both are supported.
 
+## Sub-Agent Triggers
+
+Delegate narrow review/fix work when these conditions are discovered during the main task:
+
+- `$code-review-agent`: warnings, errors, failing checks, brittle code, or likely regressions outside the current work scope.
+- `$memory-leak-review-agent`: suspicious React cleanup gaps, async cancellation leaks, retained media buffers, C++ ownership leaks, missing RAII, or unclear shutdown of threads, sockets, files, OpenCV, or WebView2 resources.
+- `$security-review-agent`: suspected risk in LAN access, auth, permissions, paths, uploads, local files, API validation, WebSocket events, logging, secrets, commands, or browser/WebView2 boundaries.
+- `$project-structure-review-agent`: any single source file over 1000 lines or a file whose responsibilities should be split across the planned frontend/backend ownership folders.
+
 ## Verification
 
 - For root Release builds, run `.\build.ps1`; it prepares frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable.

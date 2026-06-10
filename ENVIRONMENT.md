@@ -2,6 +2,8 @@
 
 This project is prepared for a Windows-first React + WebView2 + C++ OpenCV workflow.
 
+For a detailed Korean first-time setup and debugging walkthrough, see `docs/DEVELOPER_SETUP_GUIDE.md`.
+
 ## Recommended Toolchain
 
 - Windows 10 or 11 x64

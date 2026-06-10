@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory Leak Review Agent"
+  short_description: "Review React and C++ cleanup paths."
+  default_prompt: "Use $memory-leak-review-agent to inspect suspected React or C++ memory/resource leaks and propose or apply narrow cleanup fixes."

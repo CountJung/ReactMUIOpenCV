@@ -1,0 +1,4 @@
+interface:
+  display_name: "Security Review Agent"
+  short_description: "Review auth, paths, LAN, and API risk."
+  default_prompt: "Use $security-review-agent to inspect suspected security risks in LAN access, auth, paths, uploads, APIs, WebSocket events, or logs."

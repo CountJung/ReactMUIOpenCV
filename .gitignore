@@ -58,6 +58,7 @@ uploads/
 results/
 outputs/
 *.log
+reference/
 
 # Environment files
 .env
