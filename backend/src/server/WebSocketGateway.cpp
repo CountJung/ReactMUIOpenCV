@@ -7,8 +7,51 @@
 
 namespace app {
 
-WebSocketGateway::WebSocketGateway(std::string host, int port, EventHub& event_hub, LogStore& log_store)
-    : host_(std::move(host)), port_(port), event_hub_(event_hub), log_store_(log_store), server_(port_, host_) {}
+namespace {
+
+std::string query_value(const std::string& uri, const std::string& name) {
+  const auto query_start = uri.find('?');
+  if (query_start == std::string::npos) {
+    return {};
+  }
+
+  const auto query = uri.substr(query_start + 1);
+  const auto key = name + "=";
+  std::size_t offset = 0;
+  while (offset < query.size()) {
+    const auto next = query.find('&', offset);
+    const auto part = query.substr(offset, next == std::string::npos ? std::string::npos : next - offset);
+    if (part.rfind(key, 0) == 0) {
+      return part.substr(key.size());
+    }
+    if (next == std::string::npos) {
+      break;
+    }
+    offset = next + 1;
+  }
+
+  return {};
+}
+
+bool is_loopback_ip(const std::string& remote_ip) {
+  return remote_ip == "127.0.0.1" || remote_ip == "::1" ||
+         remote_ip.rfind("::ffff:127.", 0) == 0 || remote_ip.empty();
+}
+
+}  // namespace
+
+WebSocketGateway::WebSocketGateway(
+    std::string host,
+    int port,
+    EventHub& event_hub,
+    LogStore& log_store,
+    RemoteAccessManager& remote_access)
+    : host_(std::move(host)),
+      port_(port),
+      event_hub_(event_hub),
+      log_store_(log_store),
+      remote_access_(remote_access),
+      server_(port_, host_) {}
 
 WebSocketGateway::~WebSocketGateway() {
   stop();
@@ -28,6 +71,20 @@ bool WebSocketGateway::start() {
           const ix::WebSocketMessagePtr& message) {
         if (message->type == ix::WebSocketMessageType::Open) {
           const auto remote_ip = connection_state ? connection_state->getRemoteIp() : "unknown";
+          if (!is_loopback_ip(remote_ip)) {
+            auto session_token = query_value(message->openInfo.uri, "sessionToken");
+            const auto header = message->openInfo.headers.find("X-Remote-Session");
+            if (session_token.empty() && header != message->openInfo.headers.end()) {
+              session_token = header->second;
+            }
+
+            if (!remote_access_.permission_for_session(remote_ip, session_token)) {
+              log_store_.append("warning", "Rejected unauthenticated WebSocket client from " + remote_ip);
+              web_socket.close(1008, "Remote WebSocket session is not authenticated.");
+              return;
+            }
+          }
+
           log_store_.append("info", "WebSocket client connected from " + remote_ip);
           web_socket.send(event_hub_.publish("backend.status.changed", {{"websocket", "connected"}}).dump());
           web_socket.send(api_ok({{"events", event_hub_.recent()}}).dump());
@@ -51,6 +108,7 @@ bool WebSocketGateway::start() {
 }
 
 void WebSocketGateway::stop() {
+  event_hub_.detach(&server_);
   if (started_) {
     server_.stop();
     started_ = false;

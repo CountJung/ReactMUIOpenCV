@@ -1,5 +1,6 @@
 #include "ApiServer.h"
 
+#include "../common/Constants.h"
 #include "../common/HttpUtils.h"
 #include "../common/Random.h"
 
@@ -7,6 +8,7 @@
 #include <filesystem>
 #include <opencv2/core/version.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <optional>
 #include <sstream>
 #include <vector>
 
@@ -39,6 +41,7 @@ ApiServer::ApiServer(
       video_service_(video_service),
       pipeline_store_(pipeline_store),
       static_root_(std::move(static_root)) {
+  server_.set_payload_max_length(kMaxApiPayloadBytes);
   register_routes();
   mount_static_files();
 }
@@ -49,6 +52,31 @@ bool ApiServer::listen() {
 }
 
 void ApiServer::register_routes() {
+  const auto is_loopback_or_control = [&](const httplib::Request& request, httplib::Response& response) {
+    if (is_loopback_request(request)) {
+      return true;
+    }
+
+    const auto permission = remote_access_.permission_for_session(request.remote_addr, request.get_header_value("X-Remote-Session"));
+    if (permission && *permission == "control") {
+      return true;
+    }
+
+    log_store_.append("warning", "Blocked unauthenticated remote control request from " + request.remote_addr);
+    send_error(response, "remote_control_forbidden", "Remote control requires an authenticated control session.", 403);
+    return false;
+  };
+
+  const auto is_loopback_only = [&](const httplib::Request& request, httplib::Response& response) {
+    if (is_loopback_request(request)) {
+      return true;
+    }
+
+    log_store_.append("warning", "Blocked desktop-only request from " + request.remote_addr);
+    send_error(response, "desktop_only", "This operation is only available from the desktop host.", 403);
+    return false;
+  };
+
   server_.Options(".*", [](const httplib::Request&, httplib::Response& response) {
     set_cors(response);
   });
@@ -87,6 +115,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Put("/api/settings", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     const auto body = parse_body(request);
     const auto next_mode = body.value("themeMode", std::string{"system"});
     const auto updated = settings_store_.update_theme_mode(next_mode);
@@ -99,11 +131,15 @@ void ApiServer::register_routes() {
     send_data(response, *updated);
   });
 
-  server_.Get("/api/remote/status", [&](const httplib::Request&, httplib::Response& response) {
-    send_data(response, remote_access_.status(port_));
+  server_.Get("/api/remote/status", [&](const httplib::Request& request, httplib::Response& response) {
+    send_data(response, remote_access_.status(port_, is_loopback_request(request)));
   });
 
-  server_.Post("/api/remote/enable", [&](const httplib::Request&, httplib::Response& response) {
+  server_.Post("/api/remote/enable", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_only(request, response)) {
+      return;
+    }
+
     auto body = remote_access_.enable(port_);
     body["message"] = remote_access_.lan_bound()
                           ? "LAN Web UI is enabled."
@@ -113,7 +149,11 @@ void ApiServer::register_routes() {
     send_data(response, body);
   });
 
-  server_.Post("/api/remote/disable", [&](const httplib::Request&, httplib::Response& response) {
+  server_.Post("/api/remote/disable", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_only(request, response)) {
+      return;
+    }
+
     auto body = remote_access_.disable(port_);
     body["message"] = "LAN Web UI is disabled and clients were disconnected.";
     event_hub_.publish("backend.status.changed", {{"remoteAccess", "disabled"}});
@@ -121,7 +161,11 @@ void ApiServer::register_routes() {
     send_data(response, body);
   });
 
-  server_.Post("/api/remote/rotate-token", [&](const httplib::Request&, httplib::Response& response) {
+  server_.Post("/api/remote/rotate-token", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_only(request, response)) {
+      return;
+    }
+
     auto body = remote_access_.rotate_token(port_);
     body["message"] = "Access token and PIN rotated. Existing remote clients were disconnected.";
     event_hub_.publish("remote.client.disconnected", {{"reason", "token_rotated"}});
@@ -129,11 +173,19 @@ void ApiServer::register_routes() {
     send_data(response, body);
   });
 
-  server_.Get("/api/remote/clients", [&](const httplib::Request&, httplib::Response& response) {
+  server_.Get("/api/remote/clients", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_only(request, response)) {
+      return;
+    }
+
     send_data(response, remote_access_.clients());
   });
 
-  server_.Post("/api/remote/disconnect-all", [&](const httplib::Request&, httplib::Response& response) {
+  server_.Post("/api/remote/disconnect-all", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_only(request, response)) {
+      return;
+    }
+
     const auto body = remote_access_.disconnect_all();
     event_hub_.publish("remote.client.disconnected", {{"reason", "disconnect_all"}});
     log_store_.append("warning", "All remote clients disconnected");
@@ -165,7 +217,11 @@ void ApiServer::register_routes() {
     send_error(response, "desktop_host_required", "Local file picker requires the Desktop Host.", 501);
   });
 
-  server_.Post("/api/files/upload", [&](const httplib::Request&, httplib::Response& response) {
+  server_.Post("/api/files/upload", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     send_data(response, {{"fileId", random_hex(12)}, {"status", "accepted"}, {"storage", "temp"}}, 202);
   });
 
@@ -174,6 +230,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Delete(R"(/api/files/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     send_data(response, {{"deleted", request.matches[1].str()}});
   });
 
@@ -203,6 +263,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Post("/api/images/upload", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     try {
       if (!request.is_multipart_form_data() || !request.form.has_file("file")) {
         send_error(response, "invalid_upload", "Upload a multipart image file named 'file'.", 400);
@@ -210,6 +274,11 @@ void ApiServer::register_routes() {
       }
 
       const auto file = request.form.get_file("file");
+      if (file.content.size() > kMaxImageUploadBytes) {
+        send_error(response, "image_upload_too_large", "Uploaded image exceeds the allowed size.", 413);
+        return;
+      }
+
       const auto result = image_store_.upload(file.filename, file.content);
       event_hub_.publish("preview.image.updated", result);
       log_store_.append("info", "Uploaded image " + file.filename);
@@ -225,6 +294,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Post("/api/images/process", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     const auto body = parse_body(request);
     const auto result_id = body.value("resultId", std::string{});
     const auto operation = body.value("operation", std::string{});
@@ -248,6 +321,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Post("/api/images/save", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     const auto body = parse_body(request);
     const auto result_id = body.value("resultId", std::string{});
     const auto format = body.value("format", std::string{"png"});
@@ -322,6 +399,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Post("/api/videos/upload", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     try {
       if (!request.is_multipart_form_data() || !request.form.has_file("file")) {
         send_error(response, "invalid_upload", "Upload a multipart video file named 'file'.", 400);
@@ -329,6 +410,11 @@ void ApiServer::register_routes() {
       }
 
       const auto file = request.form.get_file("file");
+      if (file.content.size() > kMaxVideoUploadBytes) {
+        send_error(response, "video_upload_too_large", "Uploaded video exceeds the allowed size.", 413);
+        return;
+      }
+
       const auto result = video_service_.upload(file.filename, file.content);
       event_hub_.publish("preview.frame.updated", result);
       log_store_.append("info", "Uploaded video " + file.filename);
@@ -344,6 +430,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Post("/api/videos/process", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     const auto body = parse_body(request);
     const auto video_id = body.value("videoId", std::string{});
     const auto filter = body.value("filter", std::string{"none"});
@@ -370,6 +460,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Post("/api/videos/export", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     const auto body = parse_body(request);
     const auto video_id = body.value("videoId", std::string{});
     const auto filter = body.value("filter", std::string{"none"});
@@ -401,6 +495,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Post("/api/videos/extract-frame", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     const auto body = parse_body(request);
     const auto video_id = body.value("videoId", std::string{});
     const auto frame_index = body.value("frameIndex", 0);
@@ -458,7 +556,11 @@ void ApiServer::register_routes() {
     send_data(response, *video);
   });
 
-  server_.Post("/api/pipelines/execute", [&](const httplib::Request&, httplib::Response& response) {
+  server_.Post("/api/pipelines/execute", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     const auto job = job_queue_.enqueue("pipeline", "Pipeline execution placeholder job.");
     event_hub_.publish("pipeline.node.started", {{"jobId", job["id"]}, {"nodeId", "placeholder"}});
     send_data(response, {{"job", job}}, 202);
@@ -469,14 +571,26 @@ void ApiServer::register_routes() {
   });
 
   server_.Post("/api/pipelines", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     send_data(response, pipeline_store_.create(parse_body(request)), 201);
   });
 
   server_.Put(R"(/api/pipelines/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     send_data(response, pipeline_store_.replace(request.matches[1].str(), parse_body(request)));
   });
 
   server_.Delete(R"(/api/pipelines/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     send_data(response, pipeline_store_.remove(request.matches[1].str()));
   });
 
@@ -494,6 +608,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Post(R"(/api/jobs/([A-Za-z0-9_-]+)/cancel)", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     if (!job_queue_.cancel(request.matches[1].str())) {
       send_error(response, "job_not_cancellable", "Job was not found or cannot be cancelled.", 404);
       return;
@@ -502,6 +620,10 @@ void ApiServer::register_routes() {
   });
 
   server_.Delete(R"(/api/jobs/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
     if (!job_queue_.remove(request.matches[1].str())) {
       send_error(response, "job_not_found", "Job was not found.", 404);
       return;

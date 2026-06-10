@@ -27,9 +27,9 @@ RemoteAccessManager::RemoteAccessManager(bool lan_bound, std::string bind_host, 
       access_token_(random_hex(32)),
       pin_(random_pin()) {}
 
-nlohmann::json RemoteAccessManager::status(int port) {
+nlohmann::json RemoteAccessManager::status(int port, bool include_credentials) {
   std::scoped_lock lock(mutex_);
-  return status_locked(port);
+  return status_locked(port, include_credentials);
 }
 
 nlohmann::json RemoteAccessManager::enable(int port) {
@@ -37,14 +37,14 @@ nlohmann::json RemoteAccessManager::enable(int port) {
   enabled_ = true;
   access_token_ = random_hex(32);
   pin_ = random_pin();
-  return status_locked(port);
+  return status_locked(port, true);
 }
 
 nlohmann::json RemoteAccessManager::disable(int port) {
   std::scoped_lock lock(mutex_);
   enabled_ = false;
   clients_.clear();
-  return status_locked(port);
+  return status_locked(port, true);
 }
 
 nlohmann::json RemoteAccessManager::rotate_token(int port) {
@@ -52,7 +52,7 @@ nlohmann::json RemoteAccessManager::rotate_token(int port) {
   access_token_ = random_hex(32);
   pin_ = random_pin();
   clients_.clear();
-  return status_locked(port);
+  return status_locked(port, true);
 }
 
 nlohmann::json RemoteAccessManager::clients() {
@@ -103,6 +103,25 @@ std::optional<nlohmann::json> RemoteAccessManager::authenticate(
   };
 }
 
+std::optional<std::string> RemoteAccessManager::permission_for_session(
+    const std::string& remote_addr,
+    const std::string& session_token) {
+  if (session_token.empty()) {
+    return std::nullopt;
+  }
+
+  std::scoped_lock lock(mutex_);
+  prune_expired_clients();
+
+  for (const auto& client : clients_) {
+    if (client.session_token == session_token && client.address == remote_addr) {
+      return client.permission;
+    }
+  }
+
+  return std::nullopt;
+}
+
 bool RemoteAccessManager::enabled() const {
   std::scoped_lock lock(mutex_);
   return enabled_;
@@ -132,7 +151,7 @@ void RemoteAccessManager::prune_expired_clients() {
       clients_.end());
 }
 
-nlohmann::json RemoteAccessManager::status_locked(int port) {
+nlohmann::json RemoteAccessManager::status_locked(int port, bool include_credentials) {
   prune_expired_clients();
   const std::string local_url = "http://127.0.0.1:" + std::to_string(port);
   const std::string lan_url = "http://" + selected_ip_ + ":" + std::to_string(port);
@@ -143,7 +162,7 @@ nlohmann::json RemoteAccessManager::status_locked(int port) {
     client_list.push_back(client_to_json(client));
   }
 
-  return {
+  auto status = nlohmann::json{
       {"enabled", enabled_},
       {"lanBound", lan_bound_},
       {"bindHost", bind_host_},
@@ -151,13 +170,15 @@ nlohmann::json RemoteAccessManager::status_locked(int port) {
       {"port", port},
       {"localUrl", local_url},
       {"lanUrl", lan_url},
-      {"connectionUrl", connection_url},
-      {"accessToken", access_token_},
-      {"pin", pin_},
+      {"connectionUrl", include_credentials ? connection_url : lan_url},
+      {"accessToken", include_credentials ? access_token_ : ""},
+      {"pin", include_credentials ? pin_ : ""},
       {"sessionTimeoutMinutes", kSessionTimeoutMinutes},
       {"defaultPermission", "read-only"},
       {"clients", client_list},
   };
+
+  return status;
 }
 
 }  // namespace app

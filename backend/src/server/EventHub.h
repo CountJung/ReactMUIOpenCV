@@ -12,6 +12,7 @@ namespace app {
 class EventHub {
  public:
   void attach(ix::WebSocketServer* server);
+  void detach(ix::WebSocketServer* server);
   nlohmann::json publish(const std::string& type, const nlohmann::json& payload);
   nlohmann::json recent() const;
 

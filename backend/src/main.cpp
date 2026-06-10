@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
   app::VideoService video_service;
   app::PipelineStore pipeline_store;
 
-  app::WebSocketGateway websocket_gateway(host, app::kDefaultWsPort, event_hub, log_store);
+  app::WebSocketGateway websocket_gateway(host, app::kDefaultWsPort, event_hub, log_store, remote_access);
   websocket_gateway.start();
 
   app::ApiServer api_server(

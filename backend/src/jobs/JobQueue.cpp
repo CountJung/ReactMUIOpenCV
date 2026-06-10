@@ -87,6 +87,11 @@ bool JobQueue::cancel(const std::string& id) {
 
 bool JobQueue::remove(const std::string& id) {
   std::scoped_lock lock(mutex_);
+  auto found = jobs_.find(id);
+  if (found == jobs_.end() || found->second.status == "running") {
+    return false;
+  }
+
   return jobs_.erase(id) > 0;
 }
 
@@ -104,7 +109,12 @@ void JobQueue::run() {
       job_id = pending_.front();
       pending_.pop();
 
-      auto& job = jobs_.at(job_id);
+      auto found = jobs_.find(job_id);
+      if (found == jobs_.end()) {
+        continue;
+      }
+
+      auto& job = found->second;
       if (job.status == "cancelled") {
         continue;
       }
@@ -119,7 +129,12 @@ void JobQueue::run() {
       std::this_thread::sleep_for(std::chrono::milliseconds(180));
 
       std::scoped_lock lock(mutex_);
-      auto& job = jobs_.at(job_id);
+      auto found = jobs_.find(job_id);
+      if (found == jobs_.end()) {
+        break;
+      }
+
+      auto& job = found->second;
       if (job.status == "cancelled") {
         break;
       }

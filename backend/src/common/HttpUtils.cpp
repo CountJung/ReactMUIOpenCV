@@ -11,9 +11,10 @@ nlohmann::json api_error(const std::string& code, const std::string& message) {
 }
 
 void set_cors(httplib::Response& response) {
-  response.set_header("Access-Control-Allow-Origin", "*");
+  response.set_header("Access-Control-Allow-Origin", "http://127.0.0.1:5173");
   response.set_header("Access-Control-Allow-Headers", "Content-Type, X-Remote-Session");
   response.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  response.set_header("Vary", "Origin");
 }
 
 void send_json(httplib::Response& response, const nlohmann::json& body, int status) {

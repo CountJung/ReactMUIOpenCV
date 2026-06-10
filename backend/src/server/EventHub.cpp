@@ -11,6 +11,13 @@ void EventHub::attach(ix::WebSocketServer* server) {
   websocket_server_ = server;
 }
 
+void EventHub::detach(ix::WebSocketServer* server) {
+  std::scoped_lock lock(mutex_);
+  if (websocket_server_ == server) {
+    websocket_server_ = nullptr;
+  }
+}
+
 nlohmann::json EventHub::publish(const std::string& type, const nlohmann::json& payload) {
   const nlohmann::json event = {
       {"id", random_hex(12)},

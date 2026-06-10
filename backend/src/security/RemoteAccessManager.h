@@ -25,13 +25,14 @@ class RemoteAccessManager {
  public:
   RemoteAccessManager(bool lan_bound, std::string bind_host, std::string selected_ip);
 
-  nlohmann::json status(int port);
+  nlohmann::json status(int port, bool include_credentials = true);
   nlohmann::json enable(int port);
   nlohmann::json disable(int port);
   nlohmann::json rotate_token(int port);
   nlohmann::json clients();
   nlohmann::json disconnect_all();
   std::optional<nlohmann::json> authenticate(const std::string& remote_addr, const std::string& token, const std::string& pin);
+  std::optional<std::string> permission_for_session(const std::string& remote_addr, const std::string& session_token);
 
   bool enabled() const;
   bool lan_bound() const;
@@ -40,7 +41,7 @@ class RemoteAccessManager {
 
  private:
   void prune_expired_clients();
-  nlohmann::json status_locked(int port);
+  nlohmann::json status_locked(int port, bool include_credentials);
 
   mutable std::mutex mutex_;
   bool lan_bound_ = false;

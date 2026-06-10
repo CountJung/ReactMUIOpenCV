@@ -9,7 +9,10 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `MasterPlan.md`: Product and architecture masterplan.
 - `TODO.md`: Phase-based execution checklist.
 - `AGENTS.md`: Agent operating rules for this repository.
-- `.agents/skills/`: Project-local Codex skills, including implementation guidance and sub-agent review roles for code warnings/errors, memory/resource leaks, security risk, and oversized source structure.
+- `.agents/skills/`: Project-local Codex skills, including implementation guidance, C++ backend reference practices, and sub-agent review roles for code warnings/errors, memory/resource leaks, security risk, and oversized source structure.
+- `.agents/skills/cpp/`: Project-installed copy of the root `reference/cpp-1.0.0` general C++ skill, including modern C++ and CMake templates.
+- `.agents/skills/cpp-opencv-backend/references/backend-cpp-practices.md`: Project-specific C++ backend practices for ownership boundaries, security defaults, OpenCV resources, WebView2 lifecycle, jobs/events, and structure thresholds.
+- `reference/`: Local reference skill packages staged before project installation; currently contains the source `cpp-1.0.0` skill and archive.
 - `ENVIRONMENT.md`: Local development and dependency setup guide.
 - `.gitignore`: Git upload exclusions for generated files, build output, dependencies, logs, runtime outputs, and env files.
 - `build.ps1`: Root Release build entrypoint. Ensures frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable plus WebView2 desktop app host when the SDK is available.
@@ -46,7 +49,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 
 ## Backend
 
-- `backend/CMakeLists.txt`: C++ executable and library linkage.
+- `backend/CMakeLists.txt`: C++ executable and library linkage, warning options, and CMake compile command export request for generators that support it.
 - `backend/CMakePresets.json`: Visual Studio 2026/MSVC x64 CMake presets with workspace-local vcpkg and system-package variants.
 - `backend/vcpkg.json`: C++ dependency manifest.
 - `backend/src/main.cpp`: Thin composition root. Parses launch args, constructs backend services, starts WebSocket and HTTP runtimes, and reports process status.

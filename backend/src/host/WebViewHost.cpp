@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <string>
 #include <thread>
+#include <utility>
 
 using Microsoft::WRL::Callback;
 using Microsoft::WRL::ComPtr;
@@ -19,10 +20,75 @@ constexpr wchar_t kHealthHost[] = L"127.0.0.1";
 constexpr wchar_t kHealthPath[] = L"/api/health";
 constexpr INTERNET_PORT kHealthPort = 18730;
 
+class WinHandle {
+ public:
+  WinHandle() = default;
+  explicit WinHandle(HANDLE handle) : handle_(handle) {}
+  ~WinHandle() { reset(); }
+
+  WinHandle(const WinHandle&) = delete;
+  WinHandle& operator=(const WinHandle&) = delete;
+
+  WinHandle(WinHandle&& other) noexcept : handle_(std::exchange(other.handle_, nullptr)) {}
+
+  WinHandle& operator=(WinHandle&& other) noexcept {
+    if (this != &other) {
+      reset(std::exchange(other.handle_, nullptr));
+    }
+    return *this;
+  }
+
+  HANDLE get() const { return handle_; }
+  explicit operator bool() const { return handle_ && handle_ != INVALID_HANDLE_VALUE; }
+
+  void reset(HANDLE handle = nullptr) {
+    if (*this) {
+      CloseHandle(handle_);
+    }
+    handle_ = handle;
+  }
+
+ private:
+  HANDLE handle_ = nullptr;
+};
+
+class WinHttpHandle {
+ public:
+  WinHttpHandle() = default;
+  explicit WinHttpHandle(HINTERNET handle) : handle_(handle) {}
+  ~WinHttpHandle() { reset(); }
+
+  WinHttpHandle(const WinHttpHandle&) = delete;
+  WinHttpHandle& operator=(const WinHttpHandle&) = delete;
+
+  WinHttpHandle(WinHttpHandle&& other) noexcept : handle_(std::exchange(other.handle_, nullptr)) {}
+
+  WinHttpHandle& operator=(WinHttpHandle&& other) noexcept {
+    if (this != &other) {
+      reset(std::exchange(other.handle_, nullptr));
+    }
+    return *this;
+  }
+
+  HINTERNET get() const { return handle_; }
+  explicit operator bool() const { return handle_ != nullptr; }
+
+  void reset(HINTERNET handle = nullptr) {
+    if (handle_) {
+      WinHttpCloseHandle(handle_);
+    }
+    handle_ = handle;
+  }
+
+ private:
+  HINTERNET handle_ = nullptr;
+};
+
 HWND g_window = nullptr;
 ComPtr<ICoreWebView2Controller> g_webview_controller;
 ComPtr<ICoreWebView2> g_webview;
-PROCESS_INFORMATION g_backend_process{};
+WinHandle g_backend_process;
+WinHandle g_backend_thread;
 bool g_started_backend = false;
 
 std::filesystem::path executable_dir() {
@@ -42,30 +108,26 @@ std::filesystem::path local_app_data_dir() {
 }
 
 bool health_check() {
-  HINTERNET session = WinHttpOpen(
-      L"ReactMUIOpenCVApp/1.0",
-      WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-      WINHTTP_NO_PROXY_NAME,
-      WINHTTP_NO_PROXY_BYPASS,
-      0);
+  WinHttpHandle session(WinHttpOpen(
+      L"ReactMUIOpenCVApp/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0));
   if (!session) {
     return false;
   }
 
-  HINTERNET connect = WinHttpConnect(session, kHealthHost, kHealthPort, 0);
+  WinHttpHandle connect(WinHttpConnect(session.get(), kHealthHost, kHealthPort, 0));
   if (!connect) {
-    WinHttpCloseHandle(session);
     return false;
   }
 
-  HINTERNET request = WinHttpOpenRequest(connect, L"GET", kHealthPath, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+  WinHttpHandle request(
+      WinHttpOpenRequest(connect.get(), L"GET", kHealthPath, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0));
   bool ok = false;
-  if (request && WinHttpSendRequest(request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
-      WinHttpReceiveResponse(request, nullptr)) {
+  if (request && WinHttpSendRequest(request.get(), WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
+      WinHttpReceiveResponse(request.get(), nullptr)) {
     DWORD status_code = 0;
     DWORD status_size = sizeof(status_code);
     if (WinHttpQueryHeaders(
-            request,
+            request.get(),
             WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
             WINHTTP_HEADER_NAME_BY_INDEX,
             &status_code,
@@ -75,11 +137,6 @@ bool health_check() {
     }
   }
 
-  if (request) {
-    WinHttpCloseHandle(request);
-  }
-  WinHttpCloseHandle(connect);
-  WinHttpCloseHandle(session);
   return ok;
 }
 
@@ -94,6 +151,8 @@ bool wait_for_backend() {
   return false;
 }
 
+void shutdown_backend();
+
 bool start_backend_if_needed() {
   if (health_check()) {
     return true;
@@ -107,6 +166,7 @@ bool start_backend_if_needed() {
 
   STARTUPINFOW startup_info{};
   startup_info.cb = sizeof(startup_info);
+  PROCESS_INFORMATION process_info{};
   std::wstring command_line = L"\"" + backend_exe.wstring() + L"\"";
   auto mutable_command_line = command_line;
 
@@ -120,14 +180,17 @@ bool start_backend_if_needed() {
           nullptr,
           executable_dir().c_str(),
           &startup_info,
-          &g_backend_process)) {
+          &process_info)) {
     MessageBoxW(g_window, L"Failed to start the local backend server.", kAppTitle, MB_ICONERROR);
     return false;
   }
 
+  g_backend_process.reset(process_info.hProcess);
+  g_backend_thread.reset(process_info.hThread);
   g_started_backend = true;
   if (!wait_for_backend()) {
     MessageBoxW(g_window, L"The local backend server did not become ready.", kAppTitle, MB_ICONERROR);
+    shutdown_backend();
     return false;
   }
 
@@ -181,15 +244,16 @@ void initialize_webview() {
 }
 
 void shutdown_backend() {
-  if (g_started_backend && g_backend_process.hProcess) {
-    TerminateProcess(g_backend_process.hProcess, 0);
+  if (g_started_backend && g_backend_process) {
+    const auto wait_result = WaitForSingleObject(g_backend_process.get(), 1500);
+    if (wait_result == WAIT_TIMEOUT) {
+      TerminateProcess(g_backend_process.get(), 0);
+      WaitForSingleObject(g_backend_process.get(), 1500);
+    }
   }
-  if (g_backend_process.hThread) {
-    CloseHandle(g_backend_process.hThread);
-  }
-  if (g_backend_process.hProcess) {
-    CloseHandle(g_backend_process.hProcess);
-  }
+  g_backend_thread.reset();
+  g_backend_process.reset();
+  g_started_backend = false;
 }
 
 LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {

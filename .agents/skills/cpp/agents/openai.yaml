@@ -1,0 +1,4 @@
+interface:
+  display_name: "C++"
+  short_description: "Modern C++ idioms, RAII, STL, concurrency, error handling, and CMake patterns."
+  default_prompt: "Use $cpp for modern C++ guidance on RAII, smart pointers, move semantics, STL algorithms, concurrency, error handling, templates, and CMake setup."

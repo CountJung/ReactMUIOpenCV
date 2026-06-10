@@ -10,17 +10,19 @@ Use this skill to keep the backend responsible for serving the React app, exposi
 ## Workflow
 
 1. Read `AGENTS.md`, `TODO.md`, and the backend sections in `MasterPlan.md`.
-2. Place code under the planned folders:
+2. Use the project-local `$cpp` skill for general modern C++ guidance such as RAII, smart pointers, STL algorithms, move semantics, concurrency, and CMake idioms.
+3. When editing backend C++ behavior, consult `references/backend-cpp-practices.md` for project-specific security, ownership, OpenCV, job, and WebView2 rules.
+4. Place code under the planned folders:
    - `host` for Desktop/WebView2/tray host code.
    - `server` for static files, REST, WebSocket, network info, and remote access.
    - `security` for tokens, PIN auth, sessions, and clients.
    - `image`, `video`, and `vision` for OpenCV work.
    - `jobs` for long-running processing.
    - `storage`, `logging`, and `common` for shared infrastructure.
-3. Keep `backend/src/main.cpp` as a thin composition root only. It may parse args, construct classes, wire dependencies, start runtime servers, and return process status.
-4. Put each durable backend responsibility in a named class with matching `.h`/`.cpp` files under its ownership folder. Do not add new backend behavior directly to `main.cpp`.
-5. Keep inheritance, interface, and ownership references visible in the owning header when they are introduced, so class relationships are easy to inspect.
-6. Keep route handlers thin. Put processing, security, and storage logic in services.
+5. Keep `backend/src/main.cpp` as a thin composition root only. It may parse args, construct classes, wire dependencies, start runtime servers, and return process status.
+6. Put each durable backend responsibility in a named class with matching `.h`/`.cpp` files under its ownership folder. Do not add new backend behavior directly to `main.cpp`.
+7. Keep inheritance, interface, and ownership references visible in the owning header when they are introduced, so class relationships are easy to inspect.
+8. Keep route handlers thin. Put processing, security, and storage logic in services.
 
 ## API And Events
 
@@ -47,6 +49,8 @@ Use this skill to keep the backend responsible for serving the React app, exposi
 - Bind to `0.0.0.0` only after explicit user enable.
 - Require PIN or temporary token auth for LAN clients and apply session timeout.
 - Default remote clients to read-only mode.
+- Hide PINs, access tokens, session tokens, and sensitive local paths from non-loopback clients.
+- Require an authenticated control session for non-loopback mutating requests.
 
 ## Verification
 
