@@ -70,18 +70,18 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 
 ## Phase 7 - Dashboard And Showcase
 
-- [ ] Build dashboard cards for backend status, active jobs, remote clients, recent logs, and recent results.
-- [ ] Add chart showcase for processing statistics.
-- [ ] Add data grid for job history and file/result library views.
-- [ ] Keep all dashboard state server-owned where multiple clients must agree.
+- [x] Build dashboard cards for backend status, active jobs, remote clients, recent logs, and recent results.
+- [x] Add chart showcase for processing statistics.
+- [x] Add data grid for job history and file/result library views.
+- [x] Keep all dashboard state server-owned where multiple clients must agree.
 
 ## Phase 8 - Packaging And Template
 
 - [x] Automate frontend build and copy into backend static assets.
 - [x] Automate backend build and package output.
 - [x] Publish an external web-server-ready portable install bundle under `/publish`.
-- [ ] Check WebView2 Runtime availability.
-- [ ] Add user-facing firewall guidance for LAN Web UI Mode.
+- [x] Check WebView2 Runtime availability.
+- [x] Add user-facing firewall guidance for LAN Web UI Mode.
 - [x] Document LAN usage and developer extension points.
 
 ## Phase 9 - LearnOpenCV Example Backlog

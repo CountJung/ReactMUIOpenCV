@@ -1,5 +1,6 @@
 #include <WebView2.h>
 #include <Windows.h>
+#include <shellapi.h>
 #include <WinHttp.h>
 #include <wrl.h>
 
@@ -17,6 +18,7 @@ namespace {
 
 constexpr wchar_t kAppTitle[] = L"ReactMUIOpenCV";
 constexpr wchar_t kLocalUrl[] = L"http://127.0.0.1:18730";
+constexpr wchar_t kWebView2RuntimeUrl[] = L"https://developer.microsoft.com/microsoft-edge/webview2/";
 constexpr wchar_t kHealthHost[] = L"127.0.0.1";
 constexpr wchar_t kHealthPath[] = L"/api/health";
 constexpr wchar_t kWindowStateFile[] = L"window-state.ini";
@@ -256,6 +258,28 @@ bool health_check() {
   return ok;
 }
 
+bool ensure_webview2_runtime_available() {
+  wchar_t* version_info = nullptr;
+  const HRESULT result = GetAvailableCoreWebView2BrowserVersionString(nullptr, &version_info);
+  if (SUCCEEDED(result) && version_info != nullptr) {
+    CoTaskMemFree(version_info);
+    return true;
+  }
+
+  const int choice = MessageBoxW(
+      g_window,
+      L"Microsoft Edge WebView2 Runtime is required to run the ReactMUIOpenCV desktop app.\n\n"
+      L"Install or repair the WebView2 Runtime, then start the app again.\n\n"
+      L"Open the WebView2 download page now?",
+      kAppTitle,
+      MB_ICONERROR | MB_YESNO);
+  if (choice == IDYES) {
+    ShellExecuteW(nullptr, L"open", kWebView2RuntimeUrl, nullptr, nullptr, SW_SHOWNORMAL);
+  }
+
+  return false;
+}
+
 bool wait_for_backend() {
   for (int attempt = 0; attempt < 50; ++attempt) {
     if (health_check()) {
@@ -433,6 +457,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
   UpdateWindow(g_window);
 
   if (!start_backend_if_needed()) {
+    return 1;
+  }
+
+  if (!ensure_webview2_runtime_available()) {
+    shutdown_backend();
     return 1;
   }
 

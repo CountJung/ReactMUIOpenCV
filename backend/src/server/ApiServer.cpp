@@ -657,6 +657,26 @@ void ApiServer::register_routes() {
 void ApiServer::mount_static_files() {
   if (std::filesystem::exists(static_root_)) {
     server_.set_mount_point("/", static_root_.string());
+    server_.set_error_handler([static_root = static_root_](const httplib::Request& request, httplib::Response& response) {
+      if (request.method != "GET" || request.path.rfind("/api", 0) == 0) {
+        response.status = 404;
+        response.set_content("Not found", "text/plain");
+        return;
+      }
+
+      const auto index_file = static_root / "index.html";
+      std::ifstream file(index_file, std::ios::binary);
+      if (!file) {
+        response.status = 404;
+        response.set_content("React UI index.html was not found.", "text/plain");
+        return;
+      }
+
+      std::ostringstream buffer;
+      buffer << file.rdbuf();
+      response.status = 200;
+      response.set_content(buffer.str(), "text/html");
+    });
   } else {
     server_.Get("/", [](const httplib::Request&, httplib::Response& response) {
       response.set_content(

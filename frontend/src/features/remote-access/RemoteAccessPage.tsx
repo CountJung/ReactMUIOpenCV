@@ -111,6 +111,12 @@ export function RemoteAccessPage() {
             to accept other devices on the LAN.
           </Alert>
         )}
+        {status?.enabled && (
+          <Alert severity="info">
+            Windows Firewall may ask for permission when LAN Web UI Mode is used. Allow access only on trusted private
+            networks, and keep public network access blocked.
+          </Alert>
+        )}
 
         <Grid container spacing={2}>
           <Grid item xs={12} lg={7}>

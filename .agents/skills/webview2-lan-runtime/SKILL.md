@@ -1,6 +1,6 @@
 ---
 name: webview2-lan-runtime
-description: Runtime guidance for WebView2 desktop hosting and LAN browser access in this project. Use when Codex implements or changes WebView2 startup, local server URL policy, 127.0.0.1 vs 0.0.0.0 binding, LAN IP discovery, QR connection URLs, remote access enable/disable flows, connected-client tracking, PIN/token sessions, firewall guidance, or frontend runtime adapters for Desktop vs LAN behavior.
+description: Runtime guidance for WebView2 desktop hosting and LAN browser access in this project. Use when Codex implements or changes WebView2 startup, local server URL policy, 127.0.0.1 vs 0.0.0.0 binding, LAN IP discovery, QR connection URLs, remote access enable/disable flows, connected-client tracking, PIN/token sessions, firewall guidance, browser verification fallback, or frontend runtime adapters for Desktop vs LAN behavior.
 ---
 
 # WebView2 LAN Runtime
@@ -45,6 +45,7 @@ Use this skill when work touches how the same React UI runs inside the Windows W
 
 - Verify the WebView2 app host executable builds when WebView2 SDK is available.
 - Verify web mode still serves the same React UI in a browser.
+- Prefer the Browser plugin's `iab` session for internal browser checks when it is advertised. If `agent.browsers.get("iab")` is unavailable, use `mcp__playwright` browser tools to navigate localhost routes, inspect page state, resize viewports, and capture verification evidence before using an external browser.
 - Verify desktop mode binds only to `127.0.0.1`.
 - Verify LAN mode requires auth before UI control.
 - Verify read-only clients cannot start jobs, change settings, delete files, or access arbitrary paths.

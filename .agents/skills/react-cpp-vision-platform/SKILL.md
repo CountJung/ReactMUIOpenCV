@@ -64,3 +64,4 @@ Delegate narrow review/fix work when these conditions are discovered during the 
 - Verify the relevant frontend build, typecheck, or lint command when available.
 - Verify CMake configure/build/tests when backend files exist.
 - For cross-stack work, verify at least `/api/health`, the corresponding frontend API call, and WebSocket behavior if events are involved.
+- For UI/browser verification, use the Browser plugin's `iab` session when available; when `iab` is not advertised, use `mcp__playwright` as the internal-browser fallback.

@@ -91,6 +91,7 @@ if (-not (Test-Path $exe)) {
 }
 
 Write-Warning "LAN mode binds the backend to 0.0.0.0. Use it only on trusted networks."
+Write-Warning "If Windows Firewall prompts, allow private networks only and keep public network access blocked."
 Start-Process -FilePath $exe -ArgumentList "--lan" -WorkingDirectory $root
 Start-Sleep -Seconds 2
 Start-Process "http://127.0.0.1:18730/remote-access"

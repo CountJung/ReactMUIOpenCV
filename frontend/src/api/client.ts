@@ -46,3 +46,15 @@ export async function getHealth() {
     opencvVersion?: string;
   }>('/api/health');
 }
+
+export type ServerInfo = {
+  service: string;
+  httpUrl: string;
+  wsUrl: string;
+  staticRoot: string;
+  lanMode: boolean;
+};
+
+export function getServerInfo() {
+  return apiRequest<ServerInfo>('/api/server-info');
+}

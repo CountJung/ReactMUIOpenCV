@@ -72,4 +72,5 @@ When the main agent discovers one of the following conditions while working, del
 - For Release build changes, run `.\build.ps1`.
 - For publish workflow changes, run `scripts/publish.ps1` and verify the generated bundle can serve `/api/health` and the React UI.
 - For UI changes, verify both desktop-sized and mobile-sized layouts.
+- When the Browser plugin cannot expose an in-app browser through `agent.browsers.get("iab")`, use the `mcp__playwright` browser tools as the internal-browser fallback for localhost/UI verification before falling back to an external browser.
 - For LAN or security changes, verify binding mode, authentication, permission checks, and path traversal protections.

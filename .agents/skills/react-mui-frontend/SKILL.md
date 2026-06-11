@@ -1,6 +1,6 @@
 ---
 name: react-mui-frontend
-description: Frontend implementation guidance for this project's React + Vite + TypeScript + MUI UI. Use when Codex edits TS/TSX frontend files, creates routes or app shell UI, implements the MUI theme system, API clients, runtime adapters, WebSocket clients, TanStack Query sync, React Flow screens, responsive desktop/tablet/mobile layouts, or feature pages such as Dashboard, Remote Access, Image Lab, Video Lab, Logs, Settings, Charts, or Data Grid.
+description: Frontend implementation guidance for this project's React + Vite + TypeScript + MUI UI. Use when Codex edits TS/TSX frontend files, creates routes or app shell UI, implements the MUI theme system, API clients, runtime adapters, WebSocket clients, TanStack Query sync, React Flow screens, responsive desktop/tablet/mobile layouts, browser verification, or feature pages such as Dashboard, Remote Access, Image Lab, Video Lab, Logs, Settings, Charts, or Data Grid.
 ---
 
 # React MUI Frontend
@@ -47,4 +47,5 @@ Use this skill to build the shared UI that runs both inside WebView2 and in LAN 
 
 - Run available `package.json` lint, typecheck, test, or build scripts after meaningful edits.
 - Visually verify desktop and mobile breakpoints for UI work.
+- Prefer the Browser plugin's in-app browser when available. If `agent.browsers.get("iab")` reports `Browser is not available: iab`, use `mcp__playwright` browser tools as the internal-browser fallback for localhost UI checks.
 - Confirm text fits controls and no panels overlap.

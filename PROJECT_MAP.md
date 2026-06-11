@@ -43,7 +43,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `frontend/src/app/providers.tsx`: Global providers such as TanStack Query and theme.
 - `frontend/src/app/router.tsx`: React Router route tree.
 - `frontend/src/theme/`: MUI theme tokens, component overrides, mode resolution, theme context, and theme provider.
-- `frontend/src/api/`: REST and WebSocket client code. `remoteApi.ts` owns Remote Access and Network Info calls; `imageApi.ts` owns Image Lab open/upload/process/save/result calls; `videoApi.ts` owns Video Lab open/upload/frame/extract/export calls; `pipelineApi.ts` owns Phase 6 pipeline document, CRUD, execution, and execution result types.
+- `frontend/src/api/`: REST and WebSocket client code. `remoteApi.ts` owns Remote Access and Network Info calls; `imageApi.ts` owns Image Lab open/upload/process/save/result calls; `videoApi.ts` owns Video Lab open/upload/frame/extract/export calls; `pipelineApi.ts` owns Phase 6 pipeline document, CRUD, execution, and execution result types; `jobsApi.ts`, `logsApi.ts`, and `filesApi.ts` feed Dashboard, Charts, Logs, and Data Grid state.
 - `frontend/src/runtime/`: Desktop vs LAN runtime detection and adapters. `fileAdapter.ts` hides local-path vs upload image/video opening.
 - `frontend/src/features/`: Route-level pages for dashboard, remote access, image/video lab, pipeline, charts, data grid, logs, and settings.
 - `frontend/src/shared/`: Reusable layouts, components, hooks, utilities, and shared types.
@@ -54,7 +54,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/CMakePresets.json`: Visual Studio 2026/MSVC x64 CMake presets with workspace-local vcpkg and system-package variants.
 - `backend/vcpkg.json`: C++ dependency manifest.
 - `backend/src/main.cpp`: Thin composition root. Parses launch args, constructs backend services, starts WebSocket and HTTP runtimes, and reports process status.
-- `backend/src/host/WebViewHost.cpp`: Win32/WebView2 desktop app host. Starts the local backend server when needed and loads `http://127.0.0.1:18730` in an app window.
+- `backend/src/host/WebViewHost.cpp`: Win32/WebView2 desktop app host. Checks WebView2 Runtime availability, starts the local backend server when needed, remembers window placement, and loads `http://127.0.0.1:18730` in an app window.
 - `backend/src/common/`: Shared constants, random IDs/PINs, ISO time formatting, API envelopes, CORS, request parsing, and loopback detection.
 - `backend/src/server/ApiServer.*`: HTTP route registration, static React file serving from a resolved source-tree or bundled `frontend/dist`, and thin request/response translation over backend services.
 - `backend/src/server/WebSocketGateway.*`: WebSocket runtime setup, client lifecycle logging, event replay, and shutdown.
@@ -97,6 +97,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - Pipeline Flow UI/API flow: start at `frontend/src/features/pipeline-flow/PipelineFlowPage.tsx`, `frontend/src/api/pipelineApi.ts`, `backend/src/vision/PipelineExecutor.*`, and `docs/PIPELINE_SCHEMA.md`.
 - Video Lab UI/runtime flow: start at `frontend/src/features/video-lab/VideoLabPage.tsx`, `frontend/src/api/videoApi.ts`, and `frontend/src/runtime/fileAdapter.ts`.
 - Remote Access UI/API: start at `frontend/src/features/remote-access/RemoteAccessPage.tsx`, `frontend/src/api/remoteApi.ts`, and `backend/src/security/RemoteAccessManager.*`.
+- Dashboard/showcase tables and charts: start at `frontend/src/features/dashboard/DashboardPage.tsx`, `frontend/src/features/chart-showcase/ChartShowcasePage.tsx`, `frontend/src/features/data-grid/DataGridPage.tsx`, `frontend/src/api/jobsApi.ts`, `frontend/src/api/logsApi.ts`, and `frontend/src/api/filesApi.ts`.
 - Backend health/static server: start at `backend/src/server/ApiServer.cpp` and `backend/src/main.cpp`.
 - Backend WebSocket events: start at `backend/src/server/EventHub.*` and `backend/src/server/WebSocketGateway.*`.
 - Backend jobs/logs: start at `backend/src/jobs/JobQueue.*` and `backend/src/logging/LogStore.*`.
