@@ -1,7 +1,9 @@
 import DownloadIcon from '@mui/icons-material/Download';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import MovieFilterIcon from '@mui/icons-material/MovieFilter';
+import PauseIcon from '@mui/icons-material/Pause';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
   Alert,
@@ -66,37 +68,40 @@ function clampFrame(value: number, video?: VideoRecord | null) {
   return Math.min(Math.max(0, Math.round(value)), Math.max(0, (video?.frameCount ?? 1) - 1));
 }
 
-function FramePreview({ src }: { src?: string }) {
+function FramePreview({ src, label }: { src?: string; label: string }) {
   return (
-    <Box
-      sx={{
-        alignItems: 'center',
-        bgcolor: 'background.default',
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: 2,
-        display: 'flex',
-        justifyContent: 'center',
-        minHeight: { xs: 240, md: 460 },
-        overflow: 'hidden',
-      }}
-    >
-      {src ? (
-        <Box
-          component="img"
-          alt="Video frame preview"
-          src={src}
-          sx={{
-            display: 'block',
-            maxHeight: { xs: 320, md: 560 },
-            maxWidth: '100%',
-            objectFit: 'contain',
-          }}
-        />
-      ) : (
-        <Typography color="text.secondary">Open a video to inspect frames.</Typography>
-      )}
-    </Box>
+    <Stack spacing={1}>
+      <Typography variant="subtitle2">{label}</Typography>
+      <Box
+        sx={{
+          alignItems: 'center',
+          bgcolor: 'background.default',
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 2,
+          display: 'flex',
+          justifyContent: 'center',
+          minHeight: { xs: 220, md: 420 },
+          overflow: 'hidden',
+        }}
+      >
+        {src ? (
+          <Box
+            component="img"
+            alt={`${label} video frame preview`}
+            src={src}
+            sx={{
+              display: 'block',
+              maxHeight: { xs: 300, md: 520 },
+              maxWidth: '100%',
+              objectFit: 'contain',
+            }}
+          />
+        ) : (
+          <Typography color="text.secondary">Open a video to inspect frames.</Typography>
+        )}
+      </Box>
+    </Stack>
   );
 }
 
@@ -108,6 +113,8 @@ export function VideoLabPage() {
   const [frameIndex, setFrameIndex] = useState(0);
   const [filter, setFilter] = useState<VideoFilter>('none');
   const [cacheKey, setCacheKey] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackFps, setPlaybackFps] = useState(12);
   const [frameResult, setFrameResult] = useState<VideoFrameResult | null>(null);
   const [exportResult, setExportResult] = useState<VideoExportResult | null>(null);
 
@@ -132,10 +139,31 @@ export function VideoLabPage() {
   const activeVideo = videoQuery.data ?? currentVideo;
   const maxFrame = Math.max(0, (activeVideo?.frameCount ?? 1) - 1);
   const previewSrc = activeVideo ? videoFrameUrl(activeVideo.videoId, frameIndex, filter, cacheKey) : undefined;
+  const originalPreviewSrc = activeVideo ? videoFrameUrl(activeVideo.videoId, frameIndex, 'none', cacheKey) : undefined;
+
+  useEffect(() => {
+    if (!isPlaying || !activeVideo) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      setFrameIndex((currentFrame) => {
+        const nextFrame = currentFrame + 1;
+        if (nextFrame > maxFrame) {
+          setIsPlaying(false);
+          return maxFrame;
+        }
+        return nextFrame;
+      });
+    }, Math.max(33, 1000 / playbackFps));
+
+    return () => window.clearInterval(interval);
+  }, [activeVideo, isPlaying, maxFrame, playbackFps]);
 
   const resetForVideo = (video: VideoRecord) => {
     setCurrentVideo(video);
     setFrameIndex(0);
+    setIsPlaying(false);
     setFrameResult(null);
     setExportResult(null);
     setCacheKey(Date.now());
@@ -219,6 +247,7 @@ export function VideoLabPage() {
 
   const changeFrame = (_: Event, value: number | number[]) => {
     setFrameIndex(clampFrame(Array.isArray(value) ? value[0] : value, activeVideo));
+    setIsPlaying(false);
     setFrameResult(null);
   };
 
@@ -334,8 +363,35 @@ export function VideoLabPage() {
                       disabled={!activeVideo || busy}
                     />
                   </Stack>
+                  <Stack spacing={0.75}>
+                    <Stack direction="row" justifyContent="space-between" gap={1}>
+                      <Typography variant="body2" color="text.secondary">
+                        Playback rate
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {playbackFps} fps
+                      </Typography>
+                    </Stack>
+                    <Slider
+                      value={playbackFps}
+                      min={1}
+                      max={30}
+                      step={1}
+                      valueLabelDisplay="auto"
+                      onChange={(_, value) => setPlaybackFps(Array.isArray(value) ? value[0] : value)}
+                      disabled={!activeVideo}
+                    />
+                  </Stack>
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Button
+                      startIcon={isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+                      variant="contained"
+                      onClick={() => setIsPlaying((playing) => !playing)}
+                      disabled={!activeVideo}
+                    >
+                      {isPlaying ? 'Pause' : 'Play'}
+                    </Button>
                     <Button
                       startIcon={<MovieFilterIcon />}
                       onClick={() => processMutation.mutate()}
@@ -396,8 +452,21 @@ export function VideoLabPage() {
         <Card>
           <CardContent>
             <Stack spacing={1.5}>
-              <Typography variant="h6">Preview</Typography>
-              <FramePreview src={previewSrc} />
+              <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+                <Typography variant="h6">Playback Preview</Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Chip label={isPlaying ? 'Playing' : 'Paused'} size="small" color={isPlaying ? 'success' : 'default'} />
+                  <Chip label={`${filter} conversion`} size="small" variant="outlined" />
+                </Stack>
+              </Stack>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <FramePreview src={originalPreviewSrc} label="Original" />
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <FramePreview src={previewSrc} label={filter === 'none' ? 'Converted - Original' : `Converted - ${filter}`} />
+                </Grid>
+              </Grid>
             </Stack>
           </CardContent>
         </Card>

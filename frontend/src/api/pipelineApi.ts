@@ -23,7 +23,7 @@ export type PipelineDocument = {
     position: XYPosition;
     data: PipelineNodeData;
   }>;
-  edges: Array<Pick<Edge, 'id' | 'source' | 'target'>>;
+  edges: Array<Pick<Edge, 'id' | 'source' | 'target' | 'sourceHandle' | 'targetHandle'>>;
 };
 
 export type PipelineRecord = {

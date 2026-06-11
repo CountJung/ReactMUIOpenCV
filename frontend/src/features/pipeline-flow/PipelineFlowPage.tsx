@@ -32,6 +32,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   addEdge,
+  ConnectionMode,
   useEdgesState,
   useNodesState,
   type Connection,
@@ -100,8 +101,20 @@ function defaultDocument(resultId = ''): PipelineDocument {
       },
     ],
     edges: [
-      { id: 'input-1-operation-1', source: 'input-1', target: 'operation-1' },
-      { id: 'operation-1-output-1', source: 'operation-1', target: 'output-1' },
+      {
+        id: 'input-1-operation-1',
+        source: 'input-1',
+        target: 'operation-1',
+        sourceHandle: 'right-source',
+        targetHandle: 'left-source',
+      },
+      {
+        id: 'operation-1-output-1',
+        source: 'operation-1',
+        target: 'output-1',
+        sourceHandle: 'right-source',
+        targetHandle: 'left-source',
+      },
     ],
   };
 }
@@ -120,6 +133,8 @@ function toDocument(name: string, nodes: PipelineFlowNode[], edges: Edge[]): Pip
       id: edge.id,
       source: edge.source,
       target: edge.target,
+      sourceHandle: edge.sourceHandle,
+      targetHandle: edge.targetHandle,
     })),
   };
 }
@@ -128,7 +143,39 @@ function mutationErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Pipeline operation failed.';
 }
 
-function PipelineNodeCard({ data }: NodeProps<PipelineFlowDisplayNode>) {
+const handlePoints: Array<{
+  id: string;
+  position: Position;
+  style: Record<string, number | string>;
+}> = [
+  { id: 'top-left', position: Position.Top, style: { left: 24 } },
+  { id: 'top', position: Position.Top, style: { left: '50%' } },
+  { id: 'top-right', position: Position.Top, style: { left: 'calc(100% - 24px)' } },
+  { id: 'right', position: Position.Right, style: { top: '50%' } },
+  { id: 'bottom-right', position: Position.Bottom, style: { left: 'calc(100% - 24px)' } },
+  { id: 'bottom', position: Position.Bottom, style: { left: '50%' } },
+  { id: 'bottom-left', position: Position.Bottom, style: { left: 24 } },
+  { id: 'left', position: Position.Left, style: { top: '50%' } },
+];
+
+function ConnectionHandles({ isConnectable }: { isConnectable: boolean }) {
+  return (
+    <>
+      {handlePoints.map((point) => (
+        <Handle
+          key={`${point.id}-source`}
+          id={`${point.id}-source`}
+          type="source"
+          position={point.position}
+          isConnectable={isConnectable}
+          style={point.style}
+        />
+      ))}
+    </>
+  );
+}
+
+function PipelineNodeCard({ data, isConnectable }: NodeProps<PipelineFlowDisplayNode>) {
   const nodeType = data.pipelineType;
   const tone = nodeType === 'imageInput' ? 'primary' : nodeType === 'output' ? 'success' : 'secondary';
   return (
@@ -142,9 +189,10 @@ function PipelineNodeCard({ data }: NodeProps<PipelineFlowDisplayNode>) {
         boxShadow: 1,
         minWidth: 172,
         p: 1.25,
+        position: 'relative',
       }}
     >
-      {nodeType !== 'imageInput' && <Handle type="target" position={Position.Left} />}
+      <ConnectionHandles isConnectable={isConnectable} />
       <Stack spacing={0.75}>
         <Chip label={nodeType} size="small" color={tone} variant="outlined" sx={{ alignSelf: 'flex-start' }} />
         <Typography variant="subtitle2">{data.label}</Typography>
@@ -159,7 +207,6 @@ function PipelineNodeCard({ data }: NodeProps<PipelineFlowDisplayNode>) {
           </Typography>
         )}
       </Stack>
-      {nodeType !== 'output' && <Handle type="source" position={Position.Right} />}
     </Box>
   );
 }
@@ -248,7 +295,13 @@ function PipelineFlowWorkspace() {
   );
 
   const onConnect = (connection: Connection) => {
-    setEdges((currentEdges) => addEdge({ ...connection, id: `${connection.source}-${connection.target}` }, currentEdges));
+    const id = [
+      connection.source,
+      connection.sourceHandle ?? 'source',
+      connection.target,
+      connection.targetHandle ?? 'target',
+    ].join('-');
+    setEdges((currentEdges) => addEdge({ ...connection, id }, currentEdges));
   };
 
   const updateNodeData = (nodeId: string, data: Partial<PipelineNodeData>) => {
@@ -300,8 +353,18 @@ function PipelineFlowWorkspace() {
     setNodes((currentNodes) => [...currentNodes, nextNode]);
     setEdges((currentEdges) => [
       ...currentEdges.filter((edge) => edge.id !== beforeOutput?.id),
-      { id: `${source}-${nodeId}`, source, target: nodeId },
-      ...(output ? [{ id: `${nodeId}-${output.id}`, source: nodeId, target: output.id }] : []),
+      { id: `${source}-${nodeId}`, source, target: nodeId, sourceHandle: 'right-source', targetHandle: 'left-source' },
+      ...(output
+        ? [
+            {
+              id: `${nodeId}-${output.id}`,
+              source: nodeId,
+              target: output.id,
+              sourceHandle: 'right-source',
+              targetHandle: 'left-source',
+            },
+          ]
+        : []),
     ]);
     setSelectedNodeId(nodeId);
   };
@@ -317,7 +380,16 @@ function PipelineFlowWorkspace() {
     setEdges((currentEdges) => {
       const remaining = currentEdges.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id);
       if (incoming && outgoing) {
-        return [...remaining, { id: `${incoming.source}-${outgoing.target}`, source: incoming.source, target: outgoing.target }];
+        return [
+          ...remaining,
+          {
+            id: `${incoming.source}-${outgoing.target}`,
+            source: incoming.source,
+            target: outgoing.target,
+            sourceHandle: incoming.sourceHandle,
+            targetHandle: outgoing.targetHandle,
+          },
+        ];
       }
       return remaining;
     });
@@ -410,6 +482,15 @@ function PipelineFlowWorkspace() {
                     '& .react-flow__handle': {
                       bgcolor: 'background.paper',
                       borderColor: 'text.secondary',
+                      height: 9,
+                      width: 9,
+                    },
+                    '& .react-flow__handle-source': {
+                      bgcolor: 'primary.main',
+                      borderColor: 'background.paper',
+                    },
+                    '& .react-flow__handle-connecting, & .react-flow__handle-valid': {
+                      bgcolor: 'success.main',
                     },
                     '& .react-flow__controls': {
                       bgcolor: 'background.paper !important',
@@ -457,6 +538,7 @@ function PipelineFlowWorkspace() {
                     onNodeClick={(_, node) => setSelectedNodeId(node.id)}
                     nodesDraggable={!isMobile}
                     nodesConnectable={!isMobile}
+                    connectionMode={ConnectionMode.Loose}
                     colorMode={theme.palette.mode}
                     fitView
                     fitViewOptions={{ padding: 0.25 }}
@@ -530,6 +612,9 @@ function PipelineFlowWorkspace() {
                         Remove
                       </Button>
                     </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      Connect visible node dots from any side, including top and bottom corner points.
+                    </Typography>
                     <Divider />
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} flexWrap="wrap">
                       <FormControlLabel
