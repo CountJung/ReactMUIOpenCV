@@ -1,9 +1,11 @@
 import DownloadIcon from '@mui/icons-material/Download';
+import DeleteIcon from '@mui/icons-material/Delete';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 import PauseIcon from '@mui/icons-material/Pause';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import UndoIcon from '@mui/icons-material/Undo';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
   Alert,
@@ -25,6 +27,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import {
   exportVideo,
   extractVideoFrame,
+  deleteVideo,
   getVideo,
   getVideos,
   processVideo,
@@ -68,7 +71,17 @@ function clampFrame(value: number, video?: VideoRecord | null) {
   return Math.min(Math.max(0, Math.round(value)), Math.max(0, (video?.frameCount ?? 1) - 1));
 }
 
-function FramePreview({ src, label }: { src?: string; label: string }) {
+function FramePreview({
+  src,
+  label,
+  onLoad,
+  onError,
+}: {
+  src?: string;
+  label: string;
+  onLoad?: () => void;
+  onError?: () => void;
+}) {
   return (
     <Stack spacing={1}>
       <Typography variant="subtitle2">{label}</Typography>
@@ -87,9 +100,12 @@ function FramePreview({ src, label }: { src?: string; label: string }) {
       >
         {src ? (
           <Box
+            key={src}
             component="img"
             alt={`${label} video frame preview`}
             src={src}
+            onLoad={onLoad}
+            onError={onError}
             sx={{
               display: 'block',
               maxHeight: { xs: 300, md: 520 },
@@ -115,6 +131,8 @@ export function VideoLabPage() {
   const [cacheKey, setCacheKey] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackFps, setPlaybackFps] = useState(12);
+  const [loadedFrameKey, setLoadedFrameKey] = useState('');
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [frameResult, setFrameResult] = useState<VideoFrameResult | null>(null);
   const [exportResult, setExportResult] = useState<VideoExportResult | null>(null);
 
@@ -140,13 +158,18 @@ export function VideoLabPage() {
   const maxFrame = Math.max(0, (activeVideo?.frameCount ?? 1) - 1);
   const previewSrc = activeVideo ? videoFrameUrl(activeVideo.videoId, frameIndex, filter, cacheKey) : undefined;
   const originalPreviewSrc = activeVideo ? videoFrameUrl(activeVideo.videoId, frameIndex, 'none', cacheKey) : undefined;
+  const convertedFrameKey = activeVideo ? `${activeVideo.videoId}:${frameIndex}:${filter}:${cacheKey}` : '';
 
   useEffect(() => {
     if (!isPlaying || !activeVideo) {
       return undefined;
     }
 
-    const interval = window.setInterval(() => {
+    if (loadedFrameKey !== convertedFrameKey) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
       setFrameIndex((currentFrame) => {
         const nextFrame = currentFrame + 1;
         if (nextFrame > maxFrame) {
@@ -155,15 +178,17 @@ export function VideoLabPage() {
         }
         return nextFrame;
       });
-    }, Math.max(33, 1000 / playbackFps));
+    }, Math.max(filter === 'none' ? 33 : 120, 1000 / playbackFps));
 
-    return () => window.clearInterval(interval);
-  }, [activeVideo, isPlaying, maxFrame, playbackFps]);
+    return () => window.clearTimeout(timer);
+  }, [activeVideo, convertedFrameKey, filter, isPlaying, loadedFrameKey, maxFrame, playbackFps]);
 
   const resetForVideo = (video: VideoRecord) => {
     setCurrentVideo(video);
     setFrameIndex(0);
     setIsPlaying(false);
+    setLoadedFrameKey('');
+    setPreviewError(null);
     setFrameResult(null);
     setExportResult(null);
     setCacheKey(Date.now());
@@ -227,28 +252,57 @@ export function VideoLabPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteVideo(activeVideo?.videoId ?? ''),
+    onSuccess: () => {
+      setCurrentVideo(null);
+      setFrameIndex(0);
+      setIsPlaying(false);
+      setLoadedFrameKey('');
+      setPreviewError(null);
+      setFrameResult(null);
+      setExportResult(null);
+      void queryClient.invalidateQueries({ queryKey: videosQueryKey });
+    },
+  });
+
   const busy =
     openLocalMutation.isPending ||
     uploadMutation.isPending ||
     processMutation.isPending ||
     extractMutation.isPending ||
-    exportMutation.isPending;
+    exportMutation.isPending ||
+    deleteMutation.isPending;
   const currentError =
     openLocalMutation.error ??
     uploadMutation.error ??
     processMutation.error ??
     extractMutation.error ??
-    exportMutation.error;
+    exportMutation.error ??
+    deleteMutation.error;
 
   const changeFilter = (event: ChangeEvent<HTMLInputElement>) => {
     setFilter(event.target.value as VideoFilter);
+    setLoadedFrameKey('');
+    setPreviewError(null);
     setCacheKey(Date.now());
   };
 
   const changeFrame = (_: Event, value: number | number[]) => {
     setFrameIndex(clampFrame(Array.isArray(value) ? value[0] : value, activeVideo));
     setIsPlaying(false);
+    setLoadedFrameKey('');
+    setPreviewError(null);
     setFrameResult(null);
+  };
+
+  const resetPlaybackView = () => {
+    setFrameIndex(0);
+    setFilter('none');
+    setIsPlaying(false);
+    setLoadedFrameKey('');
+    setPreviewError(null);
+    setCacheKey(Date.now());
   };
 
   return (
@@ -263,6 +317,7 @@ export function VideoLabPage() {
           <Alert severity="info">LAN clients can upload videos and inspect results without arbitrary local path access.</Alert>
         )}
         {currentError && <Alert severity="error">{mutationErrorMessage(currentError)}</Alert>}
+        {previewError && <Alert severity="warning">{previewError}</Alert>}
         {frameResult && <Alert severity="success">Frame saved to {frameResult.path}</Alert>}
         {exportResult && <Alert severity="success">Video exported to {exportResult.path}</Alert>}
 
@@ -285,6 +340,9 @@ export function VideoLabPage() {
                     size="small"
                   />
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Button startIcon={<UndoIcon />} variant="outlined" onClick={resetPlaybackView} disabled={!activeVideo}>
+                      Revert
+                    </Button>
                     <Button
                       startIcon={<FolderOpenIcon />}
                       onClick={() => openLocalMutation.mutate()}
@@ -427,6 +485,15 @@ export function VideoLabPage() {
                     >
                       Export
                     </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => deleteMutation.mutate()}
+                      disabled={!activeVideo || busy}
+                    >
+                      Delete
+                    </Button>
                   </Stack>
                   <Stack spacing={1} sx={{ maxHeight: 250, overflowY: 'auto', pr: 0.5 }}>
                     {(videosQuery.data?.videos ?? []).map((video) => (
@@ -464,7 +531,18 @@ export function VideoLabPage() {
                   <FramePreview src={originalPreviewSrc} label="Original" />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <FramePreview src={previewSrc} label={filter === 'none' ? 'Converted - Original' : `Converted - ${filter}`} />
+                  <FramePreview
+                    src={previewSrc}
+                    label={filter === 'none' ? 'Converted - Original' : `Converted - ${filter}`}
+                    onLoad={() => {
+                      setLoadedFrameKey(convertedFrameKey);
+                      setPreviewError(null);
+                    }}
+                    onError={() => {
+                      setIsPlaying(false);
+                      setPreviewError('Preview frame failed to load. Check the video source and selected filter.');
+                    }}
+                  />
                 </Grid>
               </Grid>
             </Stack>

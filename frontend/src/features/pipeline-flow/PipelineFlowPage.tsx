@@ -3,6 +3,7 @@ import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveIcon from '@mui/icons-material/Save';
+import UndoIcon from '@mui/icons-material/Undo';
 import {
   Alert,
   Box,
@@ -42,10 +43,11 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useCallback, useMemo, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { absoluteImageUrl, getImageResults, type ImageOperation } from '../../api/imageApi';
 import {
   createPipeline,
+  deletePipeline,
   executePipeline,
   getPipelines,
   updatePipeline,
@@ -64,6 +66,20 @@ type PipelineFlowDisplayData = PipelineNodeData & {
 };
 
 type PipelineFlowDisplayNode = Node<PipelineFlowDisplayData, 'pipelineNode'>;
+
+type PipelineSnapshot = {
+  pipelineId: string | null;
+  pipelineName: string;
+  selectedNodeId: string;
+  nodes: PipelineFlowNode[];
+  edges: Edge[];
+};
+
+const nodeKindOptions: Array<{ value: PipelineNodeType; label: string }> = [
+  { value: 'imageInput', label: 'Image Input' },
+  { value: 'operation', label: 'Operation' },
+  { value: 'output', label: 'Output' },
+];
 
 const operationOptions: Array<{ value: ImageOperation; label: string; defaultParams?: Record<string, unknown> }> = [
   { value: 'grayscale', label: 'Grayscale' },
@@ -141,6 +157,26 @@ function toDocument(name: string, nodes: PipelineFlowNode[], edges: Edge[]): Pip
 
 function mutationErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Pipeline operation failed.';
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return Boolean(target.closest('input, textarea, [contenteditable="true"]'));
+}
+
+function cloneNodes(nodes: PipelineFlowNode[]) {
+  return nodes.map((node) => ({
+    ...node,
+    position: { ...node.position },
+    data: { ...node.data, params: node.data.params ? { ...node.data.params } : undefined },
+  }));
+}
+
+function cloneEdges(edges: Edge[]) {
+  return edges.map((edge) => ({ ...edge }));
 }
 
 const handlePoints: Array<{
@@ -234,8 +270,19 @@ function PipelineFlowWorkspace() {
   const [showGrid, setShowGrid] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [showMiniMap, setShowMiniMap] = useState(false);
+  const [newNodeKind, setNewNodeKind] = useState<PipelineNodeType>('operation');
+  const [history, setHistory] = useState<PipelineSnapshot[]>([]);
+  const [selectedGraph, setSelectedGraph] = useState<{ nodeIds: string[]; edgeIds: string[] }>({
+    nodeIds: ['input-1'],
+    edgeIds: [],
+  });
   const [nodes, setNodes, onNodesChange] = useNodesState<PipelineFlowNode>(defaultDocument().nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(defaultDocument().edges);
+  const graphRef = useRef({ nodes, edges, pipelineId, pipelineName, selectedNodeId });
+
+  useEffect(() => {
+    graphRef.current = { nodes, edges, pipelineId, pipelineName, selectedNodeId };
+  }, [edges, nodes, pipelineId, pipelineName, selectedNodeId]);
 
   const pipelineQuery = useQuery({
     queryKey: pipelinesQueryKey,
@@ -285,7 +332,51 @@ function PipelineFlowWorkspace() {
     },
   });
 
-  const currentError = saveMutation.error ?? executeMutation.error;
+  const deleteSavedMutation = useMutation({
+    mutationFn: (id: string) => deletePipeline(id),
+    onSuccess: (_, deletedId) => {
+      if (pipelineId === deletedId) {
+        resetPipeline();
+      }
+      void queryClient.invalidateQueries({ queryKey: pipelinesQueryKey });
+    },
+  });
+
+  const currentError = saveMutation.error ?? executeMutation.error ?? deleteSavedMutation.error;
+
+  const pushHistory = useCallback((label: string) => {
+    const snapshot = graphRef.current;
+    setHistory((items) =>
+      [
+        ...items,
+        {
+          pipelineId: snapshot.pipelineId,
+          pipelineName: snapshot.pipelineName,
+          selectedNodeId: snapshot.selectedNodeId,
+          nodes: cloneNodes(snapshot.nodes),
+          edges: cloneEdges(snapshot.edges),
+        },
+      ].slice(-30),
+    );
+    return label;
+  }, []);
+
+  const undoLastChange = useCallback(() => {
+    setHistory((items) => {
+      const last = items.at(-1);
+      if (!last) {
+        return items;
+      }
+
+      setPipelineId(last.pipelineId);
+      setPipelineName(last.pipelineName);
+      setSelectedNodeId(last.selectedNodeId);
+      setSelectedGraph({ nodeIds: last.selectedNodeId ? [last.selectedNodeId] : [], edgeIds: [] });
+      setNodes(cloneNodes(last.nodes));
+      setEdges(cloneEdges(last.edges));
+      return items.slice(0, -1);
+    });
+  }, [setEdges, setNodes]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange<PipelineFlowDisplayNode>[]) => {
@@ -295,6 +386,7 @@ function PipelineFlowWorkspace() {
   );
 
   const onConnect = (connection: Connection) => {
+    pushHistory('connect');
     const id = [
       connection.source,
       connection.sourceHandle ?? 'source',
@@ -315,86 +407,100 @@ function PipelineFlowWorkspace() {
     if (!record) {
       return;
     }
+    pushHistory('load');
     setPipelineId(record.id);
     setPipelineName(record.document.name);
     setNodes(record.document.nodes);
     setEdges(record.document.edges);
-    setSelectedNodeId(record.document.nodes[0]?.id ?? '');
+    const nextSelectedId = record.document.nodes[0]?.id ?? '';
+    setSelectedNodeId(nextSelectedId);
+    setSelectedGraph({ nodeIds: nextSelectedId ? [nextSelectedId] : [], edgeIds: [] });
   };
 
   const resetPipeline = () => {
+    pushHistory('reset');
     const next = defaultDocument(imageResultsQuery.data?.results[0]?.resultId ?? '');
     setPipelineId(null);
     setPipelineName(next.name);
     setNodes(next.nodes);
     setEdges(next.edges);
     setSelectedNodeId('input-1');
+    setSelectedGraph({ nodeIds: ['input-1'], edgeIds: [] });
     setLastExecution(null);
   };
 
-  const addOperationNode = () => {
+  const addPipelineNode = () => {
+    pushHistory('add-node');
     const operationCount = nodes.filter((node) => node.type === 'operation').length + 1;
     const selectedOperation = operationOptions[operationCount % operationOptions.length] ?? operationOptions[0];
-    const nodeId = `operation-${Date.now()}`;
+    const nodeId = `${newNodeKind}-${Date.now()}`;
     const output = nodes.find((node) => node.type === 'output');
     const beforeOutput = edges.find((edge) => output && edge.target === output.id);
     const source = beforeOutput?.source ?? 'input-1';
+    const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+    const basePosition = selectedNode?.position ?? { x: 0, y: 120 };
     const nextNode: PipelineFlowNode = {
       id: nodeId,
-      type: 'operation',
-      position: { x: 260 * operationCount, y: 120 },
-      data: {
-        label: selectedOperation.label,
-        operation: selectedOperation.value,
-        params: selectedOperation.defaultParams ?? {},
-      },
+      type: newNodeKind,
+      position: { x: basePosition.x + 220, y: basePosition.y + (newNodeKind === 'operation' ? 0 : 120) },
+      data:
+        newNodeKind === 'operation'
+          ? {
+              label: selectedOperation.label,
+              operation: selectedOperation.value,
+              params: selectedOperation.defaultParams ?? {},
+            }
+          : newNodeKind === 'imageInput'
+            ? {
+                label: `Image Input ${nodes.filter((node) => node.type === 'imageInput').length + 1}`,
+                resultId: imageResultsQuery.data?.results[0]?.resultId ?? '',
+              }
+            : {
+                label: `Output ${nodes.filter((node) => node.type === 'output').length + 1}`,
+              },
     };
 
     setNodes((currentNodes) => [...currentNodes, nextNode]);
-    setEdges((currentEdges) => [
-      ...currentEdges.filter((edge) => edge.id !== beforeOutput?.id),
-      { id: `${source}-${nodeId}`, source, target: nodeId, sourceHandle: 'right-source', targetHandle: 'left-source' },
-      ...(output
-        ? [
-            {
-              id: `${nodeId}-${output.id}`,
-              source: nodeId,
-              target: output.id,
-              sourceHandle: 'right-source',
-              targetHandle: 'left-source',
-            },
-          ]
-        : []),
-    ]);
+    if (newNodeKind === 'operation') {
+      setEdges((currentEdges) => [
+        ...currentEdges.filter((edge) => edge.id !== beforeOutput?.id),
+        { id: `${source}-${nodeId}`, source, target: nodeId, sourceHandle: 'right-source', targetHandle: 'left-source' },
+        ...(output
+          ? [
+              {
+                id: `${nodeId}-${output.id}`,
+                source: nodeId,
+                target: output.id,
+                sourceHandle: 'right-source',
+                targetHandle: 'left-source',
+              },
+            ]
+          : []),
+      ]);
+    }
     setSelectedNodeId(nodeId);
+    setSelectedGraph({ nodeIds: [nodeId], edgeIds: [] });
   };
 
-  const removeSelectedOperation = () => {
-    if (!selectedNode || selectedNode.type !== 'operation') {
+  const deleteSelectedElements = useCallback(() => {
+    const snapshot = graphRef.current;
+    const selectedNodeIds = new Set(selectedGraph.nodeIds);
+    const selectedEdgeIds = new Set(selectedGraph.edgeIds);
+    if (selectedNodeIds.size === 0 && selectedEdgeIds.size === 0) {
       return;
     }
 
-    const incoming = edges.find((edge) => edge.target === selectedNode.id);
-    const outgoing = edges.find((edge) => edge.source === selectedNode.id);
-    setNodes((currentNodes) => currentNodes.filter((node) => node.id !== selectedNode.id));
-    setEdges((currentEdges) => {
-      const remaining = currentEdges.filter((edge) => edge.source !== selectedNode.id && edge.target !== selectedNode.id);
-      if (incoming && outgoing) {
-        return [
-          ...remaining,
-          {
-            id: `${incoming.source}-${outgoing.target}`,
-            source: incoming.source,
-            target: outgoing.target,
-            sourceHandle: incoming.sourceHandle,
-            targetHandle: outgoing.targetHandle,
-          },
-        ];
-      }
-      return remaining;
-    });
-    setSelectedNodeId('input-1');
-  };
+    pushHistory('delete-selection');
+    setNodes((currentNodes) => currentNodes.filter((node) => !selectedNodeIds.has(node.id)));
+    setEdges((currentEdges) =>
+      currentEdges.filter(
+        (edge) => !selectedEdgeIds.has(edge.id) && !selectedNodeIds.has(edge.source) && !selectedNodeIds.has(edge.target),
+      ),
+    );
+    const nextNode = snapshot.nodes.find((node) => !selectedNodeIds.has(node.id));
+    setSelectedNodeId(nextNode?.id ?? '');
+    setSelectedGraph({ nodeIds: nextNode ? [nextNode.id] : [], edgeIds: [] });
+  }, [pushHistory, selectedGraph.edgeIds, selectedGraph.nodeIds, setEdges, setNodes]);
 
   const changeSelectedOperation = (event: ChangeEvent<HTMLInputElement>) => {
     const nextOperation = event.target.value as ImageOperation;
@@ -402,12 +508,39 @@ function PipelineFlowWorkspace() {
     if (!selectedNode) {
       return;
     }
+    pushHistory('change-operation');
     updateNodeData(selectedNode.id, {
       label: option?.label ?? nextOperation,
       operation: nextOperation,
       params: option?.defaultParams ?? {},
     });
   };
+
+  useEffect(() => {
+    if (isMobile) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        undoLastChange();
+        return;
+      }
+
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        deleteSelectedElements();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [deleteSelectedElements, isMobile, undoLastChange]);
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
@@ -427,6 +560,9 @@ function PipelineFlowWorkspace() {
           </Stack>
 
           <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Button startIcon={<UndoIcon />} variant="outlined" onClick={undoLastChange} disabled={history.length === 0}>
+              Undo
+            </Button>
             <Button variant="outlined" onClick={resetPipeline}>
               New
             </Button>
@@ -536,9 +672,19 @@ function PipelineFlowWorkspace() {
                     onEdgesChange={isMobile ? undefined : onEdgesChange}
                     onConnect={isMobile ? undefined : onConnect}
                     onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+                    onSelectionChange={({ nodes: selectedNodes, edges: selectedEdges }) => {
+                      setSelectedGraph({
+                        nodeIds: selectedNodes.map((node) => node.id),
+                        edgeIds: selectedEdges.map((edge) => edge.id),
+                      });
+                      if (selectedNodes[0]) {
+                        setSelectedNodeId(selectedNodes[0].id);
+                      }
+                    }}
                     nodesDraggable={!isMobile}
                     nodesConnectable={!isMobile}
                     connectionMode={ConnectionMode.Loose}
+                    deleteKeyCode={null}
                     colorMode={theme.palette.mode}
                     fitView
                     fitViewOptions={{ padding: 0.25 }}
@@ -598,22 +744,67 @@ function PipelineFlowWorkspace() {
                         </MenuItem>
                       ))}
                     </TextField>
+                    <Stack spacing={0.75}>
+                      <Typography variant="caption" color="text.secondary">
+                        Storage
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          bgcolor: 'background.default',
+                          border: 1,
+                          borderColor: 'divider',
+                          borderRadius: 1,
+                          fontFamily: 'monospace',
+                          overflowWrap: 'anywhere',
+                          p: 1,
+                        }}
+                      >
+                        {pipelineQuery.data?.storage.path ?? pipelineQuery.data?.storage.description ?? 'Backend pipeline storage'}
+                      </Typography>
+                    </Stack>
+                    <TextField
+                      label="New Node Type"
+                      select
+                      size="small"
+                      value={newNodeKind}
+                      onChange={(event) => setNewNodeKind(event.target.value as PipelineNodeType)}
+                      disabled={isMobile}
+                    >
+                      {nodeKindOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </TextField>
                     <Stack direction="row" spacing={1}>
-                      <Button startIcon={<AddIcon />} variant="outlined" onClick={addOperationNode} disabled={isMobile}>
+                      <Button startIcon={<AddIcon />} variant="outlined" onClick={addPipelineNode} disabled={isMobile}>
                         Node
                       </Button>
                       <Button
                         startIcon={<DeleteIcon />}
                         color="error"
                         variant="outlined"
-                        onClick={removeSelectedOperation}
-                        disabled={isMobile || selectedNode?.type !== 'operation'}
+                        onClick={deleteSelectedElements}
+                        disabled={isMobile || (selectedGraph.nodeIds.length === 0 && selectedGraph.edgeIds.length === 0)}
                       >
-                        Remove
+                        Selection
+                      </Button>
+                    </Stack>
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        startIcon={<DeleteIcon />}
+                        color="error"
+                        variant="outlined"
+                        onClick={() => pipelineId && deleteSavedMutation.mutate(pipelineId)}
+                        disabled={!pipelineId || deleteSavedMutation.isPending}
+                      >
+                        Saved
                       </Button>
                     </Stack>
                     <Typography variant="caption" color="text.secondary">
-                      Connect visible node dots from any side, including top and bottom corner points.
+                      Connect visible dots from any side. Delete or Backspace removes selected nodes or lead lines; Ctrl+Z restores
+                      the previous graph state.
                     </Typography>
                     <Divider />
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} flexWrap="wrap">

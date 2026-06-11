@@ -1,7 +1,9 @@
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import DeleteIcon from '@mui/icons-material/Delete';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SaveIcon from '@mui/icons-material/Save';
+import UndoIcon from '@mui/icons-material/Undo';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
   Alert,
@@ -22,6 +24,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import {
   absoluteImageUrl,
+  deleteImageResult,
   getImageResult,
   getImageResults,
   processImage,
@@ -204,10 +207,25 @@ export function ImageLabPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteImageResult(activeResult?.resultId ?? ''),
+    onSuccess: () => {
+      setCurrentResult(null);
+      setSavePath(null);
+      void queryClient.invalidateQueries({ queryKey: imageResultsQueryKey });
+    },
+  });
+
   const beforeUrl = activeResult ? absoluteImageUrl(activeResult.originalPreviewUrl) : undefined;
   const afterUrl = activeResult ? absoluteImageUrl(activeResult.previewUrl) : undefined;
-  const busy = openLocalMutation.isPending || uploadMutation.isPending || processMutation.isPending || saveMutation.isPending;
-  const currentError = openLocalMutation.error ?? uploadMutation.error ?? processMutation.error ?? saveMutation.error;
+  const busy =
+    openLocalMutation.isPending ||
+    uploadMutation.isPending ||
+    processMutation.isPending ||
+    saveMutation.isPending ||
+    deleteMutation.isPending;
+  const currentError =
+    openLocalMutation.error ?? uploadMutation.error ?? processMutation.error ?? saveMutation.error ?? deleteMutation.error;
 
   const setParam = (key: string, value: ParamValue) => {
     setParams((previous) => ({ ...previous, [key]: value }));
@@ -224,6 +242,25 @@ export function ImageLabPage() {
       return;
     }
     processMutation.mutate();
+  };
+
+  const revertToSource = () => {
+    if (!activeResult) {
+      return;
+    }
+
+    const sourceResult = (resultsQuery.data?.results ?? []).find(
+      (result) =>
+        result.operation === 'open' &&
+        result.name === activeResult.name &&
+        result.sourceType === activeResult.sourceType &&
+        result.sourcePath === activeResult.sourcePath,
+    );
+
+    setCurrentResult(sourceResult ?? activeResult);
+    setOperation('grayscale');
+    setParams(defaultParams('grayscale', sourceResult ?? activeResult));
+    setSavePath(null);
   };
 
   const renderNumberField = (key: string, label: string, minimum = 0) => (
@@ -429,6 +466,9 @@ export function ImageLabPage() {
                   </Grid>
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                    <Button startIcon={<UndoIcon />} variant="outlined" onClick={revertToSource} disabled={!activeResult || busy}>
+                      Revert
+                    </Button>
                     <Button startIcon={<PlayArrowIcon />} onClick={runProcess} disabled={!activeResult || busy}>
                       Apply
                     </Button>
@@ -439,6 +479,15 @@ export function ImageLabPage() {
                       disabled={!activeResult || busy}
                     >
                       Save PNG
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={() => deleteMutation.mutate()}
+                      disabled={!activeResult || busy}
+                    >
+                      Delete
                     </Button>
                   </Stack>
                 </Stack>

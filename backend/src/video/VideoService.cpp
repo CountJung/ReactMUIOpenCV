@@ -138,6 +138,11 @@ std::optional<nlohmann::json> VideoService::get(const std::string& id) const {
   return video_to_json(*record);
 }
 
+bool VideoService::remove(const std::string& id) {
+  std::scoped_lock lock(mutex_);
+  return videos_.erase(id) > 0;
+}
+
 std::optional<cv::Mat> VideoService::read_frame(const std::string& id, int frame_index, const std::string& filter) const {
   const auto record = find_record(id);
   if (!record) {

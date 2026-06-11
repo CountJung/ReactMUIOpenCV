@@ -32,6 +32,7 @@ class VideoService {
   nlohmann::json upload(const std::string& filename, const std::string& content);
   nlohmann::json list() const;
   std::optional<nlohmann::json> get(const std::string& id) const;
+  bool remove(const std::string& id);
   std::optional<cv::Mat> read_frame(const std::string& id, int frame_index, const std::string& filter) const;
   nlohmann::json extract_frame(const std::string& id, int frame_index, const std::string& filter);
   nlohmann::json export_filtered_video(

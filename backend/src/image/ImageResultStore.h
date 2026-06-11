@@ -34,6 +34,7 @@ class ImageResultStore {
   nlohmann::json process(const std::string& source_id, const std::string& operation, const nlohmann::json& params);
   std::optional<nlohmann::json> get(const std::string& id) const;
   nlohmann::json list() const;
+  bool remove(const std::string& id);
   std::optional<cv::Mat> preview(const std::string& id, const std::string& variant) const;
   nlohmann::json save(const std::string& id, const std::string& requested_format) const;
 

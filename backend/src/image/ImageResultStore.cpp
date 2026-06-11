@@ -4,6 +4,7 @@
 #include "../common/Random.h"
 #include "ImageFilters.h"
 
+#include <algorithm>
 #include <opencv2/imgcodecs.hpp>
 #include <stdexcept>
 #include <vector>
@@ -88,6 +89,15 @@ nlohmann::json ImageResultStore::list() const {
     }
   }
   return {{"results", results}};
+}
+
+bool ImageResultStore::remove(const std::string& id) {
+  std::scoped_lock lock(mutex_);
+  const auto erased = results_.erase(id) > 0;
+  if (erased) {
+    std::erase(order_, id);
+  }
+  return erased;
 }
 
 std::optional<cv::Mat> ImageResultStore::preview(const std::string& id, const std::string& variant) const {

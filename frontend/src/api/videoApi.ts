@@ -58,6 +58,12 @@ export function getVideo(videoId: string) {
   return apiRequest<VideoRecord>(`/api/videos/${videoId}`);
 }
 
+export function deleteVideo(videoId: string) {
+  return apiRequest<{ deleted: string }>(`/api/videos/${videoId}`, {
+    method: 'DELETE',
+  });
+}
+
 export function openLocalVideo(path: string) {
   return apiRequest<VideoRecord>('/api/videos/open-local', {
     method: 'POST',

@@ -106,6 +106,12 @@ export function getImageResult(resultId: string) {
   return apiRequest<ImageResult>(`/api/images/results/${resultId}`);
 }
 
+export function deleteImageResult(resultId: string) {
+  return apiRequest<{ deleted: string }>(`/api/images/results/${resultId}`, {
+    method: 'DELETE',
+  });
+}
+
 export function getImageResults() {
   return apiRequest<{ results: ImageResult[] }>('/api/images/results');
 }

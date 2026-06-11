@@ -375,6 +375,21 @@ void ApiServer::register_routes() {
     send_data(response, *result);
   });
 
+  server_.Delete(R"(/api/images/results/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
+    const auto id = request.matches[1].str();
+    if (!image_store_.remove(id)) {
+      send_error(response, "image_result_not_found", "Image result was not found.", 404);
+      return;
+    }
+
+    log_store_.append("info", "Removed image result " + id);
+    send_data(response, {{"deleted", id}});
+  });
+
   server_.Post("/api/videos/open-local", [&](const httplib::Request& request, httplib::Response& response) {
     if (!is_loopback_request(request)) {
       log_store_.append("warning", "Blocked remote local video open attempt from " + request.remote_addr);
@@ -558,6 +573,21 @@ void ApiServer::register_routes() {
     send_data(response, *video);
   });
 
+  server_.Delete(R"(/api/videos/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
+    const auto id = request.matches[1].str();
+    if (!video_service_.remove(id)) {
+      send_error(response, "video_not_found", "Video was not found.", 404);
+      return;
+    }
+
+    log_store_.append("info", "Removed video library record " + id);
+    send_data(response, {{"deleted", id}});
+  });
+
   server_.Post("/api/pipelines/execute", [&](const httplib::Request& request, httplib::Response& response) {
     if (!is_loopback_or_control(request, response)) {
       return;
@@ -570,8 +600,8 @@ void ApiServer::register_routes() {
     send_data(response, {{"execution", execution}}, 202);
   });
 
-  server_.Get("/api/pipelines", [&](const httplib::Request&, httplib::Response& response) {
-    send_data(response, pipeline_store_.list());
+  server_.Get("/api/pipelines", [&](const httplib::Request& request, httplib::Response& response) {
+    send_data(response, pipeline_store_.list(is_loopback_request(request)));
   });
 
   server_.Post("/api/pipelines", [&](const httplib::Request& request, httplib::Response& response) {

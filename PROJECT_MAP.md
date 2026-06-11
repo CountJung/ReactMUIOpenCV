@@ -22,6 +22,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `scripts/publish.ps1`: Creates `/publish/ReactMUIOpenCV`, versioned zip, and `ReactMUIOpenCV-latest.zip` from Release outputs.
 - `scripts/setup-vcpkg.ps1`: Workspace-local vcpkg bootstrap script used by VSCode tasks.
 - `scripts/run-backend.ps1`: Finds and runs the newest built backend executable to avoid hardcoded debug path issues.
+- `data/pipelines.json`: Backend-owned persisted pipeline documents and recent pipeline execution summaries. Created at runtime when pipelines are saved.
 
 ## Documentation
 
@@ -64,7 +65,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/src/jobs/JobQueue.*`: Server-owned job records, worker thread, progress lifecycle events, cancellation, and removal.
 - `backend/src/logging/LogStore.*`: spdlog setup, recent log store, and `log.appended` event publication.
 - `backend/src/storage/SettingsStore.*`: Backend-owned settings state and validation.
-- `backend/src/storage/PipelineStore.*`: In-memory pipeline JSON records.
+- `backend/src/storage/PipelineStore.*`: Backend-owned pipeline JSON records persisted to `data/pipelines.json`, including recent execution summaries and storage location metadata for loopback clients.
 - `backend/src/image/ImageResultStore.*`: Image open/upload/process/save result storage, `resultId` lookup, and preview retrieval.
 - `backend/src/image/ImageFilters.*`: OpenCV image operation implementations.
 - `backend/src/video/VideoService.*`: Video open/upload metadata extraction, preview frame reading, frame extraction, filter preview, and MJPG export.

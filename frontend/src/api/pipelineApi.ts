@@ -52,8 +52,14 @@ export type PipelineExecution = {
   completedAt: string;
 };
 
+export type PipelineStorageInfo = {
+  kind: 'jsonFile' | string;
+  description: string;
+  path?: string;
+};
+
 export function getPipelines() {
-  return apiRequest<{ pipelines: PipelineRecord[]; executions: PipelineExecution[] }>('/api/pipelines');
+  return apiRequest<{ pipelines: PipelineRecord[]; executions: PipelineExecution[]; storage: PipelineStorageInfo }>('/api/pipelines');
 }
 
 export function createPipeline(document: PipelineDocument) {

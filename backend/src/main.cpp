@@ -72,6 +72,16 @@ std::filesystem::path resolve_static_root(int argc, char* argv[]) {
   return candidates.front();
 }
 
+std::filesystem::path resolve_data_dir(char* argv0) {
+  const auto cwd_data = std::filesystem::current_path() / "data";
+  if (std::filesystem::exists(std::filesystem::current_path() / "frontend") ||
+      std::filesystem::exists(std::filesystem::current_path() / "backend")) {
+    return cwd_data;
+  }
+
+  return executable_dir(argv0) / "data";
+}
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -82,6 +92,7 @@ int main(int argc, char* argv[]) {
   const auto lan_addresses = app::get_lan_ipv4_addresses();
   const std::string selected_ip = lan_addresses.empty() ? "127.0.0.1" : lan_addresses.front();
   const auto static_root = resolve_static_root(argc, argv);
+  const auto data_dir = resolve_data_dir(argv[0]);
 
   app::EventHub event_hub;
   app::LogStore log_store(event_hub);
@@ -90,7 +101,7 @@ int main(int argc, char* argv[]) {
   app::RemoteAccessManager remote_access(lan_mode, host, selected_ip);
   app::ImageResultStore image_store;
   app::VideoService video_service;
-  app::PipelineStore pipeline_store;
+  app::PipelineStore pipeline_store(data_dir / "pipelines.json");
   app::PipelineExecutor pipeline_executor(image_store, event_hub, job_queue, log_store);
 
   app::WebSocketGateway websocket_gateway(host, app::kDefaultWsPort, event_hub, log_store, remote_access);
@@ -117,6 +128,7 @@ int main(int argc, char* argv[]) {
   std::cout << "Remote access " << (remote_access.enabled() ? "enabled" : "disabled") << '\n';
   std::cout << "LAN URL: http://" << selected_ip << ":" << app::kDefaultPort << '\n';
   std::cout << "Static root: " << static_root.string() << '\n';
+  std::cout << "Data dir: " << data_dir.string() << '\n';
 
   if (!api_server.listen()) {
     log_store.append("error", "Failed to bind backend on " + host + ":" + std::to_string(app::kDefaultPort));
