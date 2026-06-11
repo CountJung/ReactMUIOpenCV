@@ -4,6 +4,7 @@
 #include <wrl.h>
 
 #include <chrono>
+#include <cwchar>
 #include <filesystem>
 #include <string>
 #include <thread>
@@ -18,7 +19,18 @@ constexpr wchar_t kAppTitle[] = L"ReactMUIOpenCV";
 constexpr wchar_t kLocalUrl[] = L"http://127.0.0.1:18730";
 constexpr wchar_t kHealthHost[] = L"127.0.0.1";
 constexpr wchar_t kHealthPath[] = L"/api/health";
+constexpr wchar_t kWindowStateFile[] = L"window-state.ini";
 constexpr INTERNET_PORT kHealthPort = 18730;
+constexpr int kDefaultWindowWidth = 1280;
+constexpr int kDefaultWindowHeight = 820;
+constexpr int kMinimumWindowWidth = 900;
+constexpr int kMinimumWindowHeight = 640;
+
+struct WindowState {
+  RECT normal_rect{CW_USEDEFAULT, CW_USEDEFAULT, kDefaultWindowWidth, kDefaultWindowHeight};
+  bool maximized = false;
+  bool restored = false;
+};
 
 class WinHandle {
  public:
@@ -105,6 +117,110 @@ std::filesystem::path local_app_data_dir() {
   }
 
   return std::filesystem::path(buffer) / L"ReactMUIOpenCV";
+}
+
+std::filesystem::path window_state_path() {
+  return local_app_data_dir() / kWindowStateFile;
+}
+
+bool read_ini_int(const std::filesystem::path& path, const wchar_t* key, int* value) {
+  wchar_t buffer[32]{};
+  GetPrivateProfileStringW(L"Window", key, L"", buffer, static_cast<DWORD>(sizeof(buffer) / sizeof(buffer[0])), path.c_str());
+  if (buffer[0] == L'\0') {
+    return false;
+  }
+
+  wchar_t* end = nullptr;
+  const long parsed = std::wcstol(buffer, &end, 10);
+  if (end == buffer || *end != L'\0') {
+    return false;
+  }
+
+  *value = static_cast<int>(parsed);
+  return true;
+}
+
+bool is_visible_window_rect(const RECT& rect) {
+  const int width = rect.right - rect.left;
+  const int height = rect.bottom - rect.top;
+  if (width < kMinimumWindowWidth || height < kMinimumWindowHeight) {
+    return false;
+  }
+
+  const HMONITOR monitor = MonitorFromRect(&rect, MONITOR_DEFAULTTONULL);
+  if (!monitor) {
+    return false;
+  }
+
+  MONITORINFO monitor_info{};
+  monitor_info.cbSize = sizeof(monitor_info);
+  if (!GetMonitorInfoW(monitor, &monitor_info)) {
+    return false;
+  }
+
+  RECT intersection{};
+  return IntersectRect(&intersection, &rect, &monitor_info.rcWork) != FALSE;
+}
+
+WindowState load_window_state() {
+  WindowState state;
+  const auto path = window_state_path();
+  if (!std::filesystem::exists(path)) {
+    return state;
+  }
+
+  RECT loaded{};
+  int left = 0;
+  int top = 0;
+  int right = 0;
+  int bottom = 0;
+  int maximized = 0;
+  if (!read_ini_int(path, L"Left", &left) || !read_ini_int(path, L"Top", &top) ||
+      !read_ini_int(path, L"Right", &right) || !read_ini_int(path, L"Bottom", &bottom)) {
+    return state;
+  }
+  (void)read_ini_int(path, L"Maximized", &maximized);
+  loaded.left = left;
+  loaded.top = top;
+  loaded.right = right;
+  loaded.bottom = bottom;
+
+  if (!is_visible_window_rect(loaded)) {
+    return state;
+  }
+
+  state.normal_rect = loaded;
+  state.maximized = maximized != 0;
+  state.restored = true;
+  return state;
+}
+
+void write_ini_int(const std::filesystem::path& path, const wchar_t* key, int value) {
+  const auto text = std::to_wstring(value);
+  WritePrivateProfileStringW(L"Window", key, text.c_str(), path.c_str());
+}
+
+void save_window_state(HWND hwnd) {
+  WINDOWPLACEMENT placement{};
+  placement.length = sizeof(placement);
+  if (!GetWindowPlacement(hwnd, &placement)) {
+    return;
+  }
+
+  const RECT rect = placement.rcNormalPosition;
+  if (!is_visible_window_rect(rect)) {
+    return;
+  }
+
+  const auto directory = local_app_data_dir();
+  std::filesystem::create_directories(directory);
+  const auto path = directory / kWindowStateFile;
+
+  write_ini_int(path, L"Left", rect.left);
+  write_ini_int(path, L"Top", rect.top);
+  write_ini_int(path, L"Right", rect.right);
+  write_ini_int(path, L"Bottom", rect.bottom);
+  write_ini_int(path, L"Maximized", IsZoomed(hwnd) ? 1 : 0);
 }
 
 bool health_check() {
@@ -261,6 +377,10 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lpar
     case WM_SIZE:
       resize_webview();
       return 0;
+    case WM_CLOSE:
+      save_window_state(hwnd);
+      DestroyWindow(hwnd);
+      return 0;
     case WM_DESTROY:
       shutdown_backend();
       PostQuitMessage(0);
@@ -283,15 +403,23 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
 
   RegisterClassExW(&window_class);
 
+  const WindowState window_state = load_window_state();
+  const int initial_x = window_state.restored ? window_state.normal_rect.left : CW_USEDEFAULT;
+  const int initial_y = window_state.restored ? window_state.normal_rect.top : CW_USEDEFAULT;
+  const int initial_width =
+      window_state.restored ? window_state.normal_rect.right - window_state.normal_rect.left : kDefaultWindowWidth;
+  const int initial_height =
+      window_state.restored ? window_state.normal_rect.bottom - window_state.normal_rect.top : kDefaultWindowHeight;
+
   g_window = CreateWindowExW(
       0,
       window_class.lpszClassName,
       kAppTitle,
       WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT,
-      CW_USEDEFAULT,
-      1280,
-      820,
+      initial_x,
+      initial_y,
+      initial_width,
+      initial_height,
       nullptr,
       nullptr,
       instance,
@@ -301,7 +429,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
     return 1;
   }
 
-  ShowWindow(g_window, show_command);
+  ShowWindow(g_window, window_state.maximized ? SW_MAXIMIZE : show_command);
   UpdateWindow(g_window);
 
   if (!start_backend_if_needed()) {

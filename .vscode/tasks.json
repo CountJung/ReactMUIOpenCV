@@ -51,7 +51,8 @@
         "Bypass",
         "-File",
         "${workspaceFolder}/scripts/prepare-debug.ps1",
-        "-SkipFrontend"
+        "-BuildFrontend",
+        "-StopExistingRuntime"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

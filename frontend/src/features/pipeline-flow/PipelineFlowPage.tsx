@@ -11,14 +11,17 @@ import {
   CardContent,
   Chip,
   Divider,
+  FormControlLabel,
   Grid,
   MenuItem,
   Stack,
+  Switch,
   TextField,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Background,
@@ -33,10 +36,12 @@ import {
   useNodesState,
   type Connection,
   type Edge,
+  type Node,
+  type NodeChange,
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useCallback, useMemo, useState, type ChangeEvent } from 'react';
 import { absoluteImageUrl, getImageResults, type ImageOperation } from '../../api/imageApi';
 import {
   createPipeline,
@@ -52,6 +57,12 @@ import {
 
 const pipelinesQueryKey = ['pipelines'];
 const imageResultsQueryKey = ['image-results'];
+
+type PipelineFlowDisplayData = PipelineNodeData & {
+  pipelineType: PipelineNodeType;
+};
+
+type PipelineFlowDisplayNode = Node<PipelineFlowDisplayData, 'pipelineNode'>;
 
 const operationOptions: Array<{ value: ImageOperation; label: string; defaultParams?: Record<string, unknown> }> = [
   { value: 'grayscale', label: 'Grayscale' },
@@ -117,11 +128,12 @@ function mutationErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Pipeline operation failed.';
 }
 
-function PipelineNodeCard({ data, type }: NodeProps<PipelineFlowNode>) {
-  const nodeType = (type ?? 'operation') as PipelineNodeType;
+function PipelineNodeCard({ data }: NodeProps<PipelineFlowDisplayNode>) {
+  const nodeType = data.pipelineType;
   const tone = nodeType === 'imageInput' ? 'primary' : nodeType === 'output' ? 'success' : 'secondary';
   return (
     <Box
+      className="pipeline-node-card"
       sx={{
         bgcolor: 'background.paper',
         border: 1,
@@ -153,9 +165,7 @@ function PipelineNodeCard({ data, type }: NodeProps<PipelineFlowNode>) {
 }
 
 const nodeTypes = {
-  imageInput: PipelineNodeCard,
-  operation: PipelineNodeCard,
-  output: PipelineNodeCard,
+  pipelineNode: PipelineNodeCard,
 };
 
 export function PipelineFlowPage() {
@@ -174,6 +184,9 @@ function PipelineFlowWorkspace() {
   const [pipelineName, setPipelineName] = useState('Image Pipeline');
   const [selectedNodeId, setSelectedNodeId] = useState<string>('input-1');
   const [lastExecution, setLastExecution] = useState<PipelineExecution | null>(null);
+  const [showGrid, setShowGrid] = useState(true);
+  const [showControls, setShowControls] = useState(true);
+  const [showMiniMap, setShowMiniMap] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState<PipelineFlowNode>(defaultDocument().nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(defaultDocument().edges);
 
@@ -191,6 +204,18 @@ function PipelineFlowWorkspace() {
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? nodes[0];
   const document = useMemo(() => toDocument(pipelineName, nodes, edges), [pipelineName, nodes, edges]);
+  const flowNodes = useMemo<PipelineFlowDisplayNode[]>(
+    () =>
+      nodes.map((node) => ({
+        ...node,
+        type: 'pipelineNode',
+        data: {
+          ...node.data,
+          pipelineType: node.type ?? 'operation',
+        },
+      })),
+    [nodes],
+  );
   const execution = lastExecution ?? pipelineQuery.data?.executions?.[0] ?? null;
   const busy = pipelineQuery.isFetching || imageResultsQuery.isFetching;
 
@@ -214,6 +239,13 @@ function PipelineFlowWorkspace() {
   });
 
   const currentError = saveMutation.error ?? executeMutation.error;
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange<PipelineFlowDisplayNode>[]) => {
+      onNodesChange(changes as NodeChange<PipelineFlowNode>[]);
+    },
+    [onNodesChange],
+  );
 
   const onConnect = (connection: Connection) => {
     setEdges((currentEdges) => addEdge({ ...connection, id: `${connection.source}-${connection.target}` }, currentEdges));
@@ -347,22 +379,116 @@ function PipelineFlowWorkspace() {
           <Grid item xs={12} lg={8}>
             <Card sx={{ overflow: 'hidden' }}>
               <CardContent sx={{ p: 0 }}>
-                <Box sx={{ height: { xs: 420, md: 620 } }}>
+                <Box
+                  sx={{
+                    bgcolor: 'background.default',
+                    height: { xs: 420, md: 620 },
+                    '& .react-flow': {
+                      bgcolor: 'background.default',
+                      color: 'text.primary',
+                    },
+                    '& .react-flow__node': {
+                      background: 'transparent',
+                      border: 0,
+                      boxShadow: 'none !important',
+                      p: 0,
+                    },
+                    '& .react-flow__node:focus, & .react-flow__node:focus-visible, & .react-flow__node.selected': {
+                      outline: 'none',
+                      boxShadow: 'none !important',
+                    },
+                    '& .react-flow__node.selected .pipeline-node-card': {
+                      borderColor: 'primary.main',
+                      boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.24)}`,
+                    },
+                    '& .react-flow__edge-path': {
+                      stroke: 'divider',
+                    },
+                    '& .react-flow__edge.selected .react-flow__edge-path': {
+                      stroke: 'primary.main',
+                    },
+                    '& .react-flow__handle': {
+                      bgcolor: 'background.paper',
+                      borderColor: 'text.secondary',
+                    },
+                    '& .react-flow__controls': {
+                      bgcolor: 'background.paper !important',
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      boxShadow: 2,
+                      overflow: 'hidden',
+                    },
+                    '& .react-flow__controls-button': {
+                      bgcolor: 'background.paper !important',
+                      borderBottom: `1px solid ${theme.palette.divider} !important`,
+                      color: 'text.primary !important',
+                      height: 32,
+                      width: 32,
+                    },
+                    '& .react-flow__controls-button:hover': {
+                      bgcolor: 'action.hover !important',
+                    },
+                    '& .react-flow__controls-button svg': {
+                      fill: 'currentColor !important',
+                    },
+                    '& .react-flow__minimap': {
+                      bgcolor: 'background.paper !important',
+                      border: 1,
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      boxShadow: 2,
+                    },
+                    '& .react-flow__minimap-mask': {
+                      fill: alpha(theme.palette.background.default, theme.palette.mode === 'dark' ? 0.72 : 0.56),
+                    },
+                    '& .react-flow__minimap-node': {
+                      stroke: 'divider',
+                    },
+                  }}
+                >
                   <ReactFlow
-                    nodes={nodes}
+                    nodes={flowNodes}
                     edges={edges}
                     nodeTypes={nodeTypes}
-                    onNodesChange={isMobile ? undefined : onNodesChange}
+                    onNodesChange={isMobile ? undefined : handleNodesChange}
                     onEdgesChange={isMobile ? undefined : onEdgesChange}
                     onConnect={isMobile ? undefined : onConnect}
                     onNodeClick={(_, node) => setSelectedNodeId(node.id)}
                     nodesDraggable={!isMobile}
                     nodesConnectable={!isMobile}
+                    colorMode={theme.palette.mode}
                     fitView
+                    fitViewOptions={{ padding: 0.25 }}
+                    minZoom={0.45}
+                    maxZoom={1.8}
+                    proOptions={{ hideAttribution: true }}
                   >
-                    <Background />
-                    <Controls />
-                    <MiniMap pannable zoomable />
+                    {showGrid && <Background color={theme.palette.divider} gap={18} size={1} />}
+                    {showControls && <Controls showInteractive={false} />}
+                    {showMiniMap && (
+                      <MiniMap
+                        pannable
+                        zoomable
+                        maskColor={alpha(theme.palette.background.default, theme.palette.mode === 'dark' ? 0.72 : 0.56)}
+                        nodeColor={(node) => {
+                          const pipelineType = node.data.pipelineType;
+                          if (pipelineType === 'imageInput') {
+                            return theme.palette.primary.main;
+                          }
+                          if (pipelineType === 'output') {
+                            return theme.palette.success.main;
+                          }
+                          return theme.palette.secondary.main;
+                        }}
+                        style={{
+                          backgroundColor: theme.palette.background.paper,
+                          border: `1px solid ${theme.palette.divider}`,
+                          borderRadius: theme.shape.borderRadius,
+                          boxShadow: theme.shadows[2],
+                        }}
+                      />
+                    )}
                   </ReactFlow>
                 </Box>
               </CardContent>
@@ -403,6 +529,21 @@ function PipelineFlowWorkspace() {
                       >
                         Remove
                       </Button>
+                    </Stack>
+                    <Divider />
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} flexWrap="wrap">
+                      <FormControlLabel
+                        control={<Switch size="small" checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} />}
+                        label="Grid"
+                      />
+                      <FormControlLabel
+                        control={<Switch size="small" checked={showControls} onChange={(event) => setShowControls(event.target.checked)} />}
+                        label="Controls"
+                      />
+                      <FormControlLabel
+                        control={<Switch size="small" checked={showMiniMap} onChange={(event) => setShowMiniMap(event.target.checked)} />}
+                        label="Mini map"
+                      />
                     </Stack>
                   </Stack>
                 </CardContent>

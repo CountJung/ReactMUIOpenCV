@@ -18,7 +18,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `build.ps1`: Root Release build entrypoint. Ensures frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable plus WebView2 desktop app host when the SDK is available.
 - `docs/`: Korean user, developer setup, publishing, build/debug policy, and coding guide documentation.
 - `scripts/ensure-frontend-deps.ps1`: Conditionally runs `npm install` when frontend dependencies are missing or stale.
-- `scripts/prepare-debug.ps1`: VS Code debug preparation script for dependency checks, frontend typecheck, CMake configure, and Debug backend build.
+- `scripts/prepare-debug.ps1`: VS Code debug preparation script for dependency checks, optional workspace runtime shutdown, frontend typecheck or static bundle build, CMake configure, and Debug backend build.
 - `scripts/publish.ps1`: Creates `/publish/ReactMUIOpenCV`, versioned zip, and `ReactMUIOpenCV-latest.zip` from Release outputs.
 - `scripts/setup-vcpkg.ps1`: Workspace-local vcpkg bootstrap script used by VSCode tasks.
 - `scripts/run-backend.ps1`: Finds and runs the newest built backend executable to avoid hardcoded debug path issues.
