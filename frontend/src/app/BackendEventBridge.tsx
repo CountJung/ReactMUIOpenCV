@@ -14,6 +14,7 @@ const eventInvalidations: Record<string, string[][]> = {
   'remote.client.disconnected': [['remote-status']],
   'preview.image.updated': [['image-results']],
   'preview.frame.updated': [['video-frames'], ['video-library']],
+  'video.diagnostics.recorded': [['video-diagnostics']],
   'pipeline.node.started': [['jobs'], ['pipelines']],
   'pipeline.node.completed': [['jobs'], ['pipelines']],
   'pipeline.node.failed': [['jobs'], ['pipelines']],

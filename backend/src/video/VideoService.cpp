@@ -3,6 +3,7 @@
 #include "../common/Random.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cctype>
 #include <fstream>
 #include <opencv2/imgcodecs.hpp>
@@ -141,6 +142,44 @@ std::optional<nlohmann::json> VideoService::get(const std::string& id) const {
 bool VideoService::remove(const std::string& id) {
   std::scoped_lock lock(mutex_);
   return videos_.erase(id) > 0;
+}
+
+nlohmann::json VideoService::diagnostics(const std::string& id, int sample_frames) const {
+  const auto record = find_record(id);
+  if (!record) {
+    throw std::runtime_error("Video was not found.");
+  }
+
+  sample_frames = std::clamp(sample_frames, 1, std::min(240, std::max(1, record->frame_count)));
+
+  cv::VideoCapture capture(record->path.string());
+  if (!capture.isOpened()) {
+    throw std::runtime_error("OpenCV could not open the video for diagnostics.");
+  }
+
+  cv::Mat frame;
+  int frames_read = 0;
+  const auto started = std::chrono::steady_clock::now();
+  for (; frames_read < sample_frames; ++frames_read) {
+    if (!capture.read(frame) || frame.empty()) {
+      break;
+    }
+  }
+  const auto elapsed = std::chrono::steady_clock::now() - started;
+  const auto elapsed_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(elapsed).count();
+  const auto measured_fps = elapsed_ms > 0.0 ? (frames_read * 1000.0) / elapsed_ms : 0.0;
+
+  return {
+      {"video", video_to_json(*record)},
+      {"sampleFrames", sample_frames},
+      {"framesRead", frames_read},
+      {"elapsedMs", elapsed_ms},
+      {"metadataFps", record->fps},
+      {"measuredReadFps", measured_fps},
+      {"displayFrameUrl", "/api/videos/frame/" + id + "/0?filter=none"},
+      {"writeContainer", "avi"},
+      {"writeCodec", "MJPG"},
+  };
 }
 
 std::optional<cv::Mat> VideoService::read_frame(const std::string& id, int frame_index, const std::string& filter) const {

@@ -23,6 +23,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `scripts/setup-vcpkg.ps1`: Workspace-local vcpkg bootstrap script used by VSCode tasks.
 - `scripts/run-backend.ps1`: Finds and runs the newest built backend executable to avoid hardcoded debug path issues.
 - `data/pipelines.json`: Backend-owned persisted pipeline documents and recent pipeline execution summaries. Created at runtime when pipelines are saved.
+- `data/video-diagnostics.json`: Backend-owned persisted Video Lab FPS/read diagnostics. Created at runtime when Measure FPS is executed.
 
 ## Documentation
 
@@ -55,6 +56,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/CMakePresets.json`: Visual Studio 2026/MSVC x64 CMake presets with workspace-local vcpkg and system-package variants.
 - `backend/vcpkg.json`: C++ dependency manifest.
 - `backend/src/main.cpp`: Thin composition root. Parses launch args, constructs backend services, starts WebSocket and HTTP runtimes, and reports process status.
+- `backend/src/app/AppContext.*`: Backend runtime context. Builds runtime config, owns service lifetimes, wires dependencies, starts WebSocket and HTTP runtimes, and preserves shutdown order.
 - `backend/src/host/WebViewHost.cpp`: Win32/WebView2 desktop app host. Checks WebView2 Runtime availability, starts the local backend server when needed, remembers window placement, and loads `http://127.0.0.1:18730` in an app window.
 - `backend/src/common/`: Shared constants, random IDs/PINs, ISO time formatting, API envelopes, CORS, request parsing, and loopback detection.
 - `backend/src/server/ApiServer.*`: HTTP route registration, static React file serving from a resolved source-tree or bundled `frontend/dist`, and thin request/response translation over backend services.
@@ -66,6 +68,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/src/logging/LogStore.*`: spdlog setup, recent log store, and `log.appended` event publication.
 - `backend/src/storage/SettingsStore.*`: Backend-owned settings state and validation.
 - `backend/src/storage/PipelineStore.*`: Backend-owned pipeline JSON records persisted to `data/pipelines.json`, including recent execution summaries and storage location metadata for loopback clients.
+- `backend/src/storage/VideoDiagnosticsStore.*`: Backend-owned Video Lab diagnostics records persisted to `data/video-diagnostics.json`, including measured read FPS, metadata FPS, sample frames, elapsed time, and storage location metadata for loopback clients.
 - `backend/src/image/ImageResultStore.*`: Image open/upload/process/save result storage, `resultId` lookup, and preview retrieval.
 - `backend/src/image/ImageFilters.*`: OpenCV image operation implementations.
 - `backend/src/video/VideoService.*`: Video open/upload metadata extraction, preview frame reading, frame extraction, filter preview, and MJPG export.

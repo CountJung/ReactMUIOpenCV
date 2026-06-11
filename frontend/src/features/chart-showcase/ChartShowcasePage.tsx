@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { getImageResults, processImage, type ImageOperation } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
 import { executePipeline, getPipelines } from '../../api/pipelineApi';
-import { exportVideo, getVideos, processVideo, type VideoFilter } from '../../api/videoApi';
+import { exportVideo, getVideoDiagnosticsHistory, getVideos, processVideo, type VideoFilter } from '../../api/videoApi';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
 
 type ChartDatum = {
@@ -153,15 +153,21 @@ export function ChartShowcasePage() {
   const imageResultsQuery = useQuery({ queryKey: ['image-results'], queryFn: getImageResults, refetchInterval: 10000 });
   const pipelinesQuery = useQuery({ queryKey: ['pipelines'], queryFn: getPipelines, refetchInterval: 10000 });
   const videosQuery = useQuery({ queryKey: ['video-library'], queryFn: getVideos, refetchInterval: 10000 });
+  const diagnosticsQuery = useQuery({ queryKey: ['video-diagnostics'], queryFn: getVideoDiagnosticsHistory, refetchInterval: 10000 });
 
   const jobs = jobsQuery.data?.jobs ?? [];
   const results = imageResultsQuery.data?.results ?? [];
   const executions = pipelinesQuery.data?.executions ?? [];
   const videos = videosQuery.data?.videos ?? [];
+  const diagnostics = diagnosticsQuery.data?.records ?? [];
   const pipelines = pipelinesQuery.data?.pipelines ?? [];
   const statusData = toData(countBy(jobs, (job) => job.status));
   const operationData = toData(countBy(results, (result) => result.operation));
   const pipelineStatusData = toData(countBy(executions, (execution) => execution.status));
+  const videoReadFpsData = diagnostics.slice(0, 8).map((diagnostic) => ({
+    label: `${diagnostic.videoName} (${formatTime(diagnostic.createdAt)})`,
+    value: Number(diagnostic.measuredReadFps.toFixed(1)),
+  }));
   const effectiveImageId = selectedImageId || results[0]?.resultId || '';
   const effectiveVideoId = selectedVideoId || videos[0]?.videoId || '';
   const effectivePipelineId = selectedPipelineId || pipelines[0]?.id || '';
@@ -225,10 +231,10 @@ export function ChartShowcasePage() {
       title="Chart Showcase"
       eyebrow="Analytics"
       status={`${jobs.length} jobs`}
-      description="Processing statistics are derived from server-owned job records, image result metadata, and pipeline executions."
+      description="Processing statistics are derived from server-owned job records, image results, pipeline executions, and video diagnostics."
     >
       <Stack spacing={2.5}>
-        {(jobsQuery.isError || imageResultsQuery.isError || pipelinesQuery.isError || videosQuery.isError) && (
+        {(jobsQuery.isError || imageResultsQuery.isError || pipelinesQuery.isError || videosQuery.isError || diagnosticsQuery.isError) && (
           <Alert severity="warning">Some chart data is not available from the backend.</Alert>
         )}
         {assignJobMutation.isError && (
@@ -423,7 +429,7 @@ export function ChartShowcasePage() {
         </Card>
 
         <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -437,7 +443,7 @@ export function ChartShowcasePage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -451,7 +457,7 @@ export function ChartShowcasePage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={3}>
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
@@ -460,6 +466,20 @@ export function ChartShowcasePage() {
                     <Typography variant="h6">Pipeline Runs</Typography>
                   </Stack>
                   <BarList data={pipelineStatusData} emptyLabel="No pipeline executions are available." />
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <MovieFilterIcon color="primary" />
+                    <Typography variant="h6">Video Diagnostics</Typography>
+                  </Stack>
+                  <BarList data={videoReadFpsData} emptyLabel="Run Measure FPS in Video Lab to collect diagnostics." />
                 </Stack>
               </CardContent>
             </Card>
@@ -478,6 +498,7 @@ export function ChartShowcasePage() {
                   <Chip label={`${jobs.length} jobs`} size="small" variant="outlined" />
                   <Chip label={`${results.length} image results`} size="small" variant="outlined" />
                   <Chip label={`${executions.length} pipeline executions`} size="small" variant="outlined" />
+                  <Chip label={`${diagnostics.length} video diagnostics`} size="small" variant="outlined" />
                 </Stack>
               </Stack>
               <TimelineBars jobs={jobs} />

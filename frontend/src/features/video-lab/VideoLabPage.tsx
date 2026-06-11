@@ -5,6 +5,7 @@ import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 import PauseIcon from '@mui/icons-material/Pause';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SpeedIcon from '@mui/icons-material/Speed';
 import UndoIcon from '@mui/icons-material/Undo';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
@@ -29,10 +30,12 @@ import {
   extractVideoFrame,
   deleteVideo,
   getVideo,
+  getVideoDiagnostics,
   getVideos,
   processVideo,
   videoFrameUrl,
   type VideoExportResult,
+  type VideoDiagnostics,
   type VideoFilter,
   type VideoFrameResult,
   type VideoRecord,
@@ -135,6 +138,7 @@ export function VideoLabPage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [frameResult, setFrameResult] = useState<VideoFrameResult | null>(null);
   const [exportResult, setExportResult] = useState<VideoExportResult | null>(null);
+  const [diagnostics, setDiagnostics] = useState<VideoDiagnostics | null>(null);
 
   useEffect(() => {
     setRuntimeMode(getRuntimeMode());
@@ -191,6 +195,7 @@ export function VideoLabPage() {
     setPreviewError(null);
     setFrameResult(null);
     setExportResult(null);
+    setDiagnostics(null);
     setCacheKey(Date.now());
   };
 
@@ -252,6 +257,14 @@ export function VideoLabPage() {
     },
   });
 
+  const diagnosticsMutation = useMutation({
+    mutationFn: () => getVideoDiagnostics(activeVideo?.videoId ?? '', Math.min(120, Math.max(1, activeVideo?.frameCount ?? 1))),
+    onSuccess: (result) => {
+      setDiagnostics(result);
+      void queryClient.invalidateQueries({ queryKey: ['video-diagnostics'] });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => deleteVideo(activeVideo?.videoId ?? ''),
     onSuccess: () => {
@@ -262,6 +275,7 @@ export function VideoLabPage() {
       setPreviewError(null);
       setFrameResult(null);
       setExportResult(null);
+      setDiagnostics(null);
       void queryClient.invalidateQueries({ queryKey: videosQueryKey });
     },
   });
@@ -272,6 +286,7 @@ export function VideoLabPage() {
     processMutation.isPending ||
     extractMutation.isPending ||
     exportMutation.isPending ||
+    diagnosticsMutation.isPending ||
     deleteMutation.isPending;
   const currentError =
     openLocalMutation.error ??
@@ -279,6 +294,7 @@ export function VideoLabPage() {
     processMutation.error ??
     extractMutation.error ??
     exportMutation.error ??
+    diagnosticsMutation.error ??
     deleteMutation.error;
 
   const changeFilter = (event: ChangeEvent<HTMLInputElement>) => {
@@ -441,7 +457,23 @@ export function VideoLabPage() {
                     />
                   </Stack>
 
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gap: 1,
+                      gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+                      '& .MuiButton-root': {
+                        minHeight: 44,
+                        minWidth: 0,
+                        px: 1.25,
+                        whiteSpace: 'normal',
+                      },
+                      '& .MuiButton-startIcon': {
+                        flexShrink: 0,
+                        mr: 0.75,
+                      },
+                    }}
+                  >
                     <Button
                       startIcon={isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
                       variant="contained"
@@ -465,7 +497,31 @@ export function VideoLabPage() {
                     >
                       Extract PNG
                     </Button>
-                  </Stack>
+                    <Button
+                      variant="outlined"
+                      startIcon={<SpeedIcon />}
+                      onClick={() => diagnosticsMutation.mutate()}
+                      disabled={!activeVideo || busy}
+                    >
+                      Measure FPS
+                    </Button>
+                  </Box>
+
+                  {diagnostics && (
+                    <Stack spacing={1}>
+                      <Divider />
+                      <Typography variant="subtitle2">Read/Write Diagnostics</Typography>
+                      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                        <Chip label={`${diagnostics.framesRead}/${diagnostics.sampleFrames} frames read`} size="small" />
+                        <Chip label={`${diagnostics.measuredReadFps.toFixed(1)} read fps`} size="small" color="primary" />
+                        <Chip label={`${diagnostics.metadataFps.toFixed(1)} metadata fps`} size="small" variant="outlined" />
+                        <Chip label={`${diagnostics.writeCodec}.${diagnostics.writeContainer}`} size="small" variant="outlined" />
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">
+                        Display sample: {diagnostics.displayFrameUrl}
+                      </Typography>
+                    </Stack>
+                  )}
                 </Stack>
               </CardContent>
             </Card>

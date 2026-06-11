@@ -27,6 +27,7 @@ ApiServer::ApiServer(
     ImageResultStore& image_store,
     VideoService& video_service,
     PipelineStore& pipeline_store,
+    VideoDiagnosticsStore& video_diagnostics_store,
     PipelineExecutor& pipeline_executor,
     std::filesystem::path static_root)
     : host_(std::move(host)),
@@ -41,6 +42,7 @@ ApiServer::ApiServer(
       image_store_(image_store),
       video_service_(video_service),
       pipeline_store_(pipeline_store),
+      video_diagnostics_store_(video_diagnostics_store),
       pipeline_executor_(pipeline_executor),
       static_root_(std::move(static_root)) {
   server_.set_payload_max_length(kMaxApiPayloadBytes);
@@ -446,6 +448,10 @@ void ApiServer::register_routes() {
     send_data(response, video_service_.list());
   });
 
+  server_.Get("/api/videos/diagnostics", [&](const httplib::Request& request, httplib::Response& response) {
+    send_data(response, video_diagnostics_store_.list(is_loopback_request(request)));
+  });
+
   server_.Post("/api/videos/process", [&](const httplib::Request& request, httplib::Response& response) {
     if (!is_loopback_or_control(request, response)) {
       return;
@@ -560,6 +566,31 @@ void ApiServer::register_routes() {
     } catch (const std::exception& error) {
       log_store_.append("error", "Video frame preview failed: " + std::string(error.what()));
       send_error(response, "video_frame_preview_failed", error.what(), 400);
+    }
+  });
+
+  server_.Get(R"(/api/videos/([A-Za-z0-9_-]+)/diagnostics)", [&](const httplib::Request& request, httplib::Response& response) {
+    const auto video_id = request.matches[1].str();
+    int sample_frames = 120;
+    if (request.has_param("sampleFrames")) {
+      try {
+        sample_frames = std::stoi(request.get_param_value("sampleFrames"));
+      } catch (const std::exception&) {
+        send_error(response, "invalid_video_diagnostics_request", "sampleFrames must be an integer.", 400);
+        return;
+      }
+    }
+
+    try {
+      auto diagnostics = video_service_.diagnostics(video_id, sample_frames);
+      const auto record = video_diagnostics_store_.record(diagnostics);
+      diagnostics["record"] = record;
+      event_hub_.publish("video.diagnostics.recorded", record);
+      log_store_.append("info", "Recorded video diagnostics for " + video_id);
+      send_data(response, diagnostics);
+    } catch (const std::exception& error) {
+      log_store_.append("error", "Video diagnostics failed: " + std::string(error.what()));
+      send_error(response, "video_diagnostics_failed", error.what(), 400);
     }
   });
 

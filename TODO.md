@@ -84,22 +84,62 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 - [x] Add user-facing firewall guidance for LAN Web UI Mode.
 - [x] Document LAN usage and developer extension points.
 
-## Phase 9 - LearnOpenCV Example Backlog
+## Phase 9 - LearnOpenCV Example Implementation Packs
 
-These items are selected from `spmallick/learnopencv` because they fit this project's C++ OpenCV image, video, pipeline, and dashboard goals.
+These packs are selected from `spmallick/learnopencv` because they fit this project's C++ OpenCV image, video, pipeline, and dashboard goals. Each pack is sized so one focused agent can implement the backend service/API, frontend UI, docs/TODO update, and verification without expanding into unrelated examples.
 
-- [ ] Add a Video Lab sample for read/write/display video basics based on LearnOpenCV `Read, Write and Display a video using OpenCV`.
-- [ ] Add frame-rate measurement and display diagnostics based on LearnOpenCV `How to find frame rate or frames per second`.
-- [ ] Add Video Lab stabilization pipeline node based on LearnOpenCV `Video Stabilization Using Point Feature Matching in OpenCV`.
+### Pack 9A - Video Fundamentals And Diagnostics
+
+- [x] Add a Video Lab sample for read/write/display video basics based on LearnOpenCV `Read, Write and Display a video using OpenCV`.
+- [x] Add frame-rate measurement and display diagnostics based on LearnOpenCV `How to find frame rate or frames per second`.
+- [x] Surface Video Lab diagnostics in Charts/Data Grid so measured FPS and metadata can be compared with job history.
+- Agent focus: `$cpp-opencv-backend` for `VideoService` diagnostics and codec-safe export checks, `$react-mui-frontend` for Video Lab and chart/table display.
+
+### Pack 9B - Motion And Stabilization Pipelines
+
+- [ ] Add Video Lab stabilization preview/export and pipeline node based on LearnOpenCV `Video Stabilization Using Point Feature Matching in OpenCV`.
 - [ ] Add optical-flow preview and pipeline node based on LearnOpenCV `Optical Flow in OpenCV`.
+- [ ] Add dashboard metrics for tracked features, flow magnitude, stabilization crop, and processing time.
+- Agent focus: backend video/vision worker first, then React Flow node editor and execution result UI.
+
+### Pack 9C - Tracking And Detection Nodes
+
 - [ ] Add object tracking pipeline nodes based on LearnOpenCV `Object Tracking using OpenCV` and `MultiTracker`.
+- [ ] Store per-frame tracking metadata for Data Grid inspection.
+- [ ] Add simple start-frame ROI selection UI before enabling long tracking jobs.
+- Agent focus: backend tracking service, metadata schema, Video Lab/Pipeline UI, job cancellation behavior.
+
+### Pack 9D - Alignment, Calibration, And QR Utilities
+
 - [ ] Add feature-based alignment/image registration operation based on LearnOpenCV `Image Alignment (Feature Based)` and `Image Alignment (ECC)`.
 - [ ] Add camera calibration utility and calibration-result storage based on LearnOpenCV `Camera Calibration using OpenCV`.
 - [ ] Add QR code scanner utility based on LearnOpenCV `OpenCV QR Code Scanner`.
+- Agent focus: image/vision services, persistent calibration artifacts under backend-owned `data/`, Image Lab utility panels.
+
+### Pack 9E - Shape Analysis And Classical Vision
+
 - [ ] Add shape-analysis operations for blob centroid, convex hull, Hu moments, and Hough transform based on LearnOpenCV examples.
+- [ ] Show result overlays and structured shape metadata in Data Grid.
+- [ ] Add corresponding pipeline operation nodes for reusable inspections.
+- Agent focus: image filters/vision metadata, preview overlays, table schema.
+
+### Pack 9F - Advanced Image Composition And Rendering
+
 - [ ] Add inpainting, seamless cloning, alpha blending, exposure fusion, HDR, and non-photorealistic rendering operations as Image Lab advanced filters.
+- [ ] Add operation-specific parameter controls and before/after examples.
+- Agent focus: Image Lab filters with small verified parameter sets, output save/export behavior.
+
+### Pack 9G - Optional DNN Examples
+
 - [ ] Add DNN-based examples behind optional model assets: face detection, YOLO object detection, text detection, pose estimation, and Mask R-CNN.
+- [ ] Add model asset discovery, missing-model guidance, and guarded execution so default builds remain lightweight.
+- Agent focus: optional model management, backend validation, security/path checks, UI guidance.
+
+### Pack 9H - Performance Instrumentation
+
 - [ ] Add performance demo for parallel pixel access with OpenCV `forEach` and compare it with existing filter implementations.
+- [ ] Record benchmark samples as jobs and chart them in Dashboard/Charts.
+- Agent focus: backend benchmark service, job/event integration, chart visualization.
 
 ## Guardrails
 

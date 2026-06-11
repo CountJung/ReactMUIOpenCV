@@ -18,6 +18,7 @@ set(WEBVIEW2_INCLUDE_DIR "${WEBVIEW2_SDK_ROOT}/include")
 set(WEBVIEW2_LOADER_STATIC_LIB "${WEBVIEW2_SDK_ROOT}/x64/WebView2LoaderStatic.lib")
 
 add_executable(ReactMUIOpenCV
+  src/app/AppContext.cpp
   src/common/HttpUtils.cpp
   src/common/Random.cpp
   src/common/Time.cpp
@@ -33,6 +34,7 @@ add_executable(ReactMUIOpenCV
   src/server/WebSocketGateway.cpp
   src/storage/PipelineStore.cpp
   src/storage/SettingsStore.cpp
+  src/storage/VideoDiagnosticsStore.cpp
   src/video/VideoService.cpp
   src/vision/PipelineExecutor.cpp
 )

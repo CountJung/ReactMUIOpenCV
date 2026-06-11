@@ -179,6 +179,10 @@ function cloneEdges(edges: Edge[]) {
   return edges.map((edge) => ({ ...edge }));
 }
 
+function sameIds(left: string[], right: string[]) {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
+
 const handlePoints: Array<{
   id: string;
   position: Position;
@@ -385,7 +389,7 @@ function PipelineFlowWorkspace() {
     [onNodesChange],
   );
 
-  const onConnect = (connection: Connection) => {
+  const onConnect = useCallback((connection: Connection) => {
     pushHistory('connect');
     const id = [
       connection.source,
@@ -394,7 +398,25 @@ function PipelineFlowWorkspace() {
       connection.targetHandle ?? 'target',
     ].join('-');
     setEdges((currentEdges) => addEdge({ ...connection, id }, currentEdges));
-  };
+  }, [pushHistory, setEdges]);
+
+  const handleSelectionChange = useCallback(
+    ({ nodes: selectedNodes, edges: selectedEdges }: { nodes: PipelineFlowDisplayNode[]; edges: Edge[] }) => {
+      const nextNodeIds = selectedNodes.map((node) => node.id);
+      const nextEdgeIds = selectedEdges.map((edge) => edge.id);
+      setSelectedGraph((current) =>
+        sameIds(current.nodeIds, nextNodeIds) && sameIds(current.edgeIds, nextEdgeIds)
+          ? current
+          : { nodeIds: nextNodeIds, edgeIds: nextEdgeIds },
+      );
+
+      const nextSelectedNodeId = selectedNodes[0]?.id;
+      if (nextSelectedNodeId) {
+        setSelectedNodeId((current) => (current === nextSelectedNodeId ? current : nextSelectedNodeId));
+      }
+    },
+    [],
+  );
 
   const updateNodeData = (nodeId: string, data: Partial<PipelineNodeData>) => {
     setNodes((currentNodes) =>
@@ -672,15 +694,7 @@ function PipelineFlowWorkspace() {
                     onEdgesChange={isMobile ? undefined : onEdgesChange}
                     onConnect={isMobile ? undefined : onConnect}
                     onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-                    onSelectionChange={({ nodes: selectedNodes, edges: selectedEdges }) => {
-                      setSelectedGraph({
-                        nodeIds: selectedNodes.map((node) => node.id),
-                        edgeIds: selectedEdges.map((edge) => edge.id),
-                      });
-                      if (selectedNodes[0]) {
-                        setSelectedNodeId(selectedNodes[0].id);
-                      }
-                    }}
+                    onSelectionChange={handleSelectionChange}
                     nodesDraggable={!isMobile}
                     nodesConnectable={!isMobile}
                     connectionMode={ConnectionMode.Loose}

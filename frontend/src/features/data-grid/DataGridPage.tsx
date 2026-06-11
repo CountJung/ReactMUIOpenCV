@@ -34,9 +34,10 @@ import { useMemo, useState } from 'react';
 import { getFileLibrary, type FileLibraryItem } from '../../api/filesApi';
 import { getImageResults, type ImageResult } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
+import { getVideoDiagnosticsHistory, type VideoDiagnosticsRecord } from '../../api/videoApi';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
 
-type TabKey = 'jobs' | 'results' | 'files';
+type TabKey = 'jobs' | 'results' | 'files' | 'video-diagnostics';
 
 function formatDate(value?: string) {
   if (!value) {
@@ -154,10 +155,12 @@ export function DataGridPage() {
   const jobsQuery = useQuery({ queryKey: ['jobs'], queryFn: getJobs, refetchInterval: 5000 });
   const resultsQuery = useQuery({ queryKey: ['image-results'], queryFn: getImageResults, refetchInterval: 10000 });
   const filesQuery = useQuery({ queryKey: ['file-library'], queryFn: getFileLibrary, refetchInterval: 15000 });
+  const diagnosticsQuery = useQuery({ queryKey: ['video-diagnostics'], queryFn: getVideoDiagnosticsHistory, refetchInterval: 10000 });
 
   const jobs = jobsQuery.data?.jobs ?? [];
   const results = resultsQuery.data?.results ?? [];
   const files = filesQuery.data?.files ?? [];
+  const diagnostics = diagnosticsQuery.data?.records ?? [];
 
   const jobColumns = useMemo<ColumnDef<JobRecord>[]>(
     () => [
@@ -227,17 +230,69 @@ export function DataGridPage() {
     [],
   );
 
-  const currentDataCount = activeTab === 'jobs' ? jobs.length : activeTab === 'results' ? results.length : files.length;
+  const diagnosticsColumns = useMemo<ColumnDef<VideoDiagnosticsRecord>[]>(
+    () => [
+      { accessorKey: 'diagnosticId', header: 'ID' },
+      { accessorKey: 'videoName', header: 'Video' },
+      {
+        id: 'size',
+        header: 'Size',
+        accessorFn: (row) => `${row.width} x ${row.height}`,
+      },
+      { accessorKey: 'frameCount', header: 'Frames' },
+      {
+        accessorKey: 'metadataFps',
+        header: 'Metadata FPS',
+        cell: ({ getValue }) => getValue<number>().toFixed(2),
+      },
+      {
+        accessorKey: 'measuredReadFps',
+        header: 'Measured FPS',
+        cell: ({ getValue }) => getValue<number>().toFixed(2),
+      },
+      {
+        id: 'fpsDelta',
+        header: 'Delta',
+        accessorFn: (row) => row.measuredReadFps - row.metadataFps,
+        cell: ({ getValue }) => getValue<number>().toFixed(2),
+      },
+      {
+        accessorKey: 'elapsedMs',
+        header: 'Elapsed',
+        cell: ({ getValue }) => `${getValue<number>().toFixed(1)} ms`,
+      },
+      {
+        id: 'sample',
+        header: 'Sample',
+        accessorFn: (row) => `${row.framesRead} / ${row.sampleFrames}`,
+      },
+      {
+        accessorKey: 'createdAt',
+        header: 'Created',
+        cell: ({ getValue }) => formatDate(getValue<string>()),
+      },
+    ],
+    [],
+  );
+
+  const currentDataCount =
+    activeTab === 'jobs'
+      ? jobs.length
+      : activeTab === 'results'
+        ? results.length
+        : activeTab === 'files'
+          ? files.length
+          : diagnostics.length;
 
   return (
     <PlaceholderPage
       title="Data Grid"
       eyebrow="Tables"
       status={`${currentDataCount} rows`}
-      description="Server-owned job history, image result records, and file library entries are browsed in sortable tables."
+      description="Server-owned job history, image results, file library entries, and video diagnostics are browsed in sortable tables."
     >
       <Stack spacing={2}>
-        {(jobsQuery.isError || resultsQuery.isError || filesQuery.isError) && (
+        {(jobsQuery.isError || resultsQuery.isError || filesQuery.isError || diagnosticsQuery.isError) && (
           <Alert severity="warning">Some table data is not available from the backend.</Alert>
         )}
 
@@ -249,6 +304,7 @@ export function DataGridPage() {
                   <Tab label={`Jobs (${jobs.length})`} value="jobs" />
                   <Tab label={`Image Results (${results.length})`} value="results" />
                   <Tab label={`Files (${files.length})`} value="files" />
+                  <Tab label={`Video Diagnostics (${diagnostics.length})`} value="video-diagnostics" />
                 </Tabs>
                 <TextField
                   value={filter}
@@ -279,6 +335,14 @@ export function DataGridPage() {
               )}
               {activeTab === 'files' && (
                 <ServerTable columns={fileColumns} data={files} emptyLabel="The server file library is empty." filter={filter} />
+              )}
+              {activeTab === 'video-diagnostics' && (
+                <ServerTable
+                  columns={diagnosticsColumns}
+                  data={diagnostics}
+                  emptyLabel="Run Measure FPS in Video Lab to collect video diagnostics."
+                  filter={filter}
+                />
               )}
             </Stack>
           </CardContent>

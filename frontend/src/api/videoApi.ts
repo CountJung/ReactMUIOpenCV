@@ -33,6 +33,47 @@ export type VideoExportResult = {
   codec: string;
 };
 
+export type VideoDiagnostics = {
+  video: VideoRecord;
+  sampleFrames: number;
+  framesRead: number;
+  elapsedMs: number;
+  metadataFps: number;
+  measuredReadFps: number;
+  displayFrameUrl: string;
+  writeContainer: string;
+  writeCodec: string;
+  record?: VideoDiagnosticsRecord;
+};
+
+export type VideoDiagnosticsRecord = {
+  diagnosticId: string;
+  videoId: string;
+  videoName: string;
+  sourceType: string;
+  width: number;
+  height: number;
+  frameCount: number;
+  durationSeconds: number;
+  sampleFrames: number;
+  framesRead: number;
+  elapsedMs: number;
+  metadataFps: number;
+  measuredReadFps: number;
+  writeContainer: string;
+  writeCodec: string;
+  createdAt: string;
+};
+
+export type VideoDiagnosticsList = {
+  records: VideoDiagnosticsRecord[];
+  storage: {
+    kind: string;
+    description: string;
+    path?: string;
+  };
+};
+
 export function absoluteVideoUrl(path: string) {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
@@ -56,6 +97,15 @@ export function getVideos() {
 
 export function getVideo(videoId: string) {
   return apiRequest<VideoRecord>(`/api/videos/${videoId}`);
+}
+
+export function getVideoDiagnostics(videoId: string, sampleFrames = 120) {
+  const search = new URLSearchParams({ sampleFrames: String(sampleFrames) });
+  return apiRequest<VideoDiagnostics>(`/api/videos/${videoId}/diagnostics?${search.toString()}`);
+}
+
+export function getVideoDiagnosticsHistory() {
+  return apiRequest<VideoDiagnosticsList>('/api/videos/diagnostics');
 }
 
 export function deleteVideo(videoId: string) {
