@@ -1,6 +1,6 @@
 # Pipeline JSON Schema
 
-Phase 6 uses one JSON document shape across the React Flow editor and the C++ `PipelineExecutor`.
+Phase 6 uses one JSON document shape across the React Flow editor and the C++ `PipelineExecutor`. Phase 9B extends the same schema with video input nodes for motion-analysis pipelines.
 
 ```json
 {
@@ -45,11 +45,12 @@ Phase 6 uses one JSON document shape across the React Flow editor and the C++ `P
 ## Node Types
 
 - `imageInput`: Starts an image pipeline from an existing Image Lab `resultId`.
-- `operation`: Applies an OpenCV image operation. Supported operation names match `frontend/src/api/imageApi.ts`.
-- `output`: Marks the final preview result.
+- `videoInput`: Starts a video pipeline from an existing Video Lab `videoId`.
+- `operation`: Applies an OpenCV image operation, or a video motion operation when upstream is `videoInput`. Image operation names match `frontend/src/api/imageApi.ts`; video motion operations currently include `opticalFlow` and `stabilize`.
+- `output`: Marks the final preview result or video pipeline completion.
 
 ## Execution
 
 `POST /api/pipelines/execute` accepts `{ "document": PipelineDocument }`.
 
-The backend executes a single linear path from the first `imageInput` node through outgoing edges. Each operation produces a new Image Lab result, so intermediate steps are cached by `ImageResultStore` and can be previewed through normal image preview URLs.
+The backend executes a single linear path from the first `imageInput` or `videoInput` node through outgoing edges. Image operations produce new Image Lab results, so intermediate steps are cached by `ImageResultStore` and can be previewed through normal image preview URLs. Video motion operations record metrics such as tracked features, average flow magnitude, stabilization crop estimate, and processing time.

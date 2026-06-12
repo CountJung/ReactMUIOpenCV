@@ -452,6 +452,35 @@ void ApiServer::register_routes() {
     send_data(response, video_diagnostics_store_.list(is_loopback_request(request)));
   });
 
+  server_.Post("/api/videos/motion-metrics", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
+    const auto body = parse_body(request);
+    const auto video_id = body.value("videoId", std::string{});
+    const auto operation = body.value("operation", std::string{"opticalFlow"});
+    const auto sample_frames = body.value("sampleFrames", 120);
+    if (video_id.empty()) {
+      send_error(response, "invalid_video_motion_request", "videoId is required.", 400);
+      return;
+    }
+
+    const auto job = job_queue_.enqueue("video-motion", "Analyzing " + operation + " motion metrics for " + video_id + ".");
+    try {
+      auto metrics = video_service_.motion_metrics(video_id, operation, sample_frames);
+      const auto record = video_diagnostics_store_.record(metrics);
+      metrics["record"] = record;
+      event_hub_.publish("video.motion.recorded", record);
+      log_store_.append("info", "Recorded video motion metrics for " + video_id);
+      send_data(response, {{"job", job}, {"metrics", metrics}}, 202);
+    } catch (const std::exception& error) {
+      event_hub_.publish("job.failed", {{"id", job["id"]}, {"type", "video-motion"}, {"message", error.what()}});
+      log_store_.append("error", "Video motion metrics failed: " + std::string(error.what()));
+      send_error(response, "video_motion_metrics_failed", error.what(), 400);
+    }
+  });
+
   server_.Post("/api/videos/process", [&](const httplib::Request& request, httplib::Response& response) {
     if (!is_loopback_or_control(request, response)) {
       return;

@@ -37,6 +37,8 @@ const videoFilterOptions: Array<{ value: VideoFilter; label: string }> = [
   { value: 'blur', label: 'Blur' },
   { value: 'edgeDetect', label: 'Edge Detect' },
   { value: 'threshold', label: 'Threshold' },
+  { value: 'opticalFlow', label: 'Optical Flow' },
+  { value: 'stabilize', label: 'Stabilize' },
 ];
 
 function defaultImageParams(operation: ImageOperation): Record<string, unknown> {
@@ -168,6 +170,13 @@ export function ChartShowcasePage() {
     label: `${diagnostic.videoName} (${formatTime(diagnostic.createdAt)})`,
     value: Number(diagnostic.measuredReadFps.toFixed(1)),
   }));
+  const motionMetricData = diagnostics
+    .filter((diagnostic) => diagnostic.trackedFeatures !== undefined || diagnostic.averageFlowMagnitude !== undefined)
+    .slice(0, 8)
+    .map((diagnostic) => ({
+      label: `${diagnostic.operation ?? 'motion'} ${diagnostic.videoName}`,
+      value: Number((diagnostic.averageFlowMagnitude ?? diagnostic.trackedFeatures ?? 0).toFixed(1)),
+    }));
   const effectiveImageId = selectedImageId || results[0]?.resultId || '';
   const effectiveVideoId = selectedVideoId || videos[0]?.videoId || '';
   const effectivePipelineId = selectedPipelineId || pipelines[0]?.id || '';
@@ -480,6 +489,19 @@ export function ChartShowcasePage() {
                     <Typography variant="h6">Video Diagnostics</Typography>
                   </Stack>
                   <BarList data={videoReadFpsData} emptyLabel="Run Measure FPS in Video Lab to collect diagnostics." />
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <MovieFilterIcon color="primary" />
+                    <Typography variant="h6">Motion Metrics</Typography>
+                  </Stack>
+                  <BarList data={motionMetricData} emptyLabel="Run Analyze Motion in Video Lab to collect flow metrics." />
                 </Stack>
               </CardContent>
             </Card>

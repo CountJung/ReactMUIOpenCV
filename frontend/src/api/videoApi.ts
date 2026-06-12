@@ -1,7 +1,7 @@
 import { API_BASE_URL, apiRequest } from './client';
 import type { JobRecord } from './jobsApi';
 
-export type VideoFilter = 'none' | 'grayscale' | 'blur' | 'edgeDetect' | 'threshold';
+export type VideoFilter = 'none' | 'grayscale' | 'blur' | 'edgeDetect' | 'threshold' | 'opticalFlow' | 'stabilize';
 
 export type VideoRecord = {
   videoId: string;
@@ -35,14 +35,20 @@ export type VideoExportResult = {
 
 export type VideoDiagnostics = {
   video: VideoRecord;
+  operation?: string;
   sampleFrames: number;
   framesRead: number;
   elapsedMs: number;
   metadataFps: number;
   measuredReadFps: number;
-  displayFrameUrl: string;
-  writeContainer: string;
-  writeCodec: string;
+  trackedFeatures?: number;
+  averageFlowMagnitude?: number;
+  stabilizationCropPercent?: number;
+  processingMs?: number;
+  previewFrameUrl?: string;
+  displayFrameUrl?: string;
+  writeContainer?: string;
+  writeCodec?: string;
   record?: VideoDiagnosticsRecord;
 };
 
@@ -60,9 +66,23 @@ export type VideoDiagnosticsRecord = {
   elapsedMs: number;
   metadataFps: number;
   measuredReadFps: number;
-  writeContainer: string;
-  writeCodec: string;
+  operation?: string;
+  trackedFeatures?: number;
+  averageFlowMagnitude?: number;
+  stabilizationCropPercent?: number;
+  processingMs?: number;
+  writeContainer?: string;
+  writeCodec?: string;
   createdAt: string;
+};
+
+export type VideoMotionMetrics = VideoDiagnostics & {
+  operation: 'opticalFlow' | 'stabilize' | string;
+  trackedFeatures: number;
+  averageFlowMagnitude: number;
+  stabilizationCropPercent: number;
+  processingMs: number;
+  previewFrameUrl: string;
 };
 
 export type VideoDiagnosticsList = {
@@ -102,6 +122,17 @@ export function getVideo(videoId: string) {
 export function getVideoDiagnostics(videoId: string, sampleFrames = 120) {
   const search = new URLSearchParams({ sampleFrames: String(sampleFrames) });
   return apiRequest<VideoDiagnostics>(`/api/videos/${videoId}/diagnostics?${search.toString()}`);
+}
+
+export function analyzeVideoMotion(request: {
+  videoId: string;
+  operation: 'opticalFlow' | 'stabilize';
+  sampleFrames?: number;
+}) {
+  return apiRequest<{ job: JobRecord; metrics: VideoMotionMetrics }>('/api/videos/motion-metrics', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
 }
 
 export function getVideoDiagnosticsHistory() {

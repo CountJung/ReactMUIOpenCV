@@ -33,8 +33,13 @@ nlohmann::json step_payload(const std::string& node_id, const std::string& type,
 
 }  // namespace
 
-PipelineExecutor::PipelineExecutor(ImageResultStore& image_store, EventHub& event_hub, JobQueue& job_queue, LogStore& log_store)
-    : image_store_(image_store), event_hub_(event_hub), job_queue_(job_queue), log_store_(log_store) {}
+PipelineExecutor::PipelineExecutor(
+    ImageResultStore& image_store,
+    VideoService& video_service,
+    EventHub& event_hub,
+    JobQueue& job_queue,
+    LogStore& log_store)
+    : image_store_(image_store), video_service_(video_service), event_hub_(event_hub), job_queue_(job_queue), log_store_(log_store) {}
 
 nlohmann::json PipelineExecutor::execute(const nlohmann::json& document) {
   const auto job = job_queue_.create_manual("pipeline", "Pipeline execution queued.");
@@ -52,6 +57,7 @@ nlohmann::json PipelineExecutor::execute(const nlohmann::json& document) {
 
     job_queue_.start(job_id, "Pipeline execution started.");
     std::string current_result_id;
+    std::string current_video_id;
     nlohmann::json final_result;
 
     for (std::size_t index = 0; index < ordered_nodes.size(); ++index) {
@@ -74,30 +80,53 @@ nlohmann::json PipelineExecutor::execute(const nlohmann::json& document) {
         }
         final_result = *result;
         step["result"] = final_result;
-      } else if (active_node_type == "operation") {
-        if (current_result_id.empty()) {
-          throw std::runtime_error("Operation node requires an upstream image result.");
+      } else if (active_node_type == "videoInput") {
+        current_video_id = json_string(data.value("videoId", nlohmann::json{}));
+        if (current_video_id.empty()) {
+          throw std::runtime_error("Video input node requires data.videoId.");
         }
 
+        auto video = video_service_.get(current_video_id);
+        if (!video) {
+          throw std::runtime_error("Video input was not found.");
+        }
+        final_result = *video;
+        step["video"] = final_result;
+      } else if (active_node_type == "operation") {
         const auto operation = json_string(data.value("operation", nlohmann::json{}), "grayscale");
         const auto params = data.contains("params") && data["params"].is_object() ? data["params"] : nlohmann::json::object();
-        final_result = image_store_.process(current_result_id, operation, params);
-        current_result_id = final_result.value("resultId", std::string{});
+        if (!current_video_id.empty() && (operation == "opticalFlow" || operation == "stabilize")) {
+          const auto sample_frames = params.value("sampleFrames", 120);
+          final_result = video_service_.motion_metrics(current_video_id, operation, sample_frames);
+          step["metrics"] = final_result;
+          event_hub_.publish("video.motion.recorded", final_result);
+        } else {
+          if (current_result_id.empty()) {
+            throw std::runtime_error("Operation node requires an upstream image result.");
+          }
+          final_result = image_store_.process(current_result_id, operation, params);
+          current_result_id = final_result.value("resultId", std::string{});
+          step["result"] = final_result;
+          event_hub_.publish("preview.image.updated", {{"resultId", current_result_id}, {"source", "pipeline"}});
+        }
         step["operation"] = operation;
         step["params"] = params;
-        step["result"] = final_result;
-        event_hub_.publish("preview.image.updated", {{"resultId", current_result_id}, {"source", "pipeline"}});
       } else if (active_node_type == "output") {
-        if (current_result_id.empty()) {
-          throw std::runtime_error("Output node requires an upstream image result.");
-        }
+        if (!current_video_id.empty()) {
+          final_result = {{"videoId", current_video_id}, {"status", "video pipeline completed"}};
+          step["result"] = final_result;
+        } else {
+          if (current_result_id.empty()) {
+            throw std::runtime_error("Output node requires an upstream image result.");
+          }
 
-        auto result = image_store_.get(current_result_id);
-        if (!result) {
-          throw std::runtime_error("Output image result was not found.");
+          auto result = image_store_.get(current_result_id);
+          if (!result) {
+            throw std::runtime_error("Output image result was not found.");
+          }
+          final_result = *result;
+          step["result"] = final_result;
         }
-        final_result = *result;
-        step["result"] = final_result;
       } else {
         throw std::runtime_error("Unsupported pipeline node type: " + active_node_type);
       }
@@ -150,7 +179,7 @@ std::vector<nlohmann::json> PipelineExecutor::order_nodes(const nlohmann::json& 
   for (const auto& node : nodes) {
     const auto id = node_id(node);
     by_id[id] = node;
-    if (node_type(node) == "imageInput" && start_id.empty()) {
+    if ((node_type(node) == "imageInput" || node_type(node) == "videoInput") && start_id.empty()) {
       start_id = id;
     }
   }

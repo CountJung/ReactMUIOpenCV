@@ -26,6 +26,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import {
+  analyzeVideoMotion,
   exportVideo,
   extractVideoFrame,
   deleteVideo,
@@ -38,6 +39,7 @@ import {
   type VideoDiagnostics,
   type VideoFilter,
   type VideoFrameResult,
+  type VideoMotionMetrics,
   type VideoRecord,
 } from '../../api/videoApi';
 import { getVideoOpenCapabilities, openVideoFromLocalPath, openVideoFromUpload } from '../../runtime/fileAdapter';
@@ -52,6 +54,8 @@ const filterOptions: Array<{ value: VideoFilter; label: string }> = [
   { value: 'blur', label: 'Blur' },
   { value: 'edgeDetect', label: 'Edge Detect' },
   { value: 'threshold', label: 'Threshold' },
+  { value: 'opticalFlow', label: 'Optical Flow' },
+  { value: 'stabilize', label: 'Stabilize' },
 ];
 
 function mutationErrorMessage(error: unknown) {
@@ -138,7 +142,7 @@ export function VideoLabPage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [frameResult, setFrameResult] = useState<VideoFrameResult | null>(null);
   const [exportResult, setExportResult] = useState<VideoExportResult | null>(null);
-  const [diagnostics, setDiagnostics] = useState<VideoDiagnostics | null>(null);
+  const [diagnostics, setDiagnostics] = useState<VideoDiagnostics | VideoMotionMetrics | null>(null);
 
   useEffect(() => {
     setRuntimeMode(getRuntimeMode());
@@ -265,6 +269,21 @@ export function VideoLabPage() {
     },
   });
 
+  const motionMetricsMutation = useMutation({
+    mutationFn: () =>
+      analyzeVideoMotion({
+        videoId: activeVideo?.videoId ?? '',
+        operation: filter === 'stabilize' ? 'stabilize' : 'opticalFlow',
+        sampleFrames: Math.min(180, Math.max(2, activeVideo?.frameCount ?? 2)),
+      }),
+    onSuccess: ({ metrics }) => {
+      setDiagnostics(metrics);
+      setCacheKey(Date.now());
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      void queryClient.invalidateQueries({ queryKey: ['video-diagnostics'] });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => deleteVideo(activeVideo?.videoId ?? ''),
     onSuccess: () => {
@@ -287,6 +306,7 @@ export function VideoLabPage() {
     extractMutation.isPending ||
     exportMutation.isPending ||
     diagnosticsMutation.isPending ||
+    motionMetricsMutation.isPending ||
     deleteMutation.isPending;
   const currentError =
     openLocalMutation.error ??
@@ -295,6 +315,7 @@ export function VideoLabPage() {
     extractMutation.error ??
     exportMutation.error ??
     diagnosticsMutation.error ??
+    motionMetricsMutation.error ??
     deleteMutation.error;
 
   const changeFilter = (event: ChangeEvent<HTMLInputElement>) => {
@@ -505,6 +526,14 @@ export function VideoLabPage() {
                     >
                       Measure FPS
                     </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<MovieFilterIcon />}
+                      onClick={() => motionMetricsMutation.mutate()}
+                      disabled={!activeVideo || busy}
+                    >
+                      Analyze Motion
+                    </Button>
                   </Box>
 
                   {diagnostics && (
@@ -513,13 +542,26 @@ export function VideoLabPage() {
                       <Typography variant="subtitle2">Read/Write Diagnostics</Typography>
                       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                         <Chip label={`${diagnostics.framesRead}/${diagnostics.sampleFrames} frames read`} size="small" />
-                        <Chip label={`${diagnostics.measuredReadFps.toFixed(1)} read fps`} size="small" color="primary" />
-                        <Chip label={`${diagnostics.metadataFps.toFixed(1)} metadata fps`} size="small" variant="outlined" />
-                        <Chip label={`${diagnostics.writeCodec}.${diagnostics.writeContainer}`} size="small" variant="outlined" />
+                        <Chip label={`${diagnostics.measuredReadFps?.toFixed(1) ?? '0.0'} read fps`} size="small" color="primary" />
+                        <Chip label={`${diagnostics.metadataFps?.toFixed(1) ?? '0.0'} metadata fps`} size="small" variant="outlined" />
+                        {diagnostics.trackedFeatures !== undefined && (
+                          <Chip label={`${diagnostics.trackedFeatures} tracked features`} size="small" color="secondary" />
+                        )}
+                        {diagnostics.averageFlowMagnitude !== undefined && (
+                          <Chip label={`${diagnostics.averageFlowMagnitude.toFixed(2)} px flow`} size="small" variant="outlined" />
+                        )}
+                        {diagnostics.stabilizationCropPercent !== undefined && (
+                          <Chip label={`${diagnostics.stabilizationCropPercent.toFixed(2)}% crop estimate`} size="small" variant="outlined" />
+                        )}
+                        {diagnostics.writeCodec && diagnostics.writeContainer && (
+                          <Chip label={`${diagnostics.writeCodec}.${diagnostics.writeContainer}`} size="small" variant="outlined" />
+                        )}
                       </Stack>
-                      <Typography variant="caption" color="text.secondary">
-                        Display sample: {diagnostics.displayFrameUrl}
-                      </Typography>
+                      {(diagnostics.previewFrameUrl || diagnostics.displayFrameUrl) && (
+                        <Typography variant="caption" color="text.secondary">
+                          Display sample: {diagnostics.previewFrameUrl ?? diagnostics.displayFrameUrl}
+                        </Typography>
+                      )}
                     </Stack>
                   )}
                 </Stack>

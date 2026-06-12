@@ -2,13 +2,17 @@ import type { Edge, Node, XYPosition } from '@xyflow/react';
 import type { ImageOperation, ImageResult } from './imageApi';
 import { apiRequest } from './client';
 import type { JobRecord } from './jobsApi';
+import type { VideoRecord, VideoMotionMetrics } from './videoApi';
 
-export type PipelineNodeType = 'imageInput' | 'operation' | 'output';
+export type VideoPipelineOperation = 'opticalFlow' | 'stabilize';
+export type PipelineOperation = ImageOperation | VideoPipelineOperation;
+export type PipelineNodeType = 'imageInput' | 'videoInput' | 'operation' | 'output';
 
 export type PipelineNodeData = Record<string, unknown> & {
   label: string;
   resultId?: string;
-  operation?: ImageOperation;
+  videoId?: string;
+  operation?: PipelineOperation;
   params?: Record<string, unknown>;
 };
 
@@ -36,9 +40,11 @@ export type PipelineStep = {
   nodeId: string;
   nodeType: PipelineNodeType;
   status: 'completed' | 'failed' | string;
-  operation?: ImageOperation;
+  operation?: PipelineOperation;
   params?: Record<string, unknown>;
   result?: ImageResult;
+  video?: VideoRecord;
+  metrics?: VideoMotionMetrics;
   timestamp: string;
 };
 

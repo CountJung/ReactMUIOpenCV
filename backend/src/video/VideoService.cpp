@@ -5,9 +5,11 @@
 #include <algorithm>
 #include <chrono>
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/video.hpp>
 #include <opencv2/videoio.hpp>
 #include <stdexcept>
 #include <vector>
@@ -42,6 +44,108 @@ cv::Mat to_gray(const cv::Mat& frame) {
     cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   }
   return gray;
+}
+
+std::string normalize_motion_operation(const std::string& operation) {
+  if (operation == "stabilize" || operation == "stabilized") {
+    return "stabilize";
+  }
+  if (operation == "opticalFlow" || operation == "flow") {
+    return "opticalFlow";
+  }
+  return "opticalFlow";
+}
+
+cv::Mat draw_optical_flow(const cv::Mat& previous, const cv::Mat& current) {
+  cv::Mat previous_gray = to_gray(previous);
+  cv::Mat current_gray = to_gray(current);
+  cv::Mat flow;
+  cv::calcOpticalFlowFarneback(previous_gray, current_gray, flow, 0.5, 3, 15, 3, 5, 1.2, 0);
+
+  cv::Mat visual = current.clone();
+  if (visual.channels() == 1) {
+    cv::cvtColor(visual, visual, cv::COLOR_GRAY2BGR);
+  }
+
+  const int step = std::max(12, std::min(visual.cols, visual.rows) / 24);
+  for (int y = step / 2; y < visual.rows; y += step) {
+    for (int x = step / 2; x < visual.cols; x += step) {
+      const auto vector = flow.at<cv::Point2f>(y, x);
+      const cv::Point start(x, y);
+      const cv::Point end(
+          std::clamp(static_cast<int>(std::round(x + vector.x * 2.0F)), 0, visual.cols - 1),
+          std::clamp(static_cast<int>(std::round(y + vector.y * 2.0F)), 0, visual.rows - 1));
+      cv::arrowedLine(visual, start, end, cv::Scalar(0, 255, 255), 1, cv::LINE_AA, 0, 0.25);
+    }
+  }
+
+  return visual;
+}
+
+bool estimate_stabilization_transform(const cv::Mat& previous, const cv::Mat& current, cv::Mat& transform, int& tracked_features, double& average_motion) {
+  cv::Mat previous_gray = to_gray(previous);
+  cv::Mat current_gray = to_gray(current);
+  std::vector<cv::Point2f> previous_points;
+  cv::goodFeaturesToTrack(previous_gray, previous_points, 200, 0.01, 30);
+  if (previous_points.size() < 8) {
+    return false;
+  }
+
+  std::vector<cv::Point2f> current_points;
+  std::vector<unsigned char> status;
+  std::vector<float> errors;
+  cv::calcOpticalFlowPyrLK(previous_gray, current_gray, previous_points, current_points, status, errors);
+
+  std::vector<cv::Point2f> matched_previous;
+  std::vector<cv::Point2f> matched_current;
+  double motion_sum = 0.0;
+  double dx_sum = 0.0;
+  double dy_sum = 0.0;
+  for (std::size_t index = 0; index < status.size(); ++index) {
+    if (!status[index]) {
+      continue;
+    }
+    matched_previous.push_back(previous_points[index]);
+    matched_current.push_back(current_points[index]);
+    const auto delta = current_points[index] - previous_points[index];
+    dx_sum += delta.x;
+    dy_sum += delta.y;
+    motion_sum += std::sqrt((delta.x * delta.x) + (delta.y * delta.y));
+  }
+
+  tracked_features = static_cast<int>(matched_previous.size());
+  average_motion = tracked_features > 0 ? motion_sum / tracked_features : 0.0;
+  if (matched_previous.size() < 8) {
+    return false;
+  }
+
+  const auto dx = dx_sum / static_cast<double>(tracked_features);
+  const auto dy = dy_sum / static_cast<double>(tracked_features);
+  transform = (cv::Mat_<double>(2, 3) << 1.0, 0.0, -dx, 0.0, 1.0, -dy);
+  return true;
+}
+
+cv::Mat stabilize_frame(const cv::Mat& previous, const cv::Mat& current) {
+  cv::Mat transform;
+  int tracked_features = 0;
+  double average_motion = 0.0;
+  if (!estimate_stabilization_transform(previous, current, transform, tracked_features, average_motion)) {
+    return current.clone();
+  }
+
+  cv::Mat output;
+  cv::warpAffine(current, output, transform, current.size(), cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+  return output;
+}
+
+cv::Mat apply_temporal_video_filter(const cv::Mat& previous, const cv::Mat& current, const std::string& filter) {
+  if (filter == "opticalFlow") {
+    return draw_optical_flow(previous, current);
+  }
+  if (filter == "stabilize" || filter == "stabilized") {
+    return stabilize_frame(previous, current);
+  }
+  return apply_video_filter(current, filter);
 }
 
 }  // namespace
@@ -88,6 +192,10 @@ cv::Mat apply_video_filter(const cv::Mat& frame, const std::string& filter) {
     cv::Mat output;
     cv::threshold(to_gray(frame), output, 128, 255, cv::THRESH_BINARY);
     return output;
+  }
+
+  if (filter == "opticalFlow" || filter == "stabilize" || filter == "stabilized") {
+    return frame.clone();
   }
 
   return frame.clone();
@@ -182,6 +290,70 @@ nlohmann::json VideoService::diagnostics(const std::string& id, int sample_frame
   };
 }
 
+nlohmann::json VideoService::motion_metrics(const std::string& id, const std::string& operation, int sample_frames) const {
+  const auto record = find_record(id);
+  if (!record) {
+    throw std::runtime_error("Video was not found.");
+  }
+
+  sample_frames = std::clamp(sample_frames, 2, std::min(360, std::max(2, record->frame_count)));
+
+  cv::VideoCapture capture(record->path.string());
+  if (!capture.isOpened()) {
+    throw std::runtime_error("OpenCV could not open the video for motion analysis.");
+  }
+
+  cv::Mat previous;
+  cv::Mat current;
+  if (!capture.read(previous) || previous.empty()) {
+    throw std::runtime_error("OpenCV could not read the first motion-analysis frame.");
+  }
+
+  const auto started = std::chrono::steady_clock::now();
+  int pairs_read = 0;
+  int tracked_sum = 0;
+  double flow_sum = 0.0;
+  double crop_sum = 0.0;
+  const auto normalized_operation = normalize_motion_operation(operation);
+
+  for (int frame_index = 1; frame_index < sample_frames; ++frame_index) {
+    if (!capture.read(current) || current.empty()) {
+      break;
+    }
+
+    cv::Mat transform;
+    int tracked_features = 0;
+    double average_motion = 0.0;
+    estimate_stabilization_transform(previous, current, transform, tracked_features, average_motion);
+
+    tracked_sum += tracked_features;
+    flow_sum += average_motion;
+    crop_sum += std::clamp((average_motion / std::max(1, std::min(record->width, record->height))) * 100.0, 0.0, 25.0);
+    previous = current.clone();
+    ++pairs_read;
+  }
+
+  const auto elapsed = std::chrono::steady_clock::now() - started;
+  const auto elapsed_ms = std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(elapsed).count();
+  const auto safe_pairs = std::max(1, pairs_read);
+
+  return {
+      {"video", video_to_json(*record)},
+      {"operation", normalized_operation},
+      {"sampleFrames", sample_frames},
+      {"framesRead", pairs_read + 1},
+      {"metadataFps", record->fps},
+      {"measuredReadFps", 0.0},
+      {"trackedFeatures", tracked_sum / safe_pairs},
+      {"averageFlowMagnitude", flow_sum / safe_pairs},
+      {"stabilizationCropPercent", crop_sum / safe_pairs},
+      {"processingMs", elapsed_ms},
+      {"writeContainer", "avi"},
+      {"writeCodec", "MJPG"},
+      {"previewFrameUrl", "/api/videos/frame/" + id + "/" + std::to_string(std::min(1, record->frame_count - 1)) + "?filter=" + normalized_operation},
+  };
+}
+
 std::optional<cv::Mat> VideoService::read_frame(const std::string& id, int frame_index, const std::string& filter) const {
   const auto record = find_record(id);
   if (!record) {
@@ -193,6 +365,22 @@ std::optional<cv::Mat> VideoService::read_frame(const std::string& id, int frame
   cv::VideoCapture capture(record->path.string());
   if (!capture.isOpened()) {
     throw std::runtime_error("OpenCV could not open the video.");
+  }
+
+  if (filter == "opticalFlow" || filter == "stabilize" || filter == "stabilized") {
+    const auto previous_index = std::max(0, frame_index - 1);
+    capture.set(cv::CAP_PROP_POS_FRAMES, previous_index);
+    cv::Mat previous;
+    cv::Mat current;
+    if (!capture.read(previous) || previous.empty()) {
+      throw std::runtime_error("OpenCV could not read the previous frame for motion preview.");
+    }
+    if (previous_index == frame_index) {
+      current = previous.clone();
+    } else if (!capture.read(current) || current.empty()) {
+      throw std::runtime_error("OpenCV could not read the requested motion preview frame.");
+    }
+    return apply_temporal_video_filter(previous, current, filter);
   }
 
   capture.set(cv::CAP_PROP_POS_FRAMES, frame_index);
@@ -258,6 +446,7 @@ nlohmann::json VideoService::export_filtered_video(
 
   capture.set(cv::CAP_PROP_POS_FRAMES, start_frame);
   const int total_frames = std::max(1, end_frame - start_frame + 1);
+  cv::Mat previous_frame;
 
   for (int frame_index = start_frame; frame_index <= end_frame; ++frame_index) {
     cv::Mat frame;
@@ -265,7 +454,13 @@ nlohmann::json VideoService::export_filtered_video(
       break;
     }
 
-    auto filtered = apply_video_filter(frame, filter);
+    cv::Mat filtered;
+    if ((filter == "opticalFlow" || filter == "stabilize" || filter == "stabilized") && !previous_frame.empty()) {
+      filtered = apply_temporal_video_filter(previous_frame, frame, filter);
+    } else {
+      filtered = apply_video_filter(frame, filter);
+    }
+    previous_frame = frame.clone();
     if (filtered.channels() == 1) {
       cv::cvtColor(filtered, filtered, cv::COLOR_GRAY2BGR);
     }

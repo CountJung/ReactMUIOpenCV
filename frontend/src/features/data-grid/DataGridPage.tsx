@@ -251,6 +251,26 @@ export function DataGridPage() {
         cell: ({ getValue }) => getValue<number>().toFixed(2),
       },
       {
+        accessorKey: 'operation',
+        header: 'Operation',
+        cell: ({ getValue }) => String(getValue() ?? 'readFps'),
+      },
+      {
+        accessorKey: 'trackedFeatures',
+        header: 'Features',
+        cell: ({ getValue }) => String(getValue<number | undefined>() ?? 0),
+      },
+      {
+        accessorKey: 'averageFlowMagnitude',
+        header: 'Flow px',
+        cell: ({ getValue }) => (getValue<number | undefined>() ?? 0).toFixed(2),
+      },
+      {
+        accessorKey: 'stabilizationCropPercent',
+        header: 'Crop %',
+        cell: ({ getValue }) => (getValue<number | undefined>() ?? 0).toFixed(2),
+      },
+      {
         id: 'fpsDelta',
         header: 'Delta',
         accessorFn: (row) => row.measuredReadFps - row.metadataFps,

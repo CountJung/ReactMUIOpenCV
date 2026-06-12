@@ -98,7 +98,7 @@ AppContext::AppContext(AppRuntimeConfig config)
       remote_access_(config_.lan_mode, config_.host, config_.selected_ip),
       pipeline_store_(config_.data_dir / "pipelines.json"),
       video_diagnostics_store_(config_.data_dir / "video-diagnostics.json"),
-      pipeline_executor_(image_store_, event_hub_, job_queue_, log_store_),
+      pipeline_executor_(image_store_, video_service_, event_hub_, job_queue_, log_store_),
       websocket_gateway_(config_.host, config_.ws_port, event_hub_, log_store_, remote_access_),
       api_server_(
           config_.host,

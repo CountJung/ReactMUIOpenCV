@@ -44,7 +44,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { absoluteImageUrl, getImageResults, type ImageOperation } from '../../api/imageApi';
+import { absoluteImageUrl, getImageResults } from '../../api/imageApi';
 import {
   createPipeline,
   deletePipeline,
@@ -56,7 +56,9 @@ import {
   type PipelineFlowNode,
   type PipelineNodeData,
   type PipelineNodeType,
+  type PipelineOperation,
 } from '../../api/pipelineApi';
+import { getVideos } from '../../api/videoApi';
 
 const pipelinesQueryKey = ['pipelines'];
 const imageResultsQueryKey = ['image-results'];
@@ -77,11 +79,12 @@ type PipelineSnapshot = {
 
 const nodeKindOptions: Array<{ value: PipelineNodeType; label: string }> = [
   { value: 'imageInput', label: 'Image Input' },
+  { value: 'videoInput', label: 'Video Input' },
   { value: 'operation', label: 'Operation' },
   { value: 'output', label: 'Output' },
 ];
 
-const operationOptions: Array<{ value: ImageOperation; label: string; defaultParams?: Record<string, unknown> }> = [
+const operationOptions: Array<{ value: PipelineOperation; label: string; defaultParams?: Record<string, unknown> }> = [
   { value: 'grayscale', label: 'Grayscale' },
   { value: 'blur', label: 'Blur', defaultParams: { kernel: 7 } },
   { value: 'gaussianBlur', label: 'Gaussian Blur', defaultParams: { kernel: 7 } },
@@ -90,6 +93,8 @@ const operationOptions: Array<{ value: ImageOperation; label: string; defaultPar
   { value: 'contourDetect', label: 'Contour Detect', defaultParams: { low: 80, high: 160 } },
   { value: 'histogram', label: 'Histogram' },
   { value: 'sharpen', label: 'Sharpen', defaultParams: { strength: 1 } },
+  { value: 'opticalFlow', label: 'Optical Flow', defaultParams: { sampleFrames: 120 } },
+  { value: 'stabilize', label: 'Video Stabilize', defaultParams: { sampleFrames: 120 } },
 ];
 
 function defaultDocument(resultId = ''): PipelineDocument {
@@ -246,6 +251,11 @@ function PipelineNodeCard({ data, isConnectable }: NodeProps<PipelineFlowDisplay
             {data.resultId ? `result: ${data.resultId}` : 'select image result'}
           </Typography>
         )}
+        {nodeType === 'videoInput' && (
+          <Typography variant="caption" color="text.secondary" noWrap>
+            {data.videoId ? `video: ${data.videoId}` : 'select video'}
+          </Typography>
+        )}
       </Stack>
     </Box>
   );
@@ -299,6 +309,11 @@ function PipelineFlowWorkspace() {
     queryFn: getImageResults,
     refetchInterval: 8000,
   });
+  const videosQuery = useQuery({
+    queryKey: ['video-library'],
+    queryFn: getVideos,
+    refetchInterval: 8000,
+  });
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? nodes[0];
   const document = useMemo(() => toDocument(pipelineName, nodes, edges), [pipelineName, nodes, edges]);
@@ -315,7 +330,7 @@ function PipelineFlowWorkspace() {
     [nodes],
   );
   const execution = lastExecution ?? pipelineQuery.data?.executions?.[0] ?? null;
-  const busy = pipelineQuery.isFetching || imageResultsQuery.isFetching;
+  const busy = pipelineQuery.isFetching || imageResultsQuery.isFetching || videosQuery.isFetching;
 
   const saveMutation = useMutation({
     mutationFn: () => (pipelineId ? updatePipeline(pipelineId, document) : createPipeline(document)),
@@ -476,9 +491,14 @@ function PipelineFlowWorkspace() {
             ? {
                 label: `Image Input ${nodes.filter((node) => node.type === 'imageInput').length + 1}`,
                 resultId: imageResultsQuery.data?.results[0]?.resultId ?? '',
+            }
+          : newNodeKind === 'videoInput'
+            ? {
+                label: `Video Input ${nodes.filter((node) => node.type === 'videoInput').length + 1}`,
+                videoId: videosQuery.data?.videos[0]?.videoId ?? '',
               }
-            : {
-                label: `Output ${nodes.filter((node) => node.type === 'output').length + 1}`,
+          : {
+              label: `Output ${nodes.filter((node) => node.type === 'output').length + 1}`,
               },
     };
 
@@ -525,7 +545,7 @@ function PipelineFlowWorkspace() {
   }, [pushHistory, selectedGraph.edgeIds, selectedGraph.nodeIds, setEdges, setNodes]);
 
   const changeSelectedOperation = (event: ChangeEvent<HTMLInputElement>) => {
-    const nextOperation = event.target.value as ImageOperation;
+    const nextOperation = event.target.value as PipelineOperation;
     const option = operationOptions.find((candidate) => candidate.value === nextOperation);
     if (!selectedNode) {
       return;
@@ -855,6 +875,22 @@ function PipelineFlowWorkspace() {
                         {(imageResultsQuery.data?.results ?? []).map((result) => (
                           <MenuItem key={result.resultId} value={result.resultId}>
                             {result.name} · {result.operation}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    )}
+                    {selectedNode?.type === 'videoInput' && (
+                      <TextField
+                        label="Video"
+                        select
+                        size="small"
+                        value={String(selectedNode.data.videoId ?? '')}
+                        onChange={(event) => updateNodeData(selectedNode.id, { videoId: event.target.value })}
+                      >
+                        <MenuItem value="">Select a video</MenuItem>
+                        {(videosQuery.data?.videos ?? []).map((video) => (
+                          <MenuItem key={video.videoId} value={video.videoId}>
+                            {video.name} · {video.width}x{video.height}
                           </MenuItem>
                         ))}
                       </TextField>

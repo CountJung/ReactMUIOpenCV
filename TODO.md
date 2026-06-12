@@ -97,9 +97,9 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 
 ### Pack 9B - Motion And Stabilization Pipelines
 
-- [ ] Add Video Lab stabilization preview/export and pipeline node based on LearnOpenCV `Video Stabilization Using Point Feature Matching in OpenCV`.
-- [ ] Add optical-flow preview and pipeline node based on LearnOpenCV `Optical Flow in OpenCV`.
-- [ ] Add dashboard metrics for tracked features, flow magnitude, stabilization crop, and processing time.
+- [x] Add Video Lab stabilization preview/export and pipeline node based on LearnOpenCV `Video Stabilization Using Point Feature Matching in OpenCV`.
+- [x] Add optical-flow preview and pipeline node based on LearnOpenCV `Optical Flow in OpenCV`.
+- [x] Add dashboard metrics for tracked features, flow magnitude, stabilization crop, and processing time.
 - Agent focus: backend video/vision worker first, then React Flow node editor and execution result UI.
 
 ### Pack 9C - Tracking And Detection Nodes
