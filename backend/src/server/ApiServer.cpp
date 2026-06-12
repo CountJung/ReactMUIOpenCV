@@ -29,6 +29,8 @@ ApiServer::ApiServer(
     PipelineStore& pipeline_store,
     VideoDiagnosticsStore& video_diagnostics_store,
     VideoTrackingStore& video_tracking_store,
+    CalibrationStore& calibration_store,
+    CalibrationService& calibration_service,
     PipelineExecutor& pipeline_executor,
     std::filesystem::path static_root)
     : host_(std::move(host)),
@@ -45,6 +47,8 @@ ApiServer::ApiServer(
       pipeline_store_(pipeline_store),
       video_diagnostics_store_(video_diagnostics_store),
       video_tracking_store_(video_tracking_store),
+      calibration_store_(calibration_store),
+      calibration_service_(calibration_service),
       pipeline_executor_(pipeline_executor),
       static_root_(std::move(static_root)) {
   server_.set_payload_max_length(kMaxApiPayloadBytes);
@@ -405,6 +409,36 @@ void ApiServer::register_routes() {
         log_store_.append("info", "Removed image result " + id);
         send_data(response, {{"deleted", id}});
       });
+
+  server_.Get("/api/calibration/results", [&](const httplib::Request& request, httplib::Response& response) {
+    send_data(response, calibration_store_.list(is_loopback_request(request)));
+  });
+
+  server_.Post("/api/calibration/results", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
+    const auto body = parse_body(request);
+    const auto result_id = body.value("resultId", std::string{});
+    const int board_width = body.value("boardWidth", 9);
+    const int board_height = body.value("boardHeight", 6);
+    const double square_size = body.value("squareSize", 1.0);
+    if (result_id.empty()) {
+      send_error(response, "invalid_calibration_request", "resultId is required.", 400);
+      return;
+    }
+
+    try {
+      const auto calibration =
+          calibration_service_.calibrate_from_image(result_id, board_width, board_height, square_size);
+      log_store_.append("info", "Recorded camera calibration result for image " + result_id);
+      send_data(response, {{"calibration", calibration}}, 201);
+    } catch (const std::exception& error) {
+      log_store_.append("error", "Camera calibration failed: " + std::string(error.what()));
+      send_error(response, "camera_calibration_failed", error.what(), 400);
+    }
+  });
 
   server_.Post("/api/videos/open-local", [&](const httplib::Request& request, httplib::Response& response) {
     if (!is_loopback_request(request)) {

@@ -1,7 +1,9 @@
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import SaveIcon from '@mui/icons-material/Save';
 import UndoIcon from '@mui/icons-material/Undo';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
@@ -24,7 +26,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import {
   absoluteImageUrl,
+  createCalibrationResult,
   deleteImageResult,
+  getCalibrationResults,
   getImageResult,
   getImageResults,
   processImage,
@@ -39,9 +43,7 @@ import {
 } from '../../runtime/fileAdapter';
 import { getRuntimeMode, type RuntimeMode } from '../../runtime/runtimeMode';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
-
-type ParamValue = string | number;
-type ImageParams = Record<string, ParamValue>;
+import { useImageLabStore, type ImageParams } from '../../store/useImageLabStore';
 
 const imageResultsQueryKey = ['image-results'];
 
@@ -60,6 +62,10 @@ const operationLabels: Array<{ value: ImageOperation; label: string }> = [
   { value: 'histogram', label: 'Histogram' },
   { value: 'colorConvert', label: 'Color Convert' },
   { value: 'compare', label: 'Compare Diff' },
+  { value: 'featureAlign', label: 'Feature Align' },
+  { value: 'eccAlign', label: 'ECC Align' },
+  { value: 'qrScan', label: 'QR Scanner' },
+  { value: 'calibrationBoard', label: 'Calibration Board' },
 ];
 
 function defaultParams(operation: ImageOperation, result?: ImageResult): ImageParams {
@@ -89,6 +95,12 @@ function defaultParams(operation: ImageOperation, result?: ImageResult): ImagePa
       return { low: 80, high: 160 };
     case 'colorConvert':
       return { target: 'hsv' };
+    case 'featureAlign':
+      return { maxFeatures: 500, keepRatio: 0.18 };
+    case 'eccAlign':
+      return { iterations: 80, epsilon: 0.0001 };
+    case 'calibrationBoard':
+      return { boardWidth: 9, boardHeight: 6, squareSize: 1 };
     default:
       return {};
   }
@@ -150,11 +162,19 @@ function PreviewPanel({
 export function ImageLabPage() {
   const queryClient = useQueryClient();
   const [runtimeMode, setRuntimeMode] = useState<RuntimeMode>('desktop');
-  const [localPath, setLocalPath] = useState('');
-  const [currentResult, setCurrentResult] = useState<ImageResult | null>(null);
-  const [operation, setOperation] = useState<ImageOperation>('grayscale');
-  const [params, setParams] = useState<ImageParams>(() => defaultParams('grayscale'));
-  const [savePath, setSavePath] = useState<string | null>(null);
+  const {
+    localPath,
+    currentResult,
+    operation,
+    params,
+    savePath,
+    setLocalPath,
+    setCurrentResult,
+    setOperation,
+    setParams,
+    setParam,
+    setSavePath,
+  } = useImageLabStore();
 
   useEffect(() => {
     setRuntimeMode(getRuntimeMode());
@@ -172,6 +192,12 @@ export function ImageLabPage() {
     queryKey: imageResultsQueryKey,
     queryFn: getImageResults,
     refetchInterval: 8000,
+  });
+
+  const calibrationQuery = useQuery({
+    queryKey: ['calibration-results'],
+    queryFn: getCalibrationResults,
+    refetchInterval: 15000,
   });
 
   const activeResult = resultQuery.data ?? currentResult;
@@ -219,6 +245,19 @@ export function ImageLabPage() {
     },
   });
 
+  const calibrationMutation = useMutation({
+    mutationFn: () =>
+      createCalibrationResult({
+        resultId: activeResult?.resultId ?? '',
+        boardWidth: Number(params.boardWidth ?? 9),
+        boardHeight: Number(params.boardHeight ?? 6),
+        squareSize: Number(params.squareSize ?? 1),
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['calibration-results'] });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => deleteImageResult(activeResult?.resultId ?? ''),
     onSuccess: () => {
@@ -234,18 +273,16 @@ export function ImageLabPage() {
     openLocalMutation.isPending ||
     uploadMutation.isPending ||
     processMutation.isPending ||
+    calibrationMutation.isPending ||
     saveMutation.isPending ||
     deleteMutation.isPending;
   const currentError =
     openLocalMutation.error ??
     uploadMutation.error ??
     processMutation.error ??
+    calibrationMutation.error ??
     saveMutation.error ??
     deleteMutation.error;
-
-  const setParam = (key: string, value: ParamValue) => {
-    setParams((previous) => ({ ...previous, [key]: value }));
-  };
 
   const changeOperation = (event: ChangeEvent<HTMLInputElement>) => {
     const nextOperation = event.target.value as ImageOperation;
@@ -279,14 +316,14 @@ export function ImageLabPage() {
     setSavePath(null);
   };
 
-  const renderNumberField = (key: string, label: string, minimum = 0) => (
+  const renderNumberField = (key: string, label: string, minimum = 0, step = 1) => (
     <TextField
       key={key}
       label={label}
       type="number"
       value={params[key] ?? minimum}
       onChange={(event) => setParam(key, Number(event.target.value))}
-      inputProps={{ min: minimum }}
+      inputProps={{ min: minimum, step }}
       size="small"
       fullWidth
     />
@@ -522,6 +559,39 @@ export function ImageLabPage() {
                         </TextField>
                       </Grid>
                     )}
+                    {operation === 'featureAlign' && (
+                      <>
+                        <Grid item xs={12}>
+                          {renderNumberField('maxFeatures', 'Max Features', 50)}
+                        </Grid>
+                        <Grid item xs={12}>
+                          {renderSlider('keepRatio', 'Keep Ratio', 0.05, 1, 0.01)}
+                        </Grid>
+                      </>
+                    )}
+                    {operation === 'eccAlign' && (
+                      <>
+                        <Grid item xs={12}>
+                          {renderNumberField('iterations', 'Iterations', 10)}
+                        </Grid>
+                        <Grid item xs={12}>
+                          {renderSlider('epsilon', 'Epsilon', 0.000001, 0.01, 0.000001)}
+                        </Grid>
+                      </>
+                    )}
+                    {operation === 'calibrationBoard' && (
+                      <>
+                        <Grid item xs={4}>
+                          {renderNumberField('boardWidth', 'Board W', 2)}
+                        </Grid>
+                        <Grid item xs={4}>
+                          {renderNumberField('boardHeight', 'Board H', 2)}
+                        </Grid>
+                        <Grid item xs={4}>
+                          {renderNumberField('squareSize', 'Square', 0.001, 0.001)}
+                        </Grid>
+                      </>
+                    )}
                   </Grid>
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
@@ -547,6 +617,14 @@ export function ImageLabPage() {
                       disabled={!activeResult || busy}
                     >
                       Save PNG
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<PhotoCameraIcon />}
+                      onClick={() => calibrationMutation.mutate()}
+                      disabled={!activeResult || busy}
+                    >
+                      Calibrate
                     </Button>
                     <Button
                       variant="outlined"
@@ -583,6 +661,68 @@ export function ImageLabPage() {
                     ))}
                     {resultsQuery.data?.results.length === 0 && (
                       <Typography color="text.secondary">No image results yet.</Typography>
+                    )}
+                  </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                    <Typography variant="h6">Alignment & QR Utilities</Typography>
+                    <QrCodeScannerIcon color="primary" />
+                  </Stack>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {(['featureAlign', 'eccAlign', 'qrScan'] as ImageOperation[]).map((utility) => (
+                      <Chip
+                        key={utility}
+                        label={
+                          operationLabels.find((item) => item.value === utility)?.label ?? utility
+                        }
+                        color={operation === utility ? 'primary' : 'default'}
+                        onClick={() => {
+                          setOperation(utility);
+                          setParams(defaultParams(utility, activeResult ?? undefined));
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Typography variant="h6">Calibration Results</Typography>
+                  <Stack spacing={1} sx={{ maxHeight: 180, overflowY: 'auto', pr: 0.5 }}>
+                    {(calibrationQuery.data?.records ?? []).slice(0, 4).map((record) => (
+                      <Stack
+                        key={record.calibrationId}
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        gap={1}
+                      >
+                        <Typography variant="body2" noWrap>
+                          {record.imageName}
+                        </Typography>
+                        <Chip
+                          label={`RMS ${record.rmsReprojectionError.toFixed(3)}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      </Stack>
+                    ))}
+                    {calibrationQuery.data?.records.length === 0 && (
+                      <Typography color="text.secondary">No calibration artifacts yet.</Typography>
                     )}
                   </Stack>
                 </Stack>

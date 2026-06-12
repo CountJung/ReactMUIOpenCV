@@ -7,11 +7,13 @@
 #include "../server/ApiServer.h"
 #include "../server/EventHub.h"
 #include "../server/WebSocketGateway.h"
+#include "../storage/CalibrationStore.h"
 #include "../storage/PipelineStore.h"
 #include "../storage/SettingsStore.h"
 #include "../storage/VideoDiagnosticsStore.h"
 #include "../storage/VideoTrackingStore.h"
 #include "../video/VideoService.h"
+#include "../vision/CalibrationService.h"
 #include "../vision/PipelineExecutor.h"
 
 #include <filesystem>
@@ -57,6 +59,8 @@ private:
   PipelineStore pipeline_store_;
   VideoDiagnosticsStore video_diagnostics_store_;
   VideoTrackingStore video_tracking_store_;
+  CalibrationStore calibration_store_;
+  CalibrationService calibration_service_;
   PipelineExecutor pipeline_executor_;
   WebSocketGateway websocket_gateway_;
   ApiServer api_server_;

@@ -15,7 +15,11 @@ export type ImageOperation =
   | 'contourDetect'
   | 'histogram'
   | 'colorConvert'
-  | 'compare';
+  | 'compare'
+  | 'featureAlign'
+  | 'eccAlign'
+  | 'qrScan'
+  | 'calibrationBoard';
 
 export type ImageResult = {
   resultId: string;
@@ -49,6 +53,21 @@ export type SaveImageResponse = {
   resultId: string;
   status: 'saved';
   path: string;
+};
+
+export type CalibrationResult = {
+  calibrationId: string;
+  imageResultId: string;
+  imageName: string;
+  imageSize: { width: number; height: number };
+  board: { width: number; height: number; squareSize: number };
+  cornerCount: number;
+  rmsReprojectionError: number;
+  cameraMatrix: number[][];
+  distortionCoefficients: number[];
+  rotationVector: number[];
+  translationVector: number[];
+  createdAt: string;
 };
 
 export function absoluteImageUrl(path: string) {
@@ -114,4 +133,23 @@ export function deleteImageResult(resultId: string) {
 
 export function getImageResults() {
   return apiRequest<{ results: ImageResult[] }>('/api/images/results');
+}
+
+export function getCalibrationResults() {
+  return apiRequest<{
+    records: CalibrationResult[];
+    storage: { kind: string; description: string; path?: string };
+  }>('/api/calibration/results');
+}
+
+export function createCalibrationResult(request: {
+  resultId: string;
+  boardWidth: number;
+  boardHeight: number;
+  squareSize: number;
+}) {
+  return apiRequest<{ calibration: CalibrationResult }>('/api/calibration/results', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
 }

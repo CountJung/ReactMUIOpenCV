@@ -99,6 +99,8 @@ AppContext::AppContext(AppRuntimeConfig config)
       pipeline_store_(config_.data_dir / "pipelines.json"),
       video_diagnostics_store_(config_.data_dir / "video-diagnostics.json"),
       video_tracking_store_(config_.data_dir / "video-tracking.json"),
+      calibration_store_(config_.data_dir / "calibration-results.json"),
+      calibration_service_(image_store_, calibration_store_),
       pipeline_executor_(image_store_, video_service_, video_tracking_store_, event_hub_, job_queue_, log_store_),
       websocket_gateway_(config_.host, config_.ws_port, event_hub_, log_store_, remote_access_),
       api_server_(
@@ -116,6 +118,8 @@ AppContext::AppContext(AppRuntimeConfig config)
           pipeline_store_,
           video_diagnostics_store_,
           video_tracking_store_,
+          calibration_store_,
+          calibration_service_,
           pipeline_executor_,
           config_.static_root) {}
 

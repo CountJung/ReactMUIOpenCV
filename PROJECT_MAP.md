@@ -39,6 +39,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `data/pipelines.json`: Backend-owned persisted pipeline documents and recent pipeline execution summaries. Created at runtime when pipelines are saved.
 - `data/video-diagnostics.json`: Backend-owned persisted Video Lab FPS/read diagnostics and motion/stabilization metrics. Created at runtime when Measure FPS or Analyze Motion is executed.
 - `data/video-tracking.json`: Backend-owned persisted object-tracking summaries and per-frame ROI metadata. Created at runtime when Track ROI or a `trackObject` pipeline node is executed.
+- `data/calibration-results.json`: Backend-owned persisted camera calibration artifacts. Created at runtime when Image Lab records a calibration result.
 
 ## Documentation
 
@@ -62,8 +63,9 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `frontend/src/app/providers.tsx`: Global providers such as TanStack Query and theme.
 - `frontend/src/app/router.tsx`: React Router route tree.
 - `frontend/src/theme/`: MUI theme tokens, component overrides, mode resolution, theme context, and theme provider.
-- `frontend/src/api/`: REST and WebSocket client code. `remoteApi.ts` owns Remote Access and Network Info calls; `imageApi.ts` owns Image Lab open/upload/process/save/result calls; `videoApi.ts` owns Video Lab open/upload/frame/extract/export/motion metrics/tracking calls; `pipelineApi.ts` owns Phase 6 pipeline document, CRUD, execution, and execution result types including image/video/tracking nodes; `jobsApi.ts`, `logsApi.ts`, and `filesApi.ts` feed Dashboard, Charts, Logs, and Data Grid state.
+- `frontend/src/api/`: REST and WebSocket client code. `remoteApi.ts` owns Remote Access and Network Info calls; `imageApi.ts` owns Image Lab open/upload/process/save/result/calibration calls; `videoApi.ts` owns Video Lab open/upload/frame/extract/export/motion metrics/tracking calls; `pipelineApi.ts` owns Phase 6 pipeline document, CRUD, execution, and execution result types including image/video/tracking nodes; `jobsApi.ts`, `logsApi.ts`, and `filesApi.ts` feed Dashboard, Charts, Logs, and Data Grid state.
 - `frontend/src/runtime/`: Desktop vs LAN runtime detection and adapters. `fileAdapter.ts` hides local-path vs upload image/video opening.
+- `frontend/src/store/`: Client-owned UI state stores. `useImageLabStore.ts` preserves Image Lab path/result/filter/parameter state across route navigation.
 - `frontend/src/features/`: Route-level pages for dashboard, remote access, image/video lab, pipeline, charts, data grid, logs, and settings.
 - `frontend/src/shared/`: Reusable layouts, components, hooks, utilities, and shared types.
 
@@ -87,9 +89,11 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/src/storage/PipelineStore.*`: Backend-owned pipeline JSON records persisted to `data/pipelines.json`, including recent execution summaries and storage location metadata for loopback clients.
 - `backend/src/storage/VideoDiagnosticsStore.*`: Backend-owned Video Lab diagnostics records persisted to `data/video-diagnostics.json`, including measured read FPS, metadata FPS, sample frames, optical-flow/stabilization metrics, elapsed time, and storage location metadata for loopback clients.
 - `backend/src/storage/VideoTrackingStore.*`: Backend-owned object tracking records persisted to `data/video-tracking.json`, including ROI, per-frame bounding boxes, match scores, status, and storage location metadata for loopback clients. Uses owner-managed `std::shared_mutex` with shared reads and unique writes.
+- `backend/src/storage/CalibrationStore.*`: Backend-owned camera calibration records persisted to `data/calibration-results.json`, including board settings, RMS error, camera matrix, distortion coefficients, and storage location metadata for loopback clients.
 - `backend/src/image/ImageResultStore.*`: Image open/upload/process/save result storage, `resultId` lookup, and preview retrieval.
-- `backend/src/image/ImageFilters.*`: OpenCV image operation implementations.
+- `backend/src/image/ImageFilters.*`: OpenCV image operation implementations, including alignment previews, calibration-board corner overlay, and QR scanner overlay utilities.
 - `backend/src/video/VideoService.*`: Video open/upload metadata extraction, preview frame reading, frame extraction, filter preview, optical-flow overlay, LK feature translation stabilization, template-match ROI tracking, motion metrics, and MJPG export.
+- `backend/src/vision/CalibrationService.*`: Camera calibration utility service. Reads Image Lab result previews, detects chessboard corners, runs OpenCV calibration, and stores artifacts through `CalibrationStore`.
 - `backend/src/vision/PipelineExecutor.*`: Phase 6 C++ image/video pipeline execution over React Flow JSON, Image Lab result IDs, Video Lab video IDs, OpenCV operation nodes, node events, and cached intermediate results, motion metrics, or tracking metadata.
 
 ## VSCode
@@ -115,7 +119,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - Theme mode or tokens: start at `frontend/src/theme/AppThemeProvider.tsx`, `frontend/src/theme/ThemeModeContext.ts`, `frontend/src/theme/createAppTheme.ts`, and `frontend/src/theme/tokens.ts`.
 - Placeholder route text: start under `frontend/src/features/*`.
 - HTTP API clients: start under `frontend/src/api/*`; Image Lab calls live in `frontend/src/api/imageApi.ts`; Video Lab calls live in `frontend/src/api/videoApi.ts`.
-- Image Lab UI/runtime flow: start at `frontend/src/features/image-lab/ImageLabPage.tsx` and `frontend/src/runtime/fileAdapter.ts`.
+- Image Lab UI/runtime flow: start at `frontend/src/features/image-lab/ImageLabPage.tsx`, `frontend/src/store/useImageLabStore.ts`, and `frontend/src/runtime/fileAdapter.ts`.
 - Pipeline Flow UI/API flow: start at `frontend/src/features/pipeline-flow/PipelineFlowPage.tsx`, `frontend/src/api/pipelineApi.ts`, `backend/src/vision/PipelineExecutor.*`, and `docs/PIPELINE_SCHEMA.md`.
 - Video Lab UI/runtime flow: start at `frontend/src/features/video-lab/VideoLabPage.tsx`, `frontend/src/api/videoApi.ts`, and `frontend/src/runtime/fileAdapter.ts`; optical-flow/stabilization preview/export, motion metrics, and template-match tracking live in `backend/src/video/VideoService.*`.
 - Remote Access UI/API: start at `frontend/src/features/remote-access/RemoteAccessPage.tsx`, `frontend/src/api/remoteApi.ts`, and `backend/src/security/RemoteAccessManager.*`.

@@ -34,11 +34,13 @@ add_executable(ReactMUIOpenCV
   src/server/EventHub.cpp
   src/server/NetworkInfo.cpp
   src/server/WebSocketGateway.cpp
+  src/storage/CalibrationStore.cpp
   src/storage/PipelineStore.cpp
   src/storage/SettingsStore.cpp
   src/storage/VideoDiagnosticsStore.cpp
   src/storage/VideoTrackingStore.cpp
   src/video/VideoService.cpp
+  src/vision/CalibrationService.cpp
   src/vision/PipelineExecutor.cpp
 )
 

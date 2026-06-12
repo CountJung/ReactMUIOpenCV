@@ -9,10 +9,12 @@
       "name": "opencv4",
       "default-features": false,
       "features": [
+        "calib3d",
         "dshow",
         "jpeg",
         "msmf",
         "png",
+        "quirc",
         "thread"
       ]
     },

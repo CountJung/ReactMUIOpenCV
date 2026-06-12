@@ -111,9 +111,9 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 
 ### Pack 9D - Alignment, Calibration, And QR Utilities
 
-- [ ] Add feature-based alignment/image registration operation based on LearnOpenCV `Image Alignment (Feature Based)` and `Image Alignment (ECC)`.
-- [ ] Add camera calibration utility and calibration-result storage based on LearnOpenCV `Camera Calibration using OpenCV`.
-- [ ] Add QR code scanner utility based on LearnOpenCV `OpenCV QR Code Scanner`.
+- [x] Add feature-based alignment/image registration operation based on LearnOpenCV `Image Alignment (Feature Based)` and `Image Alignment (ECC)`.
+- [x] Add camera calibration utility and calibration-result storage based on LearnOpenCV `Camera Calibration using OpenCV`.
+- [x] Add QR code scanner utility based on LearnOpenCV `OpenCV QR Code Scanner`.
 - Agent focus: image/vision services, persistent calibration artifacts under backend-owned `data/`, Image Lab utility panels.
 
 ### Pack 9E - Shape Analysis And Classical Vision
