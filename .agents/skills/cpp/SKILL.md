@@ -51,6 +51,14 @@ Modern C++ (C++11 and beyond) patterns including RAII, smart pointers, templates
 
 ## Modern C++ Fundamentals
 
+### Reusable Utilities
+
+Project defaults:
+
+- Prefer a named shared utility in the owning project namespace over repeating the same helper in multiple `.cpp` files.
+- Keep file-local helpers for truly local behavior only. If a helper is useful to image, video, storage, or server code, move it to a shared header/source pair.
+- Keep shared utility functions stateless and explicit about ownership. Return values such as `std::string`, `std::vector`, `cv::Mat`, or JSON objects by value when that is the clearest RAII boundary.
+
 ### Smart Pointers
 
 Project defaults:

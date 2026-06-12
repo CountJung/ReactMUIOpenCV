@@ -2,6 +2,7 @@
 
 #include "../common/Constants.h"
 #include "../common/Random.h"
+#include "../common/StringUtils.h"
 #include "ImageFilters.h"
 
 #include <algorithm>
@@ -124,7 +125,7 @@ nlohmann::json ImageResultStore::save(const std::string& id, const std::string& 
   const auto format = requested_format == "jpg" || requested_format == "jpeg" ? "jpg" : "png";
   const auto output_dir = std::filesystem::path("outputs") / "images";
   std::filesystem::create_directories(output_dir);
-  const auto filename = sanitize_file_stem(record.id + "_" + record.operation) + "." + format;
+  const auto filename = sanitize_file_stem(record.id + "_" + record.operation, "image") + "." + format;
   const auto output_path = output_dir / filename;
   if (!cv::imwrite(output_path.string(), record.image)) {
     throw std::runtime_error("OpenCV failed to save the image.");

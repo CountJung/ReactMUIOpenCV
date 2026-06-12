@@ -63,6 +63,7 @@ When the main agent discovers one of the following conditions while working, del
 - Keep route handlers thin in `server/ApiServer.cpp`; route handlers should validate request shape, call service classes, publish events, and translate errors into the shared API envelope.
 - Keep file-system access, path validation, upload isolation, and cleanup policies in backend-owned services.
 - Keep ownership and synchronization visible in backend headers: use RAII values for light local resources, `std::unique_ptr` for exclusive heap-owned services or heavy replaceable components, and `std::shared_mutex` with `std::shared_lock`/`std::unique_lock` for owner-managed read/write state where concurrent reads are expected.
+- Do not reimplement reusable utility functions in each `.cpp` file. Before adding local helpers for OpenCV conversion, ROI/rect JSON, filename sanitizing, extension matching, or safe JSON extraction, use or extend `backend/src/common/*Utils.*`.
 - Default network binding to `127.0.0.1`; bind to `0.0.0.0` only when LAN Web UI Mode is explicitly enabled.
 - Require PIN or temporary token auth for LAN access, apply session timeout, and default remote clients to read-only mode.
 - Log codec failures, processing failures, auth failures, and remote client lifecycle events.

@@ -12,6 +12,7 @@ Use this reference when editing `backend/src` C++ code. It captures project-spec
 - Prefer `std::unique_ptr` for exclusive heap ownership. Use `std::shared_ptr` only for genuine shared ownership with a documented lifetime reason.
 - In classes that own mutable state accessed by multiple threads, the owning class owns the lock. Keep the lock member beside the protected state in the header.
 - For read-heavy stores and service registries, prefer `std::shared_mutex`: use `std::shared_lock` for reads and `std::unique_lock` for writes. Do not publish events or call callbacks while holding a state lock unless unavoidable and documented.
+- Do not repeat general utility helpers inside individual `.cpp` files. Shared OpenCV conversion, ROI/rect JSON, string/file-name normalization, extension checks, and safe JSON extraction should live under `backend/src/common/*Utils.*`.
 
 ## Security Defaults
 
@@ -33,6 +34,7 @@ Use this reference when editing `backend/src` C++ code. It captures project-spec
 
 - Prefer RAII values: `cv::Mat`, `cv::VideoCapture`, `cv::VideoWriter`, standard containers, and smart pointers.
 - Clone `cv::Mat` when storing or returning data across service boundaries.
+- Use `common/OpenCvUtils.*` for repeated color conversion and ROI helpers before adding a new file-local OpenCV utility.
 - Keep preview generation separate from full export. Preview should not lock a long-running export path.
 - Log codec, decode, encode, metadata, and processing failures with enough context, but do not leak secrets or untrusted raw paths to remote clients.
 

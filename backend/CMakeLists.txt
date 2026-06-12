@@ -20,7 +20,9 @@ set(WEBVIEW2_LOADER_STATIC_LIB "${WEBVIEW2_SDK_ROOT}/x64/WebView2LoaderStatic.li
 add_executable(ReactMUIOpenCV
   src/app/AppContext.cpp
   src/common/HttpUtils.cpp
+  src/common/OpenCvUtils.cpp
   src/common/Random.cpp
+  src/common/StringUtils.cpp
   src/common/Time.cpp
   src/image/ImageFilters.cpp
   src/image/ImageResultStore.cpp

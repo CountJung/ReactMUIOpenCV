@@ -1,62 +1,18 @@
 #include "ImageFilters.h"
 
+#include "../common/OpenCvUtils.h"
+#include "../common/StringUtils.h"
+
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <opencv2/imgproc.hpp>
 #include <stdexcept>
 #include <vector>
 
 namespace app {
 
-std::string lowercase_copy(std::string value) {
-  std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
-    return static_cast<char>(std::tolower(character));
-  });
-  return value;
-}
-
 bool is_supported_image_extension(const std::filesystem::path& path) {
-  const auto extension = lowercase_copy(path.extension().string());
-  return extension == ".png" || extension == ".jpg" || extension == ".jpeg" || extension == ".bmp" ||
-         extension == ".webp" || extension == ".tif" || extension == ".tiff";
-}
-
-std::string sanitize_file_stem(std::string value) {
-  for (auto& character : value) {
-    const auto byte = static_cast<unsigned char>(character);
-    if (!std::isalnum(byte) && character != '-' && character != '_') {
-      character = '_';
-    }
-  }
-
-  return value.empty() ? "image" : value;
-}
-
-cv::Mat to_bgr(const cv::Mat& input) {
-  cv::Mat output;
-  if (input.channels() == 1) {
-    cv::cvtColor(input, output, cv::COLOR_GRAY2BGR);
-  } else if (input.channels() == 4) {
-    cv::cvtColor(input, output, cv::COLOR_BGRA2BGR);
-  } else {
-    output = input.clone();
-  }
-
-  return output;
-}
-
-cv::Mat to_gray(const cv::Mat& input) {
-  cv::Mat output;
-  if (input.channels() == 1) {
-    output = input.clone();
-  } else if (input.channels() == 4) {
-    cv::cvtColor(input, output, cv::COLOR_BGRA2GRAY);
-  } else {
-    cv::cvtColor(input, output, cv::COLOR_BGR2GRAY);
-  }
-
-  return output;
+  return has_supported_extension(path, {".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tif", ".tiff"});
 }
 
 namespace {

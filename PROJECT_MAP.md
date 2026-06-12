@@ -68,7 +68,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/src/main.cpp`: Thin composition root. Parses launch args, constructs backend services, starts WebSocket and HTTP runtimes, and reports process status.
 - `backend/src/app/AppContext.*`: Backend runtime context. Builds runtime config, owns service lifetimes, wires dependencies, starts WebSocket and HTTP runtimes, and preserves shutdown order.
 - `backend/src/host/WebViewHost.cpp`: Win32/WebView2 desktop app host. Checks WebView2 Runtime availability, starts the local backend server when needed, remembers window placement, and loads `http://127.0.0.1:18730` in an app window.
-- `backend/src/common/`: Shared constants, random IDs/PINs, ISO time formatting, API envelopes, CORS, request parsing, and loopback detection.
+- `backend/src/common/`: Shared constants, random IDs/PINs, ISO time formatting, API envelopes, CORS, request parsing, loopback detection, reusable OpenCV conversion/ROI helpers, string/file-name helpers, extension checks, and safe JSON value extraction. Repeated utility helpers should be added here instead of reimplemented in each `.cpp`.
 - `backend/src/server/ApiServer.*`: HTTP route registration, static React file serving from a resolved source-tree or bundled `frontend/dist`, and thin request/response translation over backend services.
 - `backend/src/server/WebSocketGateway.*`: WebSocket runtime setup, client lifecycle logging, event replay, and shutdown.
 - `backend/src/server/EventHub.*`: WebSocket event envelope creation, recent event retention, and broadcast fanout.

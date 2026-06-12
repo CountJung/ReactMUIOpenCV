@@ -1,10 +1,11 @@
 #include "VideoService.h"
 
+#include "../common/OpenCvUtils.h"
 #include "../common/Random.h"
+#include "../common/StringUtils.h"
 
 #include <algorithm>
 #include <chrono>
-#include <cctype>
 #include <cmath>
 #include <fstream>
 #include <mutex>
@@ -19,46 +20,6 @@
 namespace app {
 
 namespace {
-
-std::string lowercase_copy(std::string value) {
-  std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
-    return static_cast<char>(std::tolower(character));
-  });
-  return value;
-}
-
-std::string sanitize_file_stem(std::string value) {
-  for (auto& character : value) {
-    const auto byte = static_cast<unsigned char>(character);
-    if (!std::isalnum(byte) && character != '-' && character != '_') {
-      character = '_';
-    }
-  }
-
-  return value.empty() ? "video" : value;
-}
-
-int json_int_value(const nlohmann::json& object, const char* key, int fallback) {
-  if (!object.is_object() || !object.contains(key)) {
-    return fallback;
-  }
-
-  try {
-    return object.at(key).get<int>();
-  } catch (const std::exception&) {
-    return fallback;
-  }
-}
-
-cv::Mat to_gray(const cv::Mat& frame) {
-  cv::Mat gray;
-  if (frame.channels() == 1) {
-    gray = frame.clone();
-  } else {
-    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-  }
-  return gray;
-}
 
 std::string normalize_motion_operation(const std::string& operation) {
   if (operation == "stabilize" || operation == "stabilized") {
@@ -162,46 +123,10 @@ cv::Mat apply_temporal_video_filter(const cv::Mat& previous, const cv::Mat& curr
   return apply_video_filter(current, filter);
 }
 
-cv::Rect roi_from_json(const nlohmann::json& roi, int frame_width, int frame_height) {
-  const int x = json_int_value(roi, "x", 0);
-  const int y = json_int_value(roi, "y", 0);
-  const int width = json_int_value(roi, "width", std::max(8, frame_width / 5));
-  const int height = json_int_value(roi, "height", std::max(8, frame_height / 5));
-
-  if (width <= 0 || height <= 0) {
-    throw std::runtime_error("Tracking ROI width and height must be positive.");
-  }
-
-  const int clamped_x = std::clamp(x, 0, std::max(0, frame_width - 1));
-  const int clamped_y = std::clamp(y, 0, std::max(0, frame_height - 1));
-  const int clamped_width = std::clamp(width, 1, frame_width - clamped_x);
-  const int clamped_height = std::clamp(height, 1, frame_height - clamped_y);
-  if (clamped_width < 4 || clamped_height < 4) {
-    throw std::runtime_error("Tracking ROI is too small after clamping to the frame.");
-  }
-
-  return {clamped_x, clamped_y, clamped_width, clamped_height};
-}
-
-cv::Rect expand_search_window(const cv::Rect& box, int frame_width, int frame_height) {
-  const int padding = std::max({24, box.width, box.height});
-  const int x = std::max(0, box.x - padding);
-  const int y = std::max(0, box.y - padding);
-  const int right = std::min(frame_width, box.x + box.width + padding);
-  const int bottom = std::min(frame_height, box.y + box.height + padding);
-  return {x, y, std::max(1, right - x), std::max(1, bottom - y)};
-}
-
-nlohmann::json rect_to_json(const cv::Rect& box) {
-  return {{"x", box.x}, {"y", box.y}, {"width", box.width}, {"height", box.height}};
-}
-
 }  // namespace
 
 bool is_supported_video_extension(const std::filesystem::path& path) {
-  const auto extension = lowercase_copy(path.extension().string());
-  return extension == ".mp4" || extension == ".mov" || extension == ".avi" || extension == ".mkv" ||
-         extension == ".wmv" || extension == ".m4v";
+  return has_supported_extension(path, {".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v"});
 }
 
 nlohmann::json video_to_json(const VideoRecord& record) {
@@ -267,7 +192,7 @@ nlohmann::json VideoService::upload(const std::string& filename, const std::stri
 
   const auto upload_dir = std::filesystem::path("uploads") / "videos";
   std::filesystem::create_directories(upload_dir);
-  const auto stored_name = random_hex(12) + "_" + sanitize_file_stem(std::filesystem::path(filename).filename().string());
+  const auto stored_name = random_hex(12) + "_" + sanitize_file_stem(std::filesystem::path(filename).filename().string(), "video");
   const auto output_path = upload_dir / stored_name;
 
   std::ofstream output(output_path, std::ios::binary);
@@ -460,7 +385,7 @@ nlohmann::json VideoService::track_template(
     }
 
     const cv::Mat gray = to_gray(frame);
-    const cv::Rect search_window = expand_search_window(current_box, gray.cols, gray.rows);
+    const cv::Rect search_window = expand_rect(current_box, gray.cols, gray.rows);
     const bool search_is_valid = search_window.width >= template_image.cols && search_window.height >= template_image.rows;
     double score = 0.0;
     bool lost = !search_is_valid;
@@ -556,7 +481,7 @@ nlohmann::json VideoService::extract_frame(const std::string& id, int frame_inde
 
   const auto output_dir = std::filesystem::path("outputs") / "frames";
   std::filesystem::create_directories(output_dir);
-  const auto output_path = output_dir / (id + "_frame_" + std::to_string(frame_index) + "_" + sanitize_file_stem(filter) + ".png");
+  const auto output_path = output_dir / (id + "_frame_" + std::to_string(frame_index) + "_" + sanitize_file_stem(filter, "filter") + ".png");
 
   if (!cv::imwrite(output_path.string(), *frame)) {
     throw std::runtime_error("OpenCV failed to save the extracted frame.");
@@ -592,7 +517,7 @@ nlohmann::json VideoService::export_filtered_video(
 
   const auto output_dir = std::filesystem::path("outputs") / "videos";
   std::filesystem::create_directories(output_dir);
-  const auto output_path = output_dir / (id + "_" + sanitize_file_stem(filter) + ".avi");
+  const auto output_path = output_dir / (id + "_" + sanitize_file_stem(filter, "filter") + ".avi");
 
   const int codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
   cv::VideoWriter writer(output_path.string(), codec, std::max(1.0, record->fps), cv::Size(record->width, record->height), true);
