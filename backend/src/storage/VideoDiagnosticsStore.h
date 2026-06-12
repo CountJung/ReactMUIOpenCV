@@ -10,13 +10,13 @@
 namespace app {
 
 class VideoDiagnosticsStore {
- public:
+public:
   explicit VideoDiagnosticsStore(std::filesystem::path storage_path);
 
   nlohmann::json list(bool include_storage_path) const;
   nlohmann::json record(const nlohmann::json& diagnostics);
 
- private:
+private:
   void load();
   void save_locked() const;
 

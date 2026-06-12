@@ -2,8 +2,10 @@
   "recommendations": [
     "ms-vscode.cpptools",
     "ms-vscode.cmake-tools",
+    "ms-vscode.PowerShell",
     "ms-vscode.vscode-typescript-next",
     "dbaeumer.vscode-eslint",
+    "EditorConfig.EditorConfig",
     "esbenp.prettier-vscode",
     "ms-vscode.vscode-edge-devtools"
   ]

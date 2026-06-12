@@ -18,7 +18,7 @@ struct PipelineRecord {
 };
 
 class PipelineStore {
- public:
+public:
   explicit PipelineStore(std::filesystem::path storage_path);
 
   nlohmann::json list(bool include_storage_path) const;
@@ -27,7 +27,7 @@ class PipelineStore {
   nlohmann::json remove(const std::string& id);
   nlohmann::json record_execution(const nlohmann::json& execution);
 
- private:
+private:
   void load();
   void save_locked() const;
 

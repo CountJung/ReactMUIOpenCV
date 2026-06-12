@@ -31,7 +31,8 @@ function AppNavigation({ onNavigate }: { onNavigate?: () => void }) {
     <List sx={{ px: 1.5 }}>
       {navItems.map((item) => {
         const Icon = item.icon;
-        const selected = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
+        const selected =
+          item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
 
         return (
           <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
@@ -93,7 +94,12 @@ export function AppShell() {
       >
         <Toolbar sx={{ minHeight: tokens.density.topbarHeight }}>
           {!isDesktop && (
-            <IconButton edge="start" aria-label="Open navigation" onClick={() => setMobileOpen(true)} sx={{ mr: 1 }}>
+            <IconButton
+              edge="start"
+              aria-label="Open navigation"
+              onClick={() => setMobileOpen(true)}
+              sx={{ mr: 1 }}
+            >
               <MenuIcon />
             </IconButton>
           )}
@@ -176,7 +182,14 @@ export function AppShell() {
         >
           {navItems.slice(0, 4).map((item) => {
             const Icon = item.icon;
-            return <BottomNavigationAction key={item.path} label={item.label} value={item.path} icon={<Icon />} />;
+            return (
+              <BottomNavigationAction
+                key={item.path}
+                label={item.label}
+                value={item.path}
+                icon={<Icon />}
+              />
+            );
           })}
         </BottomNavigation>
       )}

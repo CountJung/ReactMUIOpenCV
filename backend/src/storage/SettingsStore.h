@@ -8,11 +8,11 @@
 namespace app {
 
 class SettingsStore {
- public:
+public:
   nlohmann::json get() const;
   std::optional<nlohmann::json> update_theme_mode(const std::string& theme_mode);
 
- private:
+private:
   mutable std::mutex mutex_;
   std::string theme_mode_ = "system";
 };

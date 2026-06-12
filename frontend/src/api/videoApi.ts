@@ -1,7 +1,14 @@
 import { API_BASE_URL, apiRequest } from './client';
 import type { JobRecord } from './jobsApi';
 
-export type VideoFilter = 'none' | 'grayscale' | 'blur' | 'edgeDetect' | 'threshold' | 'opticalFlow' | 'stabilize';
+export type VideoFilter =
+  | 'none'
+  | 'grayscale'
+  | 'blur'
+  | 'edgeDetect'
+  | 'threshold'
+  | 'opticalFlow'
+  | 'stabilize';
 
 export type VideoRecord = {
   videoId: string;
@@ -157,7 +164,12 @@ export function absoluteVideoUrl(path: string) {
   return `${API_BASE_URL}${path}`;
 }
 
-export function videoFrameUrl(videoId: string, frameIndex: number, filter: VideoFilter, cacheKey?: string | number) {
+export function videoFrameUrl(
+  videoId: string,
+  frameIndex: number,
+  filter: VideoFilter,
+  cacheKey?: string | number,
+) {
   const search = new URLSearchParams({ filter });
   if (cacheKey !== undefined) {
     search.set('t', String(cacheKey));
@@ -250,13 +262,20 @@ export function processVideo(request: {
   startFrame?: number;
   endFrame?: number;
 }) {
-  return apiRequest<{ job: JobRecord; video: VideoRecord; filter: VideoFilter }>('/api/videos/process', {
-    method: 'POST',
-    body: JSON.stringify(request),
-  });
+  return apiRequest<{ job: JobRecord; video: VideoRecord; filter: VideoFilter }>(
+    '/api/videos/process',
+    {
+      method: 'POST',
+      body: JSON.stringify(request),
+    },
+  );
 }
 
-export function extractVideoFrame(request: { videoId: string; frameIndex: number; filter: VideoFilter }) {
+export function extractVideoFrame(request: {
+  videoId: string;
+  frameIndex: number;
+  filter: VideoFilter;
+}) {
   return apiRequest<{ job: JobRecord; result: VideoFrameResult }>('/api/videos/extract-frame', {
     method: 'POST',
     body: JSON.stringify(request),

@@ -21,7 +21,7 @@
 namespace app {
 
 class ApiServer {
- public:
+public:
   ApiServer(
       std::string host,
       int port,
@@ -42,7 +42,7 @@ class ApiServer {
 
   bool listen();
 
- private:
+private:
   void register_routes();
   void mount_static_files();
 

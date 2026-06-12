@@ -100,7 +100,8 @@ nlohmann::json PipelineExecutor::execute(const nlohmann::json& document) {
         step["video"] = final_result;
       } else if (active_node_type == "operation") {
         const auto operation = json_string(data.value("operation", nlohmann::json{}), "grayscale");
-        const auto params = data.contains("params") && data["params"].is_object() ? data["params"] : nlohmann::json::object();
+        const auto params =
+            data.contains("params") && data["params"].is_object() ? data["params"] : nlohmann::json::object();
         if (!current_video_id.empty() && (operation == "opticalFlow" || operation == "stabilize")) {
           const auto sample_frames = params.value("sampleFrames", 120);
           final_result = video_service_.motion_metrics(current_video_id, operation, sample_frames);
@@ -109,7 +110,8 @@ nlohmann::json PipelineExecutor::execute(const nlohmann::json& document) {
         } else if (!current_video_id.empty() && operation == "trackObject") {
           const auto start_frame = params.value("startFrame", 0);
           const auto end_frame = params.value("endFrame", 0);
-          const auto roi = params.contains("roi") && params["roi"].is_object() ? params["roi"] : nlohmann::json::object();
+          const auto roi =
+              params.contains("roi") && params["roi"].is_object() ? params["roi"] : nlohmann::json::object();
           final_result = video_service_.track_template(
               current_video_id,
               start_frame,
@@ -192,7 +194,8 @@ std::vector<nlohmann::json> PipelineExecutor::order_nodes(const nlohmann::json& 
   }
 
   const auto& nodes = document["nodes"];
-  const auto& edges = document.contains("edges") && document["edges"].is_array() ? document["edges"] : nlohmann::json::array();
+  const auto& edges =
+      document.contains("edges") && document["edges"].is_array() ? document["edges"] : nlohmann::json::array();
   std::map<std::string, nlohmann::json> by_id;
   std::map<std::string, std::string> next_by_source;
   std::string start_id;

@@ -16,7 +16,7 @@
 namespace app {
 
 class PipelineExecutor {
- public:
+public:
   PipelineExecutor(
       ImageResultStore& image_store,
       VideoService& video_service,
@@ -27,9 +27,13 @@ class PipelineExecutor {
 
   nlohmann::json execute(const nlohmann::json& document);
 
- private:
+private:
   std::vector<nlohmann::json> order_nodes(const nlohmann::json& document) const;
-  void publish_node_event(const std::string& type, const std::string& job_id, const nlohmann::json& node, const nlohmann::json& payload = {}) const;
+  void publish_node_event(
+      const std::string& type,
+      const std::string& job_id,
+      const nlohmann::json& node,
+      const nlohmann::json& payload = {}) const;
 
   ImageResultStore& image_store_;
   VideoService& video_service_;

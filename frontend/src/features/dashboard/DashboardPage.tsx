@@ -129,7 +129,10 @@ function JobList({ jobs }: { jobs: JobRecord[] }) {
             </TableCell>
             <TableCell sx={{ minWidth: 150 }}>
               <Stack spacing={0.5}>
-                <LinearProgress variant="determinate" value={Math.max(0, Math.min(100, job.progress))} />
+                <LinearProgress
+                  variant="determinate"
+                  value={Math.max(0, Math.min(100, job.progress))}
+                />
                 <Typography variant="caption" color="text.secondary">
                   {job.progress}%
                 </Typography>
@@ -166,19 +169,45 @@ function LogList({ logs }: { logs: LogEntry[] }) {
           </Stack>
         </Stack>
       ))}
-      {rows.length === 0 && <Typography color="text.secondary">No recent logs are available.</Typography>}
+      {rows.length === 0 && (
+        <Typography color="text.secondary">No recent logs are available.</Typography>
+      )}
     </Stack>
   );
 }
 
 export function DashboardPage() {
-  const healthQuery = useQuery({ queryKey: ['health'], queryFn: getHealth, refetchInterval: 10000 });
-  const serverInfoQuery = useQuery({ queryKey: ['server-info'], queryFn: getServerInfo, refetchInterval: 15000 });
-  const remoteStatusQuery = useQuery({ queryKey: ['remote-status'], queryFn: getRemoteStatus, refetchInterval: 5000 });
+  const healthQuery = useQuery({
+    queryKey: ['health'],
+    queryFn: getHealth,
+    refetchInterval: 10000,
+  });
+  const serverInfoQuery = useQuery({
+    queryKey: ['server-info'],
+    queryFn: getServerInfo,
+    refetchInterval: 15000,
+  });
+  const remoteStatusQuery = useQuery({
+    queryKey: ['remote-status'],
+    queryFn: getRemoteStatus,
+    refetchInterval: 5000,
+  });
   const jobsQuery = useQuery({ queryKey: ['jobs'], queryFn: getJobs, refetchInterval: 5000 });
-  const logsQuery = useQuery({ queryKey: ['logs'], queryFn: getRecentLogs, refetchInterval: 10000 });
-  const imageResultsQuery = useQuery({ queryKey: ['image-results'], queryFn: getImageResults, refetchInterval: 10000 });
-  const pipelinesQuery = useQuery({ queryKey: ['pipelines'], queryFn: getPipelines, refetchInterval: 10000 });
+  const logsQuery = useQuery({
+    queryKey: ['logs'],
+    queryFn: getRecentLogs,
+    refetchInterval: 10000,
+  });
+  const imageResultsQuery = useQuery({
+    queryKey: ['image-results'],
+    queryFn: getImageResults,
+    refetchInterval: 10000,
+  });
+  const pipelinesQuery = useQuery({
+    queryKey: ['pipelines'],
+    queryFn: getPipelines,
+    refetchInterval: 10000,
+  });
 
   const jobs = jobsQuery.data?.jobs ?? [];
   const logs = logsQuery.data?.logs ?? [];
@@ -244,7 +273,13 @@ export function DashboardPage() {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                    flexWrap="wrap"
+                    gap={1}
+                  >
                     <Typography variant="h6">Current Jobs</Typography>
                     <Chip label={`${jobs.length} records`} size="small" variant="outlined" />
                   </Stack>
@@ -261,13 +296,22 @@ export function DashboardPage() {
                   <Typography variant="h6">Runtime Endpoints</Typography>
                   <Stack spacing={1}>
                     <Typography variant="body2">
-                      HTTP: <Box component="span" color="text.secondary">{serverInfoQuery.data?.httpUrl ?? 'n/a'}</Box>
+                      HTTP:{' '}
+                      <Box component="span" color="text.secondary">
+                        {serverInfoQuery.data?.httpUrl ?? 'n/a'}
+                      </Box>
                     </Typography>
                     <Typography variant="body2">
-                      WebSocket: <Box component="span" color="text.secondary">{serverInfoQuery.data?.wsUrl ?? 'n/a'}</Box>
+                      WebSocket:{' '}
+                      <Box component="span" color="text.secondary">
+                        {serverInfoQuery.data?.wsUrl ?? 'n/a'}
+                      </Box>
                     </Typography>
                     <Typography variant="body2">
-                      Static root: <Box component="span" color="text.secondary">{serverInfoQuery.data?.staticRoot ?? 'n/a'}</Box>
+                      Static root:{' '}
+                      <Box component="span" color="text.secondary">
+                        {serverInfoQuery.data?.staticRoot ?? 'n/a'}
+                      </Box>
                     </Typography>
                   </Stack>
                   <Divider />
@@ -306,11 +350,17 @@ export function DashboardPage() {
                       />
                       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                         <Chip label={latestResult.operation} size="small" color="primary" />
-                        <Chip label={`${latestResult.width} x ${latestResult.height}`} size="small" variant="outlined" />
+                        <Chip
+                          label={`${latestResult.width} x ${latestResult.height}`}
+                          size="small"
+                          variant="outlined"
+                        />
                       </Stack>
                     </>
                   ) : (
-                    <Typography color="text.secondary">No image results have been produced yet.</Typography>
+                    <Typography color="text.secondary">
+                      No image results have been produced yet.
+                    </Typography>
                   )}
                 </Stack>
               </CardContent>

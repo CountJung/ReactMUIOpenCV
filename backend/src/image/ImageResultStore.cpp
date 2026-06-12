@@ -42,7 +42,14 @@ nlohmann::json ImageResultStore::open_local(const std::filesystem::path& path) {
     throw std::runtime_error("OpenCV could not decode the image.");
   }
 
-  return add(path.filename().string(), "localPath", path.lexically_normal().string(), image, image, "open", nlohmann::json::object());
+  return add(
+      path.filename().string(),
+      "localPath",
+      path.lexically_normal().string(),
+      image,
+      image,
+      "open",
+      nlohmann::json::object());
 }
 
 nlohmann::json ImageResultStore::upload(const std::string& filename, const std::string& content) {
@@ -52,10 +59,12 @@ nlohmann::json ImageResultStore::upload(const std::string& filename, const std::
     throw std::runtime_error("OpenCV could not decode the uploaded image.");
   }
 
-  return add(filename.empty() ? "uploaded-image" : filename, "upload", "", image, image, "open", nlohmann::json::object());
+  return add(
+      filename.empty() ? "uploaded-image" : filename, "upload", "", image, image, "open", nlohmann::json::object());
 }
 
-nlohmann::json ImageResultStore::process(const std::string& source_id, const std::string& operation, const nlohmann::json& params) {
+nlohmann::json
+ImageResultStore::process(const std::string& source_id, const std::string& operation, const nlohmann::json& params) {
   ImageResultRecord source;
   {
     std::scoped_lock lock(mutex_);

@@ -46,7 +46,11 @@ import {
   type VideoRecord,
   type VideoTrackingResult,
 } from '../../api/videoApi';
-import { getVideoOpenCapabilities, openVideoFromLocalPath, openVideoFromUpload } from '../../runtime/fileAdapter';
+import {
+  getVideoOpenCapabilities,
+  openVideoFromLocalPath,
+  openVideoFromUpload,
+} from '../../runtime/fileAdapter';
 import { getRuntimeMode, type RuntimeMode } from '../../runtime/runtimeMode';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
 
@@ -146,8 +150,15 @@ export function VideoLabPage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [frameResult, setFrameResult] = useState<VideoFrameResult | null>(null);
   const [exportResult, setExportResult] = useState<VideoExportResult | null>(null);
-  const [diagnostics, setDiagnostics] = useState<VideoDiagnostics | VideoMotionMetrics | null>(null);
-  const [trackingRoi, setTrackingRoi] = useState<TrackingRoi>({ x: 0, y: 0, width: 160, height: 120 });
+  const [diagnostics, setDiagnostics] = useState<VideoDiagnostics | VideoMotionMetrics | null>(
+    null,
+  );
+  const [trackingRoi, setTrackingRoi] = useState<TrackingRoi>({
+    x: 0,
+    y: 0,
+    width: 160,
+    height: 120,
+  });
   const [trackingEndFrame, setTrackingEndFrame] = useState(120);
   const [trackingResult, setTrackingResult] = useState<VideoTrackingResult | null>(null);
 
@@ -171,9 +182,15 @@ export function VideoLabPage() {
 
   const activeVideo = videoQuery.data ?? currentVideo;
   const maxFrame = Math.max(0, (activeVideo?.frameCount ?? 1) - 1);
-  const previewSrc = activeVideo ? videoFrameUrl(activeVideo.videoId, frameIndex, filter, cacheKey) : undefined;
-  const originalPreviewSrc = activeVideo ? videoFrameUrl(activeVideo.videoId, frameIndex, 'none', cacheKey) : undefined;
-  const convertedFrameKey = activeVideo ? `${activeVideo.videoId}:${frameIndex}:${filter}:${cacheKey}` : '';
+  const previewSrc = activeVideo
+    ? videoFrameUrl(activeVideo.videoId, frameIndex, filter, cacheKey)
+    : undefined;
+  const originalPreviewSrc = activeVideo
+    ? videoFrameUrl(activeVideo.videoId, frameIndex, 'none', cacheKey)
+    : undefined;
+  const convertedFrameKey = activeVideo
+    ? `${activeVideo.videoId}:${frameIndex}:${filter}:${cacheKey}`
+    : '';
 
   useEffect(() => {
     if (!isPlaying || !activeVideo) {
@@ -184,16 +201,19 @@ export function VideoLabPage() {
       return undefined;
     }
 
-    const timer = window.setTimeout(() => {
-      setFrameIndex((currentFrame) => {
-        const nextFrame = currentFrame + 1;
-        if (nextFrame > maxFrame) {
-          setIsPlaying(false);
-          return maxFrame;
-        }
-        return nextFrame;
-      });
-    }, Math.max(filter === 'none' ? 33 : 120, 1000 / playbackFps));
+    const timer = window.setTimeout(
+      () => {
+        setFrameIndex((currentFrame) => {
+          const nextFrame = currentFrame + 1;
+          if (nextFrame > maxFrame) {
+            setIsPlaying(false);
+            return maxFrame;
+          }
+          return nextFrame;
+        });
+      },
+      Math.max(filter === 'none' ? 33 : 120, 1000 / playbackFps),
+    );
 
     return () => window.clearTimeout(timer);
   }, [activeVideo, convertedFrameKey, filter, isPlaying, loadedFrameKey, maxFrame, playbackFps]);
@@ -277,7 +297,11 @@ export function VideoLabPage() {
   });
 
   const diagnosticsMutation = useMutation({
-    mutationFn: () => getVideoDiagnostics(activeVideo?.videoId ?? '', Math.min(120, Math.max(1, activeVideo?.frameCount ?? 1))),
+    mutationFn: () =>
+      getVideoDiagnostics(
+        activeVideo?.videoId ?? '',
+        Math.min(120, Math.max(1, activeVideo?.frameCount ?? 1)),
+      ),
     onSuccess: (result) => {
       setDiagnostics(result);
       void queryClient.invalidateQueries({ queryKey: ['video-diagnostics'] });
@@ -391,7 +415,9 @@ export function VideoLabPage() {
     >
       <Stack spacing={2.5}>
         {runtimeMode === 'lan' && (
-          <Alert severity="info">LAN clients can upload videos and inspect results without arbitrary local path access.</Alert>
+          <Alert severity="info">
+            LAN clients can upload videos and inspect results without arbitrary local path access.
+          </Alert>
         )}
         {currentError && <Alert severity="error">{mutationErrorMessage(currentError)}</Alert>}
         {previewError && <Alert severity="warning">{previewError}</Alert>}
@@ -399,7 +425,8 @@ export function VideoLabPage() {
         {exportResult && <Alert severity="success">Video exported to {exportResult.path}</Alert>}
         {trackingResult && (
           <Alert severity="success">
-            Tracking {trackingResult.status}: {trackingResult.framesTracked} frames, score {trackingResult.averageScore.toFixed(3)}
+            Tracking {trackingResult.status}: {trackingResult.framesTracked} frames, score{' '}
+            {trackingResult.averageScore.toFixed(3)}
           </Alert>
         )}
 
@@ -410,7 +437,11 @@ export function VideoLabPage() {
                 <Stack spacing={2}>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
                     <Typography variant="h6">Source</Typography>
-                    <Chip label={runtimeMode === 'desktop' ? 'Desktop' : 'LAN'} size="small" variant="outlined" />
+                    <Chip
+                      label={runtimeMode === 'desktop' ? 'Desktop' : 'LAN'}
+                      size="small"
+                      variant="outlined"
+                    />
                   </Stack>
 
                   <TextField
@@ -422,7 +453,12 @@ export function VideoLabPage() {
                     size="small"
                   />
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                    <Button startIcon={<UndoIcon />} variant="outlined" onClick={resetPlaybackView} disabled={!activeVideo}>
+                    <Button
+                      startIcon={<UndoIcon />}
+                      variant="outlined"
+                      onClick={resetPlaybackView}
+                      disabled={!activeVideo}
+                    >
                       Revert
                     </Button>
                     <Button
@@ -432,7 +468,12 @@ export function VideoLabPage() {
                     >
                       Open Path
                     </Button>
-                    <Button component="label" variant="outlined" startIcon={<UploadFileIcon />} disabled={busy}>
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      startIcon={<UploadFileIcon />}
+                      disabled={busy}
+                    >
                       Upload
                       <input
                         hidden
@@ -456,7 +497,10 @@ export function VideoLabPage() {
                         <Typography variant="subtitle2">{activeVideo.name}</Typography>
                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                           <Chip label={`${activeVideo.width}x${activeVideo.height}`} size="small" />
-                          <Chip label={`${Math.round(activeVideo.fps * 100) / 100} fps`} size="small" />
+                          <Chip
+                            label={`${Math.round(activeVideo.fps * 100) / 100} fps`}
+                            size="small"
+                          />
                           <Chip label={`${activeVideo.frameCount} frames`} size="small" />
                           <Chip label={formatDuration(activeVideo.durationSeconds)} size="small" />
                           <Chip label={activeVideo.sourceType} size="small" />
@@ -477,7 +521,14 @@ export function VideoLabPage() {
                     <Typography variant="h6">Frame Filter</Typography>
                     <MovieFilterIcon color="primary" />
                   </Stack>
-                  <TextField select label="Filter" value={filter} onChange={changeFilter} fullWidth size="small">
+                  <TextField
+                    select
+                    label="Filter"
+                    value={filter}
+                    onChange={changeFilter}
+                    fullWidth
+                    size="small"
+                  >
                     {filterOptions.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
@@ -518,7 +569,9 @@ export function VideoLabPage() {
                       max={30}
                       step={1}
                       valueLabelDisplay="auto"
-                      onChange={(_, value) => setPlaybackFps(Array.isArray(value) ? value[0] : value)}
+                      onChange={(_, value) =>
+                        setPlaybackFps(Array.isArray(value) ? value[0] : value)
+                      }
                       disabled={!activeVideo}
                     />
                   </Stack>
@@ -591,7 +644,12 @@ export function VideoLabPage() {
 
                   <Stack spacing={1}>
                     <Divider />
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      gap={1}
+                    >
                       <Typography variant="subtitle2">Tracking ROI</Typography>
                       <Chip label={`start ${frameIndex}`} size="small" variant="outlined" />
                     </Stack>
@@ -615,7 +673,9 @@ export function VideoLabPage() {
                           type="number"
                           size="small"
                           value={trackingEndFrame}
-                          onChange={(event) => setTrackingEndFrame(clampFrame(Number(event.target.value), activeVideo))}
+                          onChange={(event) =>
+                            setTrackingEndFrame(clampFrame(Number(event.target.value), activeVideo))
+                          }
                           disabled={!activeVideo || busy}
                           fullWidth
                         />
@@ -628,25 +688,53 @@ export function VideoLabPage() {
                       <Divider />
                       <Typography variant="subtitle2">Read/Write Diagnostics</Typography>
                       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                        <Chip label={`${diagnostics.framesRead}/${diagnostics.sampleFrames} frames read`} size="small" />
-                        <Chip label={`${diagnostics.measuredReadFps?.toFixed(1) ?? '0.0'} read fps`} size="small" color="primary" />
-                        <Chip label={`${diagnostics.metadataFps?.toFixed(1) ?? '0.0'} metadata fps`} size="small" variant="outlined" />
+                        <Chip
+                          label={`${diagnostics.framesRead}/${diagnostics.sampleFrames} frames read`}
+                          size="small"
+                        />
+                        <Chip
+                          label={`${diagnostics.measuredReadFps?.toFixed(1) ?? '0.0'} read fps`}
+                          size="small"
+                          color="primary"
+                        />
+                        <Chip
+                          label={`${diagnostics.metadataFps?.toFixed(1) ?? '0.0'} metadata fps`}
+                          size="small"
+                          variant="outlined"
+                        />
                         {diagnostics.trackedFeatures !== undefined && (
-                          <Chip label={`${diagnostics.trackedFeatures} tracked features`} size="small" color="secondary" />
+                          <Chip
+                            label={`${diagnostics.trackedFeatures} tracked features`}
+                            size="small"
+                            color="secondary"
+                          />
                         )}
                         {diagnostics.averageFlowMagnitude !== undefined && (
-                          <Chip label={`${diagnostics.averageFlowMagnitude.toFixed(2)} px flow`} size="small" variant="outlined" />
+                          <Chip
+                            label={`${diagnostics.averageFlowMagnitude.toFixed(2)} px flow`}
+                            size="small"
+                            variant="outlined"
+                          />
                         )}
                         {diagnostics.stabilizationCropPercent !== undefined && (
-                          <Chip label={`${diagnostics.stabilizationCropPercent.toFixed(2)}% crop estimate`} size="small" variant="outlined" />
+                          <Chip
+                            label={`${diagnostics.stabilizationCropPercent.toFixed(2)}% crop estimate`}
+                            size="small"
+                            variant="outlined"
+                          />
                         )}
                         {diagnostics.writeCodec && diagnostics.writeContainer && (
-                          <Chip label={`${diagnostics.writeCodec}.${diagnostics.writeContainer}`} size="small" variant="outlined" />
+                          <Chip
+                            label={`${diagnostics.writeCodec}.${diagnostics.writeContainer}`}
+                            size="small"
+                            variant="outlined"
+                          />
                         )}
                       </Stack>
                       {(diagnostics.previewFrameUrl || diagnostics.displayFrameUrl) && (
                         <Typography variant="caption" color="text.secondary">
-                          Display sample: {diagnostics.previewFrameUrl ?? diagnostics.displayFrameUrl}
+                          Display sample:{' '}
+                          {diagnostics.previewFrameUrl ?? diagnostics.displayFrameUrl}
                         </Typography>
                       )}
                     </Stack>
@@ -704,10 +792,20 @@ export function VideoLabPage() {
         <Card>
           <CardContent>
             <Stack spacing={1.5}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                flexWrap="wrap"
+                gap={1}
+              >
                 <Typography variant="h6">Playback Preview</Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Chip label={isPlaying ? 'Playing' : 'Paused'} size="small" color={isPlaying ? 'success' : 'default'} />
+                  <Chip
+                    label={isPlaying ? 'Playing' : 'Paused'}
+                    size="small"
+                    color={isPlaying ? 'success' : 'default'}
+                  />
                   <Chip label={`${filter} conversion`} size="small" variant="outlined" />
                 </Stack>
               </Stack>
@@ -725,7 +823,9 @@ export function VideoLabPage() {
                     }}
                     onError={() => {
                       setIsPlaying(false);
-                      setPreviewError('Preview frame failed to load. Check the video source and selected filter.');
+                      setPreviewError(
+                        'Preview frame failed to load. Check the video source and selected filter.',
+                      );
                     }}
                   />
                 </Grid>

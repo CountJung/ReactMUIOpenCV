@@ -32,7 +32,11 @@ import {
   type ImageOperation,
   type ImageResult,
 } from '../../api/imageApi';
-import { getImageOpenCapabilities, openImageFromLocalPath, openImageFromUpload } from '../../runtime/fileAdapter';
+import {
+  getImageOpenCapabilities,
+  openImageFromLocalPath,
+  openImageFromUpload,
+} from '../../runtime/fileAdapter';
 import { getRuntimeMode, type RuntimeMode } from '../../runtime/runtimeMode';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
 
@@ -94,7 +98,15 @@ function mutationErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Image operation failed.';
 }
 
-function PreviewPanel({ title, src, emptyLabel }: { title: string; src?: string; emptyLabel: string }) {
+function PreviewPanel({
+  title,
+  src,
+  emptyLabel,
+}: {
+  title: string;
+  src?: string;
+  emptyLabel: string;
+}) {
   return (
     <Card sx={{ height: '100%' }}>
       <CardContent>
@@ -225,7 +237,11 @@ export function ImageLabPage() {
     saveMutation.isPending ||
     deleteMutation.isPending;
   const currentError =
-    openLocalMutation.error ?? uploadMutation.error ?? processMutation.error ?? saveMutation.error ?? deleteMutation.error;
+    openLocalMutation.error ??
+    uploadMutation.error ??
+    processMutation.error ??
+    saveMutation.error ??
+    deleteMutation.error;
 
   const setParam = (key: string, value: ParamValue) => {
     setParams((previous) => ({ ...previous, [key]: value }));
@@ -301,7 +317,9 @@ export function ImageLabPage() {
     >
       <Stack spacing={2.5}>
         {runtimeMode === 'lan' && (
-          <Alert severity="info">LAN clients use upload and result inspection without arbitrary local path access.</Alert>
+          <Alert severity="info">
+            LAN clients use upload and result inspection without arbitrary local path access.
+          </Alert>
         )}
         {currentError && <Alert severity="error">{mutationErrorMessage(currentError)}</Alert>}
         {savePath && <Alert severity="success">Saved to {savePath}</Alert>}
@@ -313,7 +331,11 @@ export function ImageLabPage() {
                 <Stack spacing={2}>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
                     <Typography variant="h6">Source</Typography>
-                    <Chip label={runtimeMode === 'desktop' ? 'Desktop' : 'LAN'} size="small" variant="outlined" />
+                    <Chip
+                      label={runtimeMode === 'desktop' ? 'Desktop' : 'LAN'}
+                      size="small"
+                      variant="outlined"
+                    />
                   </Stack>
 
                   <TextField
@@ -332,7 +354,12 @@ export function ImageLabPage() {
                     >
                       Open Path
                     </Button>
-                    <Button component="label" variant="outlined" startIcon={<UploadFileIcon />} disabled={busy}>
+                    <Button
+                      component="label"
+                      variant="outlined"
+                      startIcon={<UploadFileIcon />}
+                      disabled={busy}
+                    >
                       Upload
                       <input
                         hidden
@@ -355,7 +382,10 @@ export function ImageLabPage() {
                       <Stack spacing={0.75}>
                         <Typography variant="subtitle2">{activeResult.name}</Typography>
                         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                          <Chip label={`${activeResult.width}x${activeResult.height}`} size="small" />
+                          <Chip
+                            label={`${activeResult.width}x${activeResult.height}`}
+                            size="small"
+                          />
                           <Chip label={`${activeResult.channels} channels`} size="small" />
                           <Chip label={activeResult.sourceType} size="small" />
                         </Stack>
@@ -375,7 +405,14 @@ export function ImageLabPage() {
                     <Typography variant="h6">Operation</Typography>
                     <CompareArrowsIcon color="primary" />
                   </Stack>
-                  <TextField select label="Filter" value={operation} onChange={changeOperation} fullWidth size="small">
+                  <TextField
+                    select
+                    label="Filter"
+                    value={operation}
+                    onChange={changeOperation}
+                    fullWidth
+                    size="small"
+                  >
                     {operationLabels.map((option) => (
                       <MenuItem key={option.value} value={option.value}>
                         {option.label}
@@ -386,16 +423,28 @@ export function ImageLabPage() {
                   <Grid container spacing={1.5}>
                     {operation === 'resize' && (
                       <>
-                        <Grid item xs={6}>{renderNumberField('width', 'Width', 1)}</Grid>
-                        <Grid item xs={6}>{renderNumberField('height', 'Height', 1)}</Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('width', 'Width', 1)}
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('height', 'Height', 1)}
+                        </Grid>
                       </>
                     )}
                     {operation === 'crop' && (
                       <>
-                        <Grid item xs={6}>{renderNumberField('x', 'X')}</Grid>
-                        <Grid item xs={6}>{renderNumberField('y', 'Y')}</Grid>
-                        <Grid item xs={6}>{renderNumberField('width', 'Width', 1)}</Grid>
-                        <Grid item xs={6}>{renderNumberField('height', 'Height', 1)}</Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('x', 'X')}
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('y', 'Y')}
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('width', 'Width', 1)}
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('height', 'Height', 1)}
+                        </Grid>
                       </>
                     )}
                     {operation === 'rotate' && (
@@ -433,18 +482,28 @@ export function ImageLabPage() {
                       </Grid>
                     )}
                     {(operation === 'blur' || operation === 'gaussianBlur') && (
-                      <Grid item xs={12}>{renderSlider('kernel', 'Kernel', 1, 31, 2)}</Grid>
+                      <Grid item xs={12}>
+                        {renderSlider('kernel', 'Kernel', 1, 31, 2)}
+                      </Grid>
                     )}
                     {operation === 'sharpen' && (
-                      <Grid item xs={12}>{renderSlider('strength', 'Strength', 0.2, 4, 0.1)}</Grid>
+                      <Grid item xs={12}>
+                        {renderSlider('strength', 'Strength', 0.2, 4, 0.1)}
+                      </Grid>
                     )}
                     {operation === 'threshold' && (
-                      <Grid item xs={12}>{renderSlider('threshold', 'Threshold', 0, 255)}</Grid>
+                      <Grid item xs={12}>
+                        {renderSlider('threshold', 'Threshold', 0, 255)}
+                      </Grid>
                     )}
                     {(operation === 'edgeDetect' || operation === 'contourDetect') && (
                       <>
-                        <Grid item xs={12}>{renderSlider('low', 'Low', 0, 255)}</Grid>
-                        <Grid item xs={12}>{renderSlider('high', 'High', 0, 255)}</Grid>
+                        <Grid item xs={12}>
+                          {renderSlider('low', 'Low', 0, 255)}
+                        </Grid>
+                        <Grid item xs={12}>
+                          {renderSlider('high', 'High', 0, 255)}
+                        </Grid>
                       </>
                     )}
                     {operation === 'colorConvert' && (
@@ -466,10 +525,19 @@ export function ImageLabPage() {
                   </Grid>
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                    <Button startIcon={<UndoIcon />} variant="outlined" onClick={revertToSource} disabled={!activeResult || busy}>
+                    <Button
+                      startIcon={<UndoIcon />}
+                      variant="outlined"
+                      onClick={revertToSource}
+                      disabled={!activeResult || busy}
+                    >
                       Revert
                     </Button>
-                    <Button startIcon={<PlayArrowIcon />} onClick={runProcess} disabled={!activeResult || busy}>
+                    <Button
+                      startIcon={<PlayArrowIcon />}
+                      onClick={runProcess}
+                      disabled={!activeResult || busy}
+                    >
                       Apply
                     </Button>
                     <Button
@@ -504,7 +572,9 @@ export function ImageLabPage() {
                     {(resultsQuery.data?.results ?? []).map((result) => (
                       <Button
                         key={result.resultId}
-                        variant={result.resultId === activeResult?.resultId ? 'contained' : 'outlined'}
+                        variant={
+                          result.resultId === activeResult?.resultId ? 'contained' : 'outlined'
+                        }
                         onClick={() => setCurrentResult(result)}
                         sx={{ justifyContent: 'flex-start', textAlign: 'left' }}
                       >
@@ -523,10 +593,18 @@ export function ImageLabPage() {
 
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
-            <PreviewPanel title="Before" src={beforeUrl} emptyLabel="Open an image to preview the source." />
+            <PreviewPanel
+              title="Before"
+              src={beforeUrl}
+              emptyLabel="Open an image to preview the source."
+            />
           </Grid>
           <Grid item xs={12} md={6}>
-            <PreviewPanel title="After" src={afterUrl} emptyLabel="Apply a filter to preview the result." />
+            <PreviewPanel
+              title="After"
+              src={afterUrl}
+              emptyLabel="Apply a filter to preview the result."
+            />
           </Grid>
         </Grid>
       </Stack>

@@ -22,7 +22,7 @@ struct RemoteClient {
 nlohmann::json client_to_json(const RemoteClient& client);
 
 class RemoteAccessManager {
- public:
+public:
   RemoteAccessManager(bool lan_bound, std::string bind_host, std::string selected_ip);
 
   nlohmann::json status(int port, bool include_credentials = true);
@@ -31,7 +31,8 @@ class RemoteAccessManager {
   nlohmann::json rotate_token(int port);
   nlohmann::json clients();
   nlohmann::json disconnect_all();
-  std::optional<nlohmann::json> authenticate(const std::string& remote_addr, const std::string& token, const std::string& pin);
+  std::optional<nlohmann::json>
+  authenticate(const std::string& remote_addr, const std::string& token, const std::string& pin);
   std::optional<std::string> permission_for_session(const std::string& remote_addr, const std::string& session_token);
 
   bool enabled() const;
@@ -39,7 +40,7 @@ class RemoteAccessManager {
   std::string bind_host() const;
   std::string selected_ip() const;
 
- private:
+private:
   void prune_expired_clients();
   nlohmann::json status_locked(int port, bool include_credentials);
 

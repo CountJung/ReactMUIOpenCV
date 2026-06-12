@@ -26,9 +26,8 @@ std::string sanitize_file_stem(std::string value, std::string fallback) {
 
 bool has_supported_extension(const std::filesystem::path& path, std::initializer_list<std::string_view> extensions) {
   const auto extension = lowercase_copy(path.extension().string());
-  return std::any_of(extensions.begin(), extensions.end(), [&](std::string_view supported) {
-    return extension == supported;
-  });
+  return std::any_of(
+      extensions.begin(), extensions.end(), [&](std::string_view supported) { return extension == supported; });
 }
 
 }  // namespace app

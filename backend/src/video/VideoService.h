@@ -27,7 +27,7 @@ struct VideoRecord {
 };
 
 class VideoService {
- public:
+public:
   nlohmann::json open_local(const std::filesystem::path& path);
   nlohmann::json upload(const std::string& filename, const std::string& content);
   nlohmann::json list() const;
@@ -51,7 +51,7 @@ class VideoService {
       int end_frame,
       const std::function<void(int)>& progress_callback) const;
 
- private:
+private:
   nlohmann::json add_record(const std::string& name, const std::string& source_type, const std::filesystem::path& path);
   std::optional<VideoRecord> find_record(const std::string& id) const;
 

@@ -28,7 +28,7 @@ struct JobRecord {
 nlohmann::json job_to_json(const JobRecord& job);
 
 class JobQueue {
- public:
+public:
   JobQueue(EventHub& event_hub, LogStore& log_store);
   ~JobQueue();
 
@@ -47,7 +47,7 @@ class JobQueue {
   bool cancel(const std::string& id);
   bool remove(const std::string& id);
 
- private:
+private:
   void run();
   nlohmann::json create_record(const std::string& type, const std::string& message, bool enqueue);
   std::optional<nlohmann::json> update_record(

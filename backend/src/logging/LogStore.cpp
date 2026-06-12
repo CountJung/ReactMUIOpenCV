@@ -10,7 +10,8 @@
 
 namespace app {
 
-LogStore::LogStore(EventHub& event_hub) : event_hub_(event_hub) {}
+LogStore::LogStore(EventHub& event_hub)
+    : event_hub_(event_hub) {}
 
 nlohmann::json LogStore::append(const std::string& level, const std::string& message) {
   const nlohmann::json entry = {

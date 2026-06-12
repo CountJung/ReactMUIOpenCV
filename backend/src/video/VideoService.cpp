@@ -57,7 +57,12 @@ cv::Mat draw_optical_flow(const cv::Mat& previous, const cv::Mat& current) {
   return visual;
 }
 
-bool estimate_stabilization_transform(const cv::Mat& previous, const cv::Mat& current, cv::Mat& transform, int& tracked_features, double& average_motion) {
+bool estimate_stabilization_transform(
+    const cv::Mat& previous,
+    const cv::Mat& current,
+    cv::Mat& transform,
+    int& tracked_features,
+    double& average_motion) {
   cv::Mat previous_gray = to_gray(previous);
   cv::Mat current_gray = to_gray(current);
   std::vector<cv::Point2f> previous_points;
@@ -192,7 +197,8 @@ nlohmann::json VideoService::upload(const std::string& filename, const std::stri
 
   const auto upload_dir = std::filesystem::path("uploads") / "videos";
   std::filesystem::create_directories(upload_dir);
-  const auto stored_name = random_hex(12) + "_" + sanitize_file_stem(std::filesystem::path(filename).filename().string(), "video");
+  const auto stored_name =
+      random_hex(12) + "_" + sanitize_file_stem(std::filesystem::path(filename).filename().string(), "video");
   const auto output_path = upload_dir / stored_name;
 
   std::ofstream output(output_path, std::ios::binary);
@@ -263,7 +269,8 @@ nlohmann::json VideoService::diagnostics(const std::string& id, int sample_frame
   };
 }
 
-nlohmann::json VideoService::motion_metrics(const std::string& id, const std::string& operation, int sample_frames) const {
+nlohmann::json
+VideoService::motion_metrics(const std::string& id, const std::string& operation, int sample_frames) const {
   const auto record = find_record(id);
   if (!record) {
     throw std::runtime_error("Video was not found.");
@@ -323,7 +330,9 @@ nlohmann::json VideoService::motion_metrics(const std::string& id, const std::st
       {"processingMs", elapsed_ms},
       {"writeContainer", "avi"},
       {"writeCodec", "MJPG"},
-      {"previewFrameUrl", "/api/videos/frame/" + id + "/" + std::to_string(std::min(1, record->frame_count - 1)) + "?filter=" + normalized_operation},
+      {"previewFrameUrl",
+       "/api/videos/frame/" + id + "/" + std::to_string(std::min(1, record->frame_count - 1)) +
+           "?filter=" + normalized_operation},
   };
 }
 
@@ -386,7 +395,8 @@ nlohmann::json VideoService::track_template(
 
     const cv::Mat gray = to_gray(frame);
     const cv::Rect search_window = expand_rect(current_box, gray.cols, gray.rows);
-    const bool search_is_valid = search_window.width >= template_image.cols && search_window.height >= template_image.rows;
+    const bool search_is_valid =
+        search_window.width >= template_image.cols && search_window.height >= template_image.rows;
     double score = 0.0;
     bool lost = !search_is_valid;
 
@@ -435,7 +445,8 @@ nlohmann::json VideoService::track_template(
   };
 }
 
-std::optional<cv::Mat> VideoService::read_frame(const std::string& id, int frame_index, const std::string& filter) const {
+std::optional<cv::Mat>
+VideoService::read_frame(const std::string& id, int frame_index, const std::string& filter) const {
   const auto record = find_record(id);
   if (!record) {
     return std::nullopt;
@@ -481,7 +492,8 @@ nlohmann::json VideoService::extract_frame(const std::string& id, int frame_inde
 
   const auto output_dir = std::filesystem::path("outputs") / "frames";
   std::filesystem::create_directories(output_dir);
-  const auto output_path = output_dir / (id + "_frame_" + std::to_string(frame_index) + "_" + sanitize_file_stem(filter, "filter") + ".png");
+  const auto output_path =
+      output_dir / (id + "_frame_" + std::to_string(frame_index) + "_" + sanitize_file_stem(filter, "filter") + ".png");
 
   if (!cv::imwrite(output_path.string(), *frame)) {
     throw std::runtime_error("OpenCV failed to save the extracted frame.");
@@ -508,7 +520,8 @@ nlohmann::json VideoService::export_filtered_video(
   }
 
   start_frame = std::clamp(start_frame, 0, std::max(0, record->frame_count - 1));
-  end_frame = end_frame <= 0 ? record->frame_count - 1 : std::clamp(end_frame, start_frame, std::max(0, record->frame_count - 1));
+  end_frame = end_frame <= 0 ? record->frame_count - 1
+                             : std::clamp(end_frame, start_frame, std::max(0, record->frame_count - 1));
 
   cv::VideoCapture capture(record->path.string());
   if (!capture.isOpened()) {
@@ -520,7 +533,8 @@ nlohmann::json VideoService::export_filtered_video(
   const auto output_path = output_dir / (id + "_" + sanitize_file_stem(filter, "filter") + ".avi");
 
   const int codec = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
-  cv::VideoWriter writer(output_path.string(), codec, std::max(1.0, record->fps), cv::Size(record->width, record->height), true);
+  cv::VideoWriter writer(
+      output_path.string(), codec, std::max(1.0, record->fps), cv::Size(record->width, record->height), true);
   if (!writer.isOpened()) {
     throw std::runtime_error("OpenCV could not open the output video writer. Check codec availability.");
   }
@@ -565,7 +579,8 @@ nlohmann::json VideoService::export_filtered_video(
   };
 }
 
-nlohmann::json VideoService::add_record(const std::string& name, const std::string& source_type, const std::filesystem::path& path) {
+nlohmann::json
+VideoService::add_record(const std::string& name, const std::string& source_type, const std::filesystem::path& path) {
   cv::VideoCapture capture(path.string());
   if (!capture.isOpened()) {
     throw std::runtime_error("OpenCV could not open the video.");

@@ -11,13 +11,13 @@
 namespace app {
 
 class LogStore {
- public:
+public:
   explicit LogStore(EventHub& event_hub);
 
   nlohmann::json append(const std::string& level, const std::string& message);
   nlohmann::json recent() const;
 
- private:
+private:
   EventHub& event_hub_;
   mutable std::mutex mutex_;
   std::deque<nlohmann::json> entries_;

@@ -27,7 +27,8 @@ std::vector<std::uint8_t> random_bytes(std::size_t length) {
   }
 
 #ifdef _WIN32
-  const auto status = BCryptGenRandom(nullptr, bytes.data(), static_cast<ULONG>(bytes.size()), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+  const auto status =
+      BCryptGenRandom(nullptr, bytes.data(), static_cast<ULONG>(bytes.size()), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
   if (status < 0) {
     throw std::runtime_error("BCryptGenRandom failed.");
   }
@@ -60,11 +61,8 @@ std::string random_hex(std::size_t length) {
 
 std::string random_pin() {
   const auto bytes = random_bytes(4);
-  const auto value =
-      (static_cast<unsigned int>(bytes[0]) << 24) |
-      (static_cast<unsigned int>(bytes[1]) << 16) |
-      (static_cast<unsigned int>(bytes[2]) << 8) |
-      static_cast<unsigned int>(bytes[3]);
+  const auto value = (static_cast<unsigned int>(bytes[0]) << 24) | (static_cast<unsigned int>(bytes[1]) << 16) |
+                     (static_cast<unsigned int>(bytes[2]) << 8) | static_cast<unsigned int>(bytes[3]);
 
   std::ostringstream stream;
   stream << std::setw(6) << std::setfill('0') << (value % 1000000);

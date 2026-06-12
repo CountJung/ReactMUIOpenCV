@@ -66,7 +66,11 @@ export type PipelineStorageInfo = {
 };
 
 export function getPipelines() {
-  return apiRequest<{ pipelines: PipelineRecord[]; executions: PipelineExecution[]; storage: PipelineStorageInfo }>('/api/pipelines');
+  return apiRequest<{
+    pipelines: PipelineRecord[];
+    executions: PipelineExecution[];
+    storage: PipelineStorageInfo;
+  }>('/api/pipelines');
 }
 
 export function createPipeline(document: PipelineDocument) {

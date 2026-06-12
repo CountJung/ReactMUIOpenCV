@@ -73,10 +73,8 @@ nlohmann::json RemoteAccessManager::disconnect_all() {
   return {{"clients", nlohmann::json::array()}, {"message", "All remote clients disconnected."}};
 }
 
-std::optional<nlohmann::json> RemoteAccessManager::authenticate(
-    const std::string& remote_addr,
-    const std::string& token,
-    const std::string& pin) {
+std::optional<nlohmann::json>
+RemoteAccessManager::authenticate(const std::string& remote_addr, const std::string& token, const std::string& pin) {
   std::scoped_lock lock(mutex_);
   prune_expired_clients();
 
@@ -103,9 +101,8 @@ std::optional<nlohmann::json> RemoteAccessManager::authenticate(
   };
 }
 
-std::optional<std::string> RemoteAccessManager::permission_for_session(
-    const std::string& remote_addr,
-    const std::string& session_token) {
+std::optional<std::string>
+RemoteAccessManager::permission_for_session(const std::string& remote_addr, const std::string& session_token) {
   if (session_token.empty()) {
     return std::nullopt;
   }
@@ -145,9 +142,8 @@ std::string RemoteAccessManager::selected_ip() const {
 void RemoteAccessManager::prune_expired_clients() {
   const auto now = Clock::now();
   clients_.erase(
-      std::remove_if(clients_.begin(), clients_.end(), [now](const RemoteClient& client) {
-        return client.expires_at <= now;
-      }),
+      std::remove_if(
+          clients_.begin(), clients_.end(), [now](const RemoteClient& client) { return client.expires_at <= now; }),
       clients_.end());
 }
 

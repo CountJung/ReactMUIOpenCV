@@ -6,14 +6,33 @@ import ImageIcon from '@mui/icons-material/Image';
 import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import TimelineIcon from '@mui/icons-material/Timeline';
-import { Alert, Box, Button, Card, CardContent, Chip, Divider, Grid, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  Grid,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { getImageResults, processImage, type ImageOperation } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
 import { executePipeline, getPipelines } from '../../api/pipelineApi';
-import { exportVideo, getVideoDiagnosticsHistory, getVideos, processVideo, type VideoFilter } from '../../api/videoApi';
+import {
+  exportVideo,
+  getVideoDiagnosticsHistory,
+  getVideos,
+  processVideo,
+  type VideoFilter,
+} from '../../api/videoApi';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
 
 type ChartDatum = {
@@ -119,13 +138,23 @@ function TimelineBars({ jobs }: { jobs: JobRecord[] }) {
     .slice(-10);
 
   return (
-    <Stack direction="row" spacing={1} alignItems="flex-end" sx={{ minHeight: 160, overflowX: 'auto', py: 1 }}>
+    <Stack
+      direction="row"
+      spacing={1}
+      alignItems="flex-end"
+      sx={{ minHeight: 160, overflowX: 'auto', py: 1 }}
+    >
       {rows.map((job) => (
         <Stack key={job.id} spacing={1} alignItems="center" sx={{ minWidth: 54 }}>
           <Box
             title={`${job.type} ${job.progress}%`}
             sx={{
-              bgcolor: job.status === 'failed' ? 'error.main' : job.status === 'completed' ? 'success.main' : 'warning.main',
+              bgcolor:
+                job.status === 'failed'
+                  ? 'error.main'
+                  : job.status === 'completed'
+                    ? 'success.main'
+                    : 'warning.main',
               borderRadius: 1,
               height: `${Math.max(12, job.progress * 1.3)}px`,
               width: 24,
@@ -136,7 +165,9 @@ function TimelineBars({ jobs }: { jobs: JobRecord[] }) {
           </Typography>
         </Stack>
       ))}
-      {rows.length === 0 && <Typography color="text.secondary">No job timeline data is available.</Typography>}
+      {rows.length === 0 && (
+        <Typography color="text.secondary">No job timeline data is available.</Typography>
+      )}
     </Stack>
   );
 }
@@ -152,10 +183,26 @@ export function ChartShowcasePage() {
   const [assignedJob, setAssignedJob] = useState<JobRecord | null>(null);
 
   const jobsQuery = useQuery({ queryKey: ['jobs'], queryFn: getJobs, refetchInterval: 5000 });
-  const imageResultsQuery = useQuery({ queryKey: ['image-results'], queryFn: getImageResults, refetchInterval: 10000 });
-  const pipelinesQuery = useQuery({ queryKey: ['pipelines'], queryFn: getPipelines, refetchInterval: 10000 });
-  const videosQuery = useQuery({ queryKey: ['video-library'], queryFn: getVideos, refetchInterval: 10000 });
-  const diagnosticsQuery = useQuery({ queryKey: ['video-diagnostics'], queryFn: getVideoDiagnosticsHistory, refetchInterval: 10000 });
+  const imageResultsQuery = useQuery({
+    queryKey: ['image-results'],
+    queryFn: getImageResults,
+    refetchInterval: 10000,
+  });
+  const pipelinesQuery = useQuery({
+    queryKey: ['pipelines'],
+    queryFn: getPipelines,
+    refetchInterval: 10000,
+  });
+  const videosQuery = useQuery({
+    queryKey: ['video-library'],
+    queryFn: getVideos,
+    refetchInterval: 10000,
+  });
+  const diagnosticsQuery = useQuery({
+    queryKey: ['video-diagnostics'],
+    queryFn: getVideoDiagnosticsHistory,
+    refetchInterval: 10000,
+  });
 
   const jobs = jobsQuery.data?.jobs ?? [];
   const results = imageResultsQuery.data?.results ?? [];
@@ -171,11 +218,16 @@ export function ChartShowcasePage() {
     value: Number(diagnostic.measuredReadFps.toFixed(1)),
   }));
   const motionMetricData = diagnostics
-    .filter((diagnostic) => diagnostic.trackedFeatures !== undefined || diagnostic.averageFlowMagnitude !== undefined)
+    .filter(
+      (diagnostic) =>
+        diagnostic.trackedFeatures !== undefined || diagnostic.averageFlowMagnitude !== undefined,
+    )
     .slice(0, 8)
     .map((diagnostic) => ({
       label: `${diagnostic.operation ?? 'motion'} ${diagnostic.videoName}`,
-      value: Number((diagnostic.averageFlowMagnitude ?? diagnostic.trackedFeatures ?? 0).toFixed(1)),
+      value: Number(
+        (diagnostic.averageFlowMagnitude ?? diagnostic.trackedFeatures ?? 0).toFixed(1),
+      ),
     }));
   const effectiveImageId = selectedImageId || results[0]?.resultId || '';
   const effectiveVideoId = selectedVideoId || videos[0]?.videoId || '';
@@ -232,7 +284,8 @@ export function ChartShowcasePage() {
   const canAssignJob =
     !assignJobMutation.isPending &&
     ((jobTemplate === 'image' && Boolean(effectiveImageId)) ||
-      ((jobTemplate === 'video-preview' || jobTemplate === 'video-export') && Boolean(effectiveVideoId)) ||
+      ((jobTemplate === 'video-preview' || jobTemplate === 'video-export') &&
+        Boolean(effectiveVideoId)) ||
       (jobTemplate === 'pipeline' && Boolean(selectedPipeline)));
 
   return (
@@ -243,19 +296,31 @@ export function ChartShowcasePage() {
       description="Processing statistics are derived from server-owned job records, image results, pipeline executions, and video diagnostics."
     >
       <Stack spacing={2.5}>
-        {(jobsQuery.isError || imageResultsQuery.isError || pipelinesQuery.isError || videosQuery.isError || diagnosticsQuery.isError) && (
+        {(jobsQuery.isError ||
+          imageResultsQuery.isError ||
+          pipelinesQuery.isError ||
+          videosQuery.isError ||
+          diagnosticsQuery.isError) && (
           <Alert severity="warning">Some chart data is not available from the backend.</Alert>
         )}
         {assignJobMutation.isError && (
           <Alert severity="error">
-            {assignJobMutation.error instanceof Error ? assignJobMutation.error.message : 'Unable to assign the selected job.'}
+            {assignJobMutation.error instanceof Error
+              ? assignJobMutation.error.message
+              : 'Unable to assign the selected job.'}
           </Alert>
         )}
 
         <Card>
           <CardContent>
             <Stack spacing={2}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                flexWrap="wrap"
+                gap={1}
+              >
                 <Stack direction="row" spacing={1} alignItems="center">
                   <AssignmentTurnedInIcon color="primary" />
                   <Typography variant="h6">Job Assignment</Typography>
@@ -270,8 +335,8 @@ export function ChartShowcasePage() {
               </Stack>
 
               <Alert severity="info">
-                Select an operation source, assign it as a backend job, then watch the status and timeline charts refresh from
-                server-owned job records.
+                Select an operation source, assign it as a backend job, then watch the status and
+                timeline charts refresh from server-owned job records.
               </Alert>
 
               <Grid container spacing={2}>
@@ -339,7 +404,9 @@ export function ChartShowcasePage() {
                         size="small"
                         fullWidth
                         value={imageOperation}
-                        onChange={(event) => setImageOperation(event.target.value as ImageOperation)}
+                        onChange={(event) =>
+                          setImageOperation(event.target.value as ImageOperation)
+                        }
                       >
                         {imageOperationOptions.map((option) => (
                           <MenuItem key={option.value} value={option.value}>
@@ -474,7 +541,10 @@ export function ChartShowcasePage() {
                     <TimelineIcon color="primary" />
                     <Typography variant="h6">Pipeline Runs</Typography>
                   </Stack>
-                  <BarList data={pipelineStatusData} emptyLabel="No pipeline executions are available." />
+                  <BarList
+                    data={pipelineStatusData}
+                    emptyLabel="No pipeline executions are available."
+                  />
                 </Stack>
               </CardContent>
             </Card>
@@ -488,7 +558,10 @@ export function ChartShowcasePage() {
                     <MovieFilterIcon color="primary" />
                     <Typography variant="h6">Video Diagnostics</Typography>
                   </Stack>
-                  <BarList data={videoReadFpsData} emptyLabel="Run Measure FPS in Video Lab to collect diagnostics." />
+                  <BarList
+                    data={videoReadFpsData}
+                    emptyLabel="Run Measure FPS in Video Lab to collect diagnostics."
+                  />
                 </Stack>
               </CardContent>
             </Card>
@@ -501,7 +574,10 @@ export function ChartShowcasePage() {
                     <MovieFilterIcon color="primary" />
                     <Typography variant="h6">Motion Metrics</Typography>
                   </Stack>
-                  <BarList data={motionMetricData} emptyLabel="Run Analyze Motion in Video Lab to collect flow metrics." />
+                  <BarList
+                    data={motionMetricData}
+                    emptyLabel="Run Analyze Motion in Video Lab to collect flow metrics."
+                  />
                 </Stack>
               </CardContent>
             </Card>
@@ -511,7 +587,13 @@ export function ChartShowcasePage() {
         <Card>
           <CardContent>
             <Stack spacing={2}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                flexWrap="wrap"
+                gap={1}
+              >
                 <Stack direction="row" spacing={1} alignItems="center">
                   <TimelineIcon color="primary" />
                   <Typography variant="h6">Recent Job Progress</Typography>
@@ -519,8 +601,16 @@ export function ChartShowcasePage() {
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                   <Chip label={`${jobs.length} jobs`} size="small" variant="outlined" />
                   <Chip label={`${results.length} image results`} size="small" variant="outlined" />
-                  <Chip label={`${executions.length} pipeline executions`} size="small" variant="outlined" />
-                  <Chip label={`${diagnostics.length} video diagnostics`} size="small" variant="outlined" />
+                  <Chip
+                    label={`${executions.length} pipeline executions`}
+                    size="small"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={`${diagnostics.length} video diagnostics`}
+                    size="small"
+                    variant="outlined"
+                  />
                 </Stack>
               </Stack>
               <TimelineBars jobs={jobs} />

@@ -14,7 +14,8 @@ nlohmann::json record_to_json(const PipelineRecord& pipeline) {
 
 }  // namespace
 
-PipelineStore::PipelineStore(std::filesystem::path storage_path) : storage_path_(std::move(storage_path)) {
+PipelineStore::PipelineStore(std::filesystem::path storage_path)
+    : storage_path_(std::move(storage_path)) {
   load();
 }
 

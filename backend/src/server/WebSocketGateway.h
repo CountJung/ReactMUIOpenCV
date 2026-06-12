@@ -11,13 +11,9 @@
 namespace app {
 
 class WebSocketGateway {
- public:
+public:
   WebSocketGateway(
-      std::string host,
-      int port,
-      EventHub& event_hub,
-      LogStore& log_store,
-      RemoteAccessManager& remote_access);
+      std::string host, int port, EventHub& event_hub, LogStore& log_store, RemoteAccessManager& remote_access);
   ~WebSocketGateway();
 
   WebSocketGateway(const WebSocketGateway&) = delete;
@@ -26,7 +22,7 @@ class WebSocketGateway {
   bool start();
   void stop();
 
- private:
+private:
   std::string host_;
   int port_;
   EventHub& event_hub_;

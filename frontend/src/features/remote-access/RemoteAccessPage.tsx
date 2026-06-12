@@ -104,17 +104,14 @@ export function RemoteAccessPage() {
       <Stack spacing={2.5}>
         {status && !status.lanBound && (
           <Alert severity="warning">
-            Remote access settings are prepared, but the backend is bound to {status.bindHost}. Start the backend with
-            {' '}
-            <code>--lan</code>
-            {' '}
-            to accept other devices on the LAN.
+            Remote access settings are prepared, but the backend is bound to {status.bindHost}.
+            Start the backend with <code>--lan</code> to accept other devices on the LAN.
           </Alert>
         )}
         {status?.enabled && (
           <Alert severity="info">
-            Windows Firewall may ask for permission when LAN Web UI Mode is used. Allow access only on trusted private
-            networks, and keep public network access blocked.
+            Windows Firewall may ask for permission when LAN Web UI Mode is used. Allow access only
+            on trusted private networks, and keep public network access blocked.
           </Alert>
         )}
 
@@ -123,7 +120,13 @@ export function RemoteAccessPage() {
             <Card sx={{ height: '100%' }}>
               <CardContent>
                 <Stack spacing={2}>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    flexWrap="wrap"
+                    gap={1}
+                  >
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <LanIcon color="primary" />
                       <Typography variant="h6">LAN Web UI Mode</Typography>
@@ -136,10 +139,20 @@ export function RemoteAccessPage() {
 
                   <Grid container spacing={1.5}>
                     <Grid item xs={12} sm={6}>
-                      <TextField label="Bind Host" value={status?.bindHost ?? 'Loading'} fullWidth size="small" />
+                      <TextField
+                        label="Bind Host"
+                        value={status?.bindHost ?? 'Loading'}
+                        fullWidth
+                        size="small"
+                      />
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <TextField label="Selected LAN IP" value={status?.selectedIp ?? 'Loading'} fullWidth size="small" />
+                      <TextField
+                        label="Selected LAN IP"
+                        value={status?.selectedIp ?? 'Loading'}
+                        fullWidth
+                        size="small"
+                      />
                     </Grid>
                     <Grid item xs={12}>
                       <TextField
@@ -152,7 +165,11 @@ export function RemoteAccessPage() {
                           endAdornment: (
                             <Tooltip title="Copy URL">
                               <span>
-                                <IconButton aria-label="Copy connection URL" onClick={copyConnectionUrl} disabled={!copyText}>
+                                <IconButton
+                                  aria-label="Copy connection URL"
+                                  onClick={copyConnectionUrl}
+                                  disabled={!copyText}
+                                >
                                   <ContentCopyIcon fontSize="small" />
                                 </IconButton>
                               </span>
@@ -166,15 +183,25 @@ export function RemoteAccessPage() {
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                     <Button
                       startIcon={<PowerSettingsNewIcon />}
-                      onClick={() => (status?.enabled ? disableMutation.mutate() : enableMutation.mutate())}
+                      onClick={() =>
+                        status?.enabled ? disableMutation.mutate() : enableMutation.mutate()
+                      }
                       color={status?.enabled ? 'warning' : 'primary'}
                     >
                       {status?.enabled ? 'Disable LAN UI' : 'Enable LAN UI'}
                     </Button>
-                    <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => rotateMutation.mutate()}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<RefreshIcon />}
+                      onClick={() => rotateMutation.mutate()}
+                    >
                       Rotate Token
                     </Button>
-                    <Button variant="outlined" color="warning" onClick={() => disconnectMutation.mutate()}>
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      onClick={() => disconnectMutation.mutate()}
+                    >
                       Disconnect All
                     </Button>
                   </Stack>
@@ -199,7 +226,9 @@ export function RemoteAccessPage() {
                       borderRadius: 2,
                     }}
                   >
-                    {status?.connectionUrl ? <QRCodeSVG value={status.connectionUrl} size={180} /> : null}
+                    {status?.connectionUrl ? (
+                      <QRCodeSVG value={status.connectionUrl} size={180} />
+                    ) : null}
                   </Box>
                   <Typography variant="body2" color="text.secondary" align="center">
                     Remote clients authenticate with the token URL or PIN and start as read-only.
@@ -228,7 +257,9 @@ export function RemoteAccessPage() {
                     Create Read-only Session
                   </Button>
                   {authResult && <Alert severity="success">{authResult}</Alert>}
-                  {authMutation.isError && <Alert severity="error">PIN authentication failed.</Alert>}
+                  {authMutation.isError && (
+                    <Alert severity="error">PIN authentication failed.</Alert>
+                  )}
                 </Stack>
               </CardContent>
             </Card>
@@ -243,7 +274,9 @@ export function RemoteAccessPage() {
                     {(networkInfo.data?.addresses ?? []).map((address) => (
                       <Chip key={address} label={address} variant="outlined" />
                     ))}
-                    {networkInfo.data?.addresses.length === 0 && <Chip label="No LAN IPv4 detected" />}
+                    {networkInfo.data?.addresses.length === 0 && (
+                      <Chip label="No LAN IPv4 detected" />
+                    )}
                   </Stack>
                   <Divider />
                   <Typography variant="h6">Connected Clients</Typography>
@@ -266,7 +299,9 @@ export function RemoteAccessPage() {
                       {clients.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={3}>
-                            <Typography color="text.secondary">No remote clients connected.</Typography>
+                            <Typography color="text.secondary">
+                              No remote clients connected.
+                            </Typography>
                           </TableCell>
                         </TableRow>
                       )}

@@ -61,11 +61,12 @@ cv::Mat apply_histogram_preview(const cv::Mat& source) {
 
     const int bin_width = cvRound(static_cast<double>(width) / hist_size);
     for (int i = 1; i < hist_size; ++i) {
-      cv::line(canvas,
-               cv::Point(bin_width * (i - 1), height - cvRound(histogram.at<float>(i - 1)) - 12),
-               cv::Point(bin_width * i, height - cvRound(histogram.at<float>(i)) - 12),
-               colors[index],
-               2);
+      cv::line(
+          canvas,
+          cv::Point(bin_width * (i - 1), height - cvRound(histogram.at<float>(i - 1)) - 12),
+          cv::Point(bin_width * i, height - cvRound(histogram.at<float>(i)) - 12),
+          colors[index],
+          2);
     }
   }
 
@@ -75,10 +76,7 @@ cv::Mat apply_histogram_preview(const cv::Mat& source) {
 }  // namespace
 
 cv::Mat apply_image_operation(
-    const cv::Mat& original,
-    const cv::Mat& source,
-    const std::string& operation,
-    const nlohmann::json& params) {
+    const cv::Mat& original, const cv::Mat& source, const std::string& operation, const nlohmann::json& params) {
   if (source.empty()) {
     throw std::runtime_error("Source image is empty.");
   }
@@ -147,34 +145,40 @@ cv::Mat apply_image_operation(
   if (operation == "sharpen") {
     cv::Mat output;
     const double strength = std::clamp(json_double(params, "strength", 1.0), 0.2, 4.0);
-    const cv::Mat kernel = (cv::Mat_<double>(3, 3) << 0,
-                            -strength,
-                            0,
-                            -strength,
-                            1 + 4 * strength,
-                            -strength,
-                            0,
-                            -strength,
-                            0);
+    const cv::Mat kernel =
+        (cv::Mat_<double>(3, 3) << 0, -strength, 0, -strength, 1 + 4 * strength, -strength, 0, -strength, 0);
     cv::filter2D(source, output, source.depth(), kernel);
     return output;
   }
 
   if (operation == "threshold") {
     cv::Mat output;
-    cv::threshold(to_gray(source), output, std::clamp(json_double(params, "threshold", 128.0), 0.0, 255.0), 255, cv::THRESH_BINARY);
+    cv::threshold(
+        to_gray(source),
+        output,
+        std::clamp(json_double(params, "threshold", 128.0), 0.0, 255.0),
+        255,
+        cv::THRESH_BINARY);
     return output;
   }
 
   if (operation == "edgeDetect") {
     cv::Mat output;
-    cv::Canny(to_gray(source), output, std::clamp(json_double(params, "low", 80.0), 0.0, 255.0), std::clamp(json_double(params, "high", 160.0), 0.0, 255.0));
+    cv::Canny(
+        to_gray(source),
+        output,
+        std::clamp(json_double(params, "low", 80.0), 0.0, 255.0),
+        std::clamp(json_double(params, "high", 160.0), 0.0, 255.0));
     return output;
   }
 
   if (operation == "contourDetect") {
     cv::Mat edges;
-    cv::Canny(to_gray(source), edges, std::clamp(json_double(params, "low", 80.0), 0.0, 255.0), std::clamp(json_double(params, "high", 160.0), 0.0, 255.0));
+    cv::Canny(
+        to_gray(source),
+        edges,
+        std::clamp(json_double(params, "low", 80.0), 0.0, 255.0),
+        std::clamp(json_double(params, "high", 160.0), 0.0, 255.0));
     std::vector<std::vector<cv::Point>> contours;
     cv::findContours(edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
     cv::Mat output = to_bgr(source);

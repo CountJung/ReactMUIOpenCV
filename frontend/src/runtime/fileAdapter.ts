@@ -20,7 +20,10 @@ export function getVideoOpenCapabilities(runtimeMode: RuntimeMode): VideoOpenCap
   return getImageOpenCapabilities(runtimeMode);
 }
 
-export function openImageFromLocalPath(path: string, runtimeMode: RuntimeMode): Promise<ImageResult> {
+export function openImageFromLocalPath(
+  path: string,
+  runtimeMode: RuntimeMode,
+): Promise<ImageResult> {
   if (!getImageOpenCapabilities(runtimeMode).localPath) {
     return Promise.reject(new Error('Local image paths are only available in desktop mode.'));
   }
@@ -32,7 +35,10 @@ export function openImageFromUpload(file: File): Promise<ImageResult> {
   return uploadImageFile(file);
 }
 
-export function openVideoFromLocalPath(path: string, runtimeMode: RuntimeMode): Promise<VideoRecord> {
+export function openVideoFromLocalPath(
+  path: string,
+  runtimeMode: RuntimeMode,
+): Promise<VideoRecord> {
   if (!getVideoOpenCapabilities(runtimeMode).localPath) {
     return Promise.reject(new Error('Local video paths are only available in desktop mode.'));
   }

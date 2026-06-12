@@ -14,7 +14,8 @@ constexpr std::size_t kMaxVideoDiagnosticsRecords = 100;
 
 }  // namespace
 
-VideoDiagnosticsStore::VideoDiagnosticsStore(std::filesystem::path storage_path) : storage_path_(std::move(storage_path)) {
+VideoDiagnosticsStore::VideoDiagnosticsStore(std::filesystem::path storage_path)
+    : storage_path_(std::move(storage_path)) {
   load();
 }
 
@@ -51,7 +52,8 @@ nlohmann::json VideoDiagnosticsStore::record(const nlohmann::json& diagnostics) 
       {"trackedFeatures", json_value_or<int>(diagnostics, "trackedFeatures", 0)},
       {"averageFlowMagnitude", json_value_or<double>(diagnostics, "averageFlowMagnitude", 0.0)},
       {"stabilizationCropPercent", json_value_or<double>(diagnostics, "stabilizationCropPercent", 0.0)},
-      {"processingMs", json_value_or<double>(diagnostics, "processingMs", json_value_or<double>(diagnostics, "elapsedMs", 0.0))},
+      {"processingMs",
+       json_value_or<double>(diagnostics, "processingMs", json_value_or<double>(diagnostics, "elapsedMs", 0.0))},
       {"writeContainer", json_value_or<std::string>(diagnostics, "writeContainer", "")},
       {"writeCodec", json_value_or<std::string>(diagnostics, "writeCodec", "")},
       {"createdAt", to_iso_time(Clock::now())},

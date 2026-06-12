@@ -35,15 +35,19 @@ struct WindowState {
 };
 
 class WinHandle {
- public:
+public:
   WinHandle() = default;
-  explicit WinHandle(HANDLE handle) : handle_(handle) {}
-  ~WinHandle() { reset(); }
+  explicit WinHandle(HANDLE handle)
+      : handle_(handle) {}
+  ~WinHandle() {
+    reset();
+  }
 
   WinHandle(const WinHandle&) = delete;
   WinHandle& operator=(const WinHandle&) = delete;
 
-  WinHandle(WinHandle&& other) noexcept : handle_(std::exchange(other.handle_, nullptr)) {}
+  WinHandle(WinHandle&& other) noexcept
+      : handle_(std::exchange(other.handle_, nullptr)) {}
 
   WinHandle& operator=(WinHandle&& other) noexcept {
     if (this != &other) {
@@ -52,8 +56,12 @@ class WinHandle {
     return *this;
   }
 
-  HANDLE get() const { return handle_; }
-  explicit operator bool() const { return handle_ && handle_ != INVALID_HANDLE_VALUE; }
+  HANDLE get() const {
+    return handle_;
+  }
+  explicit operator bool() const {
+    return handle_ && handle_ != INVALID_HANDLE_VALUE;
+  }
 
   void reset(HANDLE handle = nullptr) {
     if (*this) {
@@ -62,20 +70,24 @@ class WinHandle {
     handle_ = handle;
   }
 
- private:
+private:
   HANDLE handle_ = nullptr;
 };
 
 class WinHttpHandle {
- public:
+public:
   WinHttpHandle() = default;
-  explicit WinHttpHandle(HINTERNET handle) : handle_(handle) {}
-  ~WinHttpHandle() { reset(); }
+  explicit WinHttpHandle(HINTERNET handle)
+      : handle_(handle) {}
+  ~WinHttpHandle() {
+    reset();
+  }
 
   WinHttpHandle(const WinHttpHandle&) = delete;
   WinHttpHandle& operator=(const WinHttpHandle&) = delete;
 
-  WinHttpHandle(WinHttpHandle&& other) noexcept : handle_(std::exchange(other.handle_, nullptr)) {}
+  WinHttpHandle(WinHttpHandle&& other) noexcept
+      : handle_(std::exchange(other.handle_, nullptr)) {}
 
   WinHttpHandle& operator=(WinHttpHandle&& other) noexcept {
     if (this != &other) {
@@ -84,8 +96,12 @@ class WinHttpHandle {
     return *this;
   }
 
-  HINTERNET get() const { return handle_; }
-  explicit operator bool() const { return handle_ != nullptr; }
+  HINTERNET get() const {
+    return handle_;
+  }
+  explicit operator bool() const {
+    return handle_ != nullptr;
+  }
 
   void reset(HINTERNET handle = nullptr) {
     if (handle_) {
@@ -94,7 +110,7 @@ class WinHttpHandle {
     handle_ = handle;
   }
 
- private:
+private:
   HINTERNET handle_ = nullptr;
 };
 
@@ -127,7 +143,8 @@ std::filesystem::path window_state_path() {
 
 bool read_ini_int(const std::filesystem::path& path, const wchar_t* key, int* value) {
   wchar_t buffer[32]{};
-  GetPrivateProfileStringW(L"Window", key, L"", buffer, static_cast<DWORD>(sizeof(buffer) / sizeof(buffer[0])), path.c_str());
+  GetPrivateProfileStringW(
+      L"Window", key, L"", buffer, static_cast<DWORD>(sizeof(buffer) / sizeof(buffer[0])), path.c_str());
   if (buffer[0] == L'\0') {
     return false;
   }
@@ -237,10 +254,11 @@ bool health_check() {
     return false;
   }
 
-  WinHttpHandle request(
-      WinHttpOpenRequest(connect.get(), L"GET", kHealthPath, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0));
+  WinHttpHandle request(WinHttpOpenRequest(
+      connect.get(), L"GET", kHealthPath, nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0));
   bool ok = false;
-  if (request && WinHttpSendRequest(request.get(), WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
+  if (request &&
+      WinHttpSendRequest(request.get(), WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0) &&
       WinHttpReceiveResponse(request.get(), nullptr)) {
     DWORD status_code = 0;
     DWORD status_size = sizeof(status_code);
@@ -398,19 +416,19 @@ void shutdown_backend() {
 
 LRESULT CALLBACK window_proc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam) {
   switch (message) {
-    case WM_SIZE:
-      resize_webview();
-      return 0;
-    case WM_CLOSE:
-      save_window_state(hwnd);
-      DestroyWindow(hwnd);
-      return 0;
-    case WM_DESTROY:
-      shutdown_backend();
-      PostQuitMessage(0);
-      return 0;
-    default:
-      return DefWindowProcW(hwnd, message, wparam, lparam);
+  case WM_SIZE:
+    resize_webview();
+    return 0;
+  case WM_CLOSE:
+    save_window_state(hwnd);
+    DestroyWindow(hwnd);
+    return 0;
+  case WM_DESTROY:
+    shutdown_backend();
+    PostQuitMessage(0);
+    return 0;
+  default:
+    return DefWindowProcW(hwnd, message, wparam, lparam);
   }
 }
 

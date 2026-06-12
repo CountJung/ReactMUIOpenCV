@@ -15,15 +15,12 @@
 namespace app {
 
 bool is_private_ipv4(const std::string& ip) {
-  return ip.rfind("10.", 0) == 0 || ip.rfind("192.168.", 0) == 0 ||
-         ip.rfind("172.16.", 0) == 0 || ip.rfind("172.17.", 0) == 0 ||
-         ip.rfind("172.18.", 0) == 0 || ip.rfind("172.19.", 0) == 0 ||
-         ip.rfind("172.20.", 0) == 0 || ip.rfind("172.21.", 0) == 0 ||
-         ip.rfind("172.22.", 0) == 0 || ip.rfind("172.23.", 0) == 0 ||
-         ip.rfind("172.24.", 0) == 0 || ip.rfind("172.25.", 0) == 0 ||
-         ip.rfind("172.26.", 0) == 0 || ip.rfind("172.27.", 0) == 0 ||
-         ip.rfind("172.28.", 0) == 0 || ip.rfind("172.29.", 0) == 0 ||
-         ip.rfind("172.30.", 0) == 0 || ip.rfind("172.31.", 0) == 0;
+  return ip.rfind("10.", 0) == 0 || ip.rfind("192.168.", 0) == 0 || ip.rfind("172.16.", 0) == 0 ||
+         ip.rfind("172.17.", 0) == 0 || ip.rfind("172.18.", 0) == 0 || ip.rfind("172.19.", 0) == 0 ||
+         ip.rfind("172.20.", 0) == 0 || ip.rfind("172.21.", 0) == 0 || ip.rfind("172.22.", 0) == 0 ||
+         ip.rfind("172.23.", 0) == 0 || ip.rfind("172.24.", 0) == 0 || ip.rfind("172.25.", 0) == 0 ||
+         ip.rfind("172.26.", 0) == 0 || ip.rfind("172.27.", 0) == 0 || ip.rfind("172.28.", 0) == 0 ||
+         ip.rfind("172.29.", 0) == 0 || ip.rfind("172.30.", 0) == 0 || ip.rfind("172.31.", 0) == 0;
 }
 
 std::vector<std::string> get_lan_ipv4_addresses() {

@@ -24,7 +24,8 @@ export function createAppTheme(resolvedMode: ResolvedThemeMode) {
         main: tokens.color.error,
       },
       background: {
-        default: resolvedMode === 'dark' ? tokens.color.darkBackground : tokens.color.lightBackground,
+        default:
+          resolvedMode === 'dark' ? tokens.color.darkBackground : tokens.color.lightBackground,
         paper: resolvedMode === 'dark' ? tokens.color.darkSurface : tokens.color.lightSurface,
       },
       divider: resolvedMode === 'dark' ? tokens.color.darkBorder : tokens.color.lightBorder,

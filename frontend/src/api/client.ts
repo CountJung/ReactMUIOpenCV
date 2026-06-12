@@ -10,7 +10,13 @@ type ApiEnvelope<T> = {
 };
 
 function isApiEnvelope<T>(value: unknown): value is ApiEnvelope<T> {
-  return typeof value === 'object' && value !== null && 'ok' in value && 'data' in value && 'error' in value;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'ok' in value &&
+    'data' in value &&
+    'error' in value
+  );
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit) {

@@ -34,7 +34,12 @@ import { useMemo, useState } from 'react';
 import { getFileLibrary, type FileLibraryItem } from '../../api/filesApi';
 import { getImageResults, type ImageResult } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
-import { getVideoDiagnosticsHistory, getVideoTrackingHistory, type VideoDiagnosticsRecord, type VideoTrackingRecord } from '../../api/videoApi';
+import {
+  getVideoDiagnosticsHistory,
+  getVideoTrackingHistory,
+  type VideoDiagnosticsRecord,
+  type VideoTrackingRecord,
+} from '../../api/videoApi';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
 
 type TabKey = 'jobs' | 'results' | 'files' | 'video-diagnostics' | 'video-tracking';
@@ -116,12 +121,21 @@ function ServerTable<T>({
                 <TableCell
                   key={header.id}
                   onClick={header.column.getToggleSortingHandler()}
-                  sx={{ cursor: header.column.getCanSort() ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
+                  sx={{
+                    cursor: header.column.getCanSort() ? 'pointer' : 'default',
+                    whiteSpace: 'nowrap',
+                  }}
                 >
                   <Stack direction="row" spacing={0.5} alignItems="center">
-                    <Box component="span">{flexRender(header.column.columnDef.header, header.getContext())}</Box>
-                    {header.column.getIsSorted() === 'asc' && <ArrowUpwardIcon fontSize="inherit" />}
-                    {header.column.getIsSorted() === 'desc' && <ArrowDownwardIcon fontSize="inherit" />}
+                    <Box component="span">
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                    </Box>
+                    {header.column.getIsSorted() === 'asc' && (
+                      <ArrowUpwardIcon fontSize="inherit" />
+                    )}
+                    {header.column.getIsSorted() === 'desc' && (
+                      <ArrowDownwardIcon fontSize="inherit" />
+                    )}
                   </Stack>
                 </TableCell>
               ))}
@@ -132,7 +146,9 @@ function ServerTable<T>({
           {table.getRowModel().rows.map((row) => (
             <TableRow key={row.id} hover>
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                <TableCell key={cell.id}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
               ))}
             </TableRow>
           ))}
@@ -153,10 +169,26 @@ export function DataGridPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('jobs');
   const [filter, setFilter] = useState('');
   const jobsQuery = useQuery({ queryKey: ['jobs'], queryFn: getJobs, refetchInterval: 5000 });
-  const resultsQuery = useQuery({ queryKey: ['image-results'], queryFn: getImageResults, refetchInterval: 10000 });
-  const filesQuery = useQuery({ queryKey: ['file-library'], queryFn: getFileLibrary, refetchInterval: 15000 });
-  const diagnosticsQuery = useQuery({ queryKey: ['video-diagnostics'], queryFn: getVideoDiagnosticsHistory, refetchInterval: 10000 });
-  const trackingQuery = useQuery({ queryKey: ['video-tracking'], queryFn: getVideoTrackingHistory, refetchInterval: 10000 });
+  const resultsQuery = useQuery({
+    queryKey: ['image-results'],
+    queryFn: getImageResults,
+    refetchInterval: 10000,
+  });
+  const filesQuery = useQuery({
+    queryKey: ['file-library'],
+    queryFn: getFileLibrary,
+    refetchInterval: 15000,
+  });
+  const diagnosticsQuery = useQuery({
+    queryKey: ['video-diagnostics'],
+    queryFn: getVideoDiagnosticsHistory,
+    refetchInterval: 10000,
+  });
+  const trackingQuery = useQuery({
+    queryKey: ['video-tracking'],
+    queryFn: getVideoTrackingHistory,
+    refetchInterval: 10000,
+  });
 
   const jobs = jobsQuery.data?.jobs ?? [];
   const results = resultsQuery.data?.results ?? [];
@@ -305,7 +337,9 @@ export function DataGridPage() {
       {
         accessorKey: 'status',
         header: 'Status',
-        cell: ({ getValue }) => <Chip label={String(getValue())} size="small" color={statusColor(String(getValue()))} />,
+        cell: ({ getValue }) => (
+          <Chip label={String(getValue())} size="small" color={statusColor(String(getValue()))} />
+        ),
       },
       {
         id: 'range',
@@ -321,7 +355,8 @@ export function DataGridPage() {
       {
         id: 'sourceRoi',
         header: 'ROI',
-        accessorFn: (row) => `${row.sourceRoi.x},${row.sourceRoi.y} ${row.sourceRoi.width}x${row.sourceRoi.height}`,
+        accessorFn: (row) =>
+          `${row.sourceRoi.x},${row.sourceRoi.y} ${row.sourceRoi.width}x${row.sourceRoi.height}`,
       },
       {
         id: 'frameMetadata',
@@ -335,10 +370,12 @@ export function DataGridPage() {
           return (
             <Stack spacing={0.25}>
               <Typography variant="caption">
-                {first.frameIndex}: {first.x},{first.y} {first.width}x{first.height} / {first.score.toFixed(2)}
+                {first.frameIndex}: {first.x},{first.y} {first.width}x{first.height} /{' '}
+                {first.score.toFixed(2)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {last.frameIndex}: {last.x},{last.y} {last.width}x{last.height} / {last.score.toFixed(2)}
+                {last.frameIndex}: {last.x},{last.y} {last.width}x{last.height} /{' '}
+                {last.score.toFixed(2)}
               </Typography>
             </Stack>
           );
@@ -377,19 +414,34 @@ export function DataGridPage() {
       description="Server-owned job history, image results, file library entries, and video diagnostics are browsed in sortable tables."
     >
       <Stack spacing={2}>
-        {(jobsQuery.isError || resultsQuery.isError || filesQuery.isError || diagnosticsQuery.isError || trackingQuery.isError) && (
+        {(jobsQuery.isError ||
+          resultsQuery.isError ||
+          filesQuery.isError ||
+          diagnosticsQuery.isError ||
+          trackingQuery.isError) && (
           <Alert severity="warning">Some table data is not available from the backend.</Alert>
         )}
 
         <Card>
           <CardContent>
             <Stack spacing={2}>
-              <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2}>
-                <Tabs value={activeTab} onChange={(_, value: TabKey) => setActiveTab(value)} variant="scrollable">
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                justifyContent="space-between"
+                spacing={2}
+              >
+                <Tabs
+                  value={activeTab}
+                  onChange={(_, value: TabKey) => setActiveTab(value)}
+                  variant="scrollable"
+                >
                   <Tab label={`Jobs (${jobs.length})`} value="jobs" />
                   <Tab label={`Image Results (${results.length})`} value="results" />
                   <Tab label={`Files (${files.length})`} value="files" />
-                  <Tab label={`Video Diagnostics (${diagnostics.length})`} value="video-diagnostics" />
+                  <Tab
+                    label={`Video Diagnostics (${diagnostics.length})`}
+                    value="video-diagnostics"
+                  />
                   <Tab label={`Tracking (${tracking.length})`} value="video-tracking" />
                 </Tabs>
                 <TextField
@@ -409,7 +461,12 @@ export function DataGridPage() {
               </Stack>
 
               {activeTab === 'jobs' && (
-                <ServerTable columns={jobColumns} data={jobs} emptyLabel="No job records are available." filter={filter} />
+                <ServerTable
+                  columns={jobColumns}
+                  data={jobs}
+                  emptyLabel="No job records are available."
+                  filter={filter}
+                />
               )}
               {activeTab === 'results' && (
                 <ServerTable
@@ -420,7 +477,12 @@ export function DataGridPage() {
                 />
               )}
               {activeTab === 'files' && (
-                <ServerTable columns={fileColumns} data={files} emptyLabel="The server file library is empty." filter={filter} />
+                <ServerTable
+                  columns={fileColumns}
+                  data={files}
+                  emptyLabel="The server file library is empty."
+                  filter={filter}
+                />
               )}
               {activeTab === 'video-diagnostics' && (
                 <ServerTable

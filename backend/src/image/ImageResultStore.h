@@ -28,7 +28,7 @@ struct ImageResultRecord {
 nlohmann::json image_metadata_to_json(const ImageResultRecord& record);
 
 class ImageResultStore {
- public:
+public:
   nlohmann::json open_local(const std::filesystem::path& path);
   nlohmann::json upload(const std::string& filename, const std::string& content);
   nlohmann::json process(const std::string& source_id, const std::string& operation, const nlohmann::json& params);
@@ -38,9 +38,9 @@ class ImageResultStore {
   std::optional<cv::Mat> preview(const std::string& id, const std::string& variant) const;
   nlohmann::json save(const std::string& id, const std::string& requested_format) const;
 
- private:
-  nlohmann::json add(
-      const std::string& name,
+private:
+  nlohmann::json
+  add(const std::string& name,
       const std::string& source_type,
       const std::string& source_path,
       const cv::Mat& original,

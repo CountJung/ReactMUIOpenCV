@@ -84,7 +84,11 @@ const nodeKindOptions: Array<{ value: PipelineNodeType; label: string }> = [
   { value: 'output', label: 'Output' },
 ];
 
-const operationOptions: Array<{ value: PipelineOperation; label: string; defaultParams?: Record<string, unknown> }> = [
+const operationOptions: Array<{
+  value: PipelineOperation;
+  label: string;
+  defaultParams?: Record<string, unknown>;
+}> = [
   { value: 'grayscale', label: 'Grayscale' },
   { value: 'blur', label: 'Blur', defaultParams: { kernel: 7 } },
   { value: 'gaussianBlur', label: 'Gaussian Blur', defaultParams: { kernel: 7 } },
@@ -95,7 +99,11 @@ const operationOptions: Array<{ value: PipelineOperation; label: string; default
   { value: 'sharpen', label: 'Sharpen', defaultParams: { strength: 1 } },
   { value: 'opticalFlow', label: 'Optical Flow', defaultParams: { sampleFrames: 120 } },
   { value: 'stabilize', label: 'Video Stabilize', defaultParams: { sampleFrames: 120 } },
-  { value: 'trackObject', label: 'Track Object ROI', defaultParams: { startFrame: 0, endFrame: 120, roi: { x: 0, y: 0, width: 160, height: 120 } } },
+  {
+    value: 'trackObject',
+    label: 'Track Object ROI',
+    defaultParams: { startFrame: 0, endFrame: 120, roi: { x: 0, y: 0, width: 160, height: 120 } },
+  },
 ];
 
 function defaultDocument(resultId = ''): PipelineDocument {
@@ -223,7 +231,8 @@ function ConnectionHandles({ isConnectable }: { isConnectable: boolean }) {
 
 function PipelineNodeCard({ data, isConnectable }: NodeProps<PipelineFlowDisplayNode>) {
   const nodeType = data.pipelineType;
-  const tone = nodeType === 'imageInput' ? 'primary' : nodeType === 'output' ? 'success' : 'secondary';
+  const tone =
+    nodeType === 'imageInput' ? 'primary' : nodeType === 'output' ? 'success' : 'secondary';
   return (
     <Box
       className="pipeline-node-card"
@@ -240,7 +249,13 @@ function PipelineNodeCard({ data, isConnectable }: NodeProps<PipelineFlowDisplay
     >
       <ConnectionHandles isConnectable={isConnectable} />
       <Stack spacing={0.75}>
-        <Chip label={nodeType} size="small" color={tone} variant="outlined" sx={{ alignSelf: 'flex-start' }} />
+        <Chip
+          label={nodeType}
+          size="small"
+          color={tone}
+          variant="outlined"
+          sx={{ alignSelf: 'flex-start' }}
+        />
         <Typography variant="subtitle2">{data.label}</Typography>
         {nodeType === 'operation' && (
           <Typography variant="caption" color="text.secondary">
@@ -317,7 +332,10 @@ function PipelineFlowWorkspace() {
   });
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? nodes[0];
-  const document = useMemo(() => toDocument(pipelineName, nodes, edges), [pipelineName, nodes, edges]);
+  const document = useMemo(
+    () => toDocument(pipelineName, nodes, edges),
+    [pipelineName, nodes, edges],
+  );
   const flowNodes = useMemo<PipelineFlowDisplayNode[]>(
     () =>
       nodes.map((node) => ({
@@ -334,7 +352,8 @@ function PipelineFlowWorkspace() {
   const busy = pipelineQuery.isFetching || imageResultsQuery.isFetching || videosQuery.isFetching;
 
   const saveMutation = useMutation({
-    mutationFn: () => (pipelineId ? updatePipeline(pipelineId, document) : createPipeline(document)),
+    mutationFn: () =>
+      pipelineId ? updatePipeline(pipelineId, document) : createPipeline(document),
     onSuccess: (pipeline) => {
       setPipelineId(pipeline.id);
       setPipelineName(pipeline.document.name);
@@ -405,19 +424,28 @@ function PipelineFlowWorkspace() {
     [onNodesChange],
   );
 
-  const onConnect = useCallback((connection: Connection) => {
-    pushHistory('connect');
-    const id = [
-      connection.source,
-      connection.sourceHandle ?? 'source',
-      connection.target,
-      connection.targetHandle ?? 'target',
-    ].join('-');
-    setEdges((currentEdges) => addEdge({ ...connection, id }, currentEdges));
-  }, [pushHistory, setEdges]);
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      pushHistory('connect');
+      const id = [
+        connection.source,
+        connection.sourceHandle ?? 'source',
+        connection.target,
+        connection.targetHandle ?? 'target',
+      ].join('-');
+      setEdges((currentEdges) => addEdge({ ...connection, id }, currentEdges));
+    },
+    [pushHistory, setEdges],
+  );
 
   const handleSelectionChange = useCallback(
-    ({ nodes: selectedNodes, edges: selectedEdges }: { nodes: PipelineFlowDisplayNode[]; edges: Edge[] }) => {
+    ({
+      nodes: selectedNodes,
+      edges: selectedEdges,
+    }: {
+      nodes: PipelineFlowDisplayNode[];
+      edges: Edge[];
+    }) => {
       const nextNodeIds = selectedNodes.map((node) => node.id);
       const nextEdgeIds = selectedEdges.map((edge) => edge.id);
       setSelectedGraph((current) =>
@@ -428,7 +456,9 @@ function PipelineFlowWorkspace() {
 
       const nextSelectedNodeId = selectedNodes[0]?.id;
       if (nextSelectedNodeId) {
-        setSelectedNodeId((current) => (current === nextSelectedNodeId ? current : nextSelectedNodeId));
+        setSelectedNodeId((current) =>
+          current === nextSelectedNodeId ? current : nextSelectedNodeId,
+        );
       }
     },
     [],
@@ -436,7 +466,9 @@ function PipelineFlowWorkspace() {
 
   const updateNodeData = (nodeId: string, data: Partial<PipelineNodeData>) => {
     setNodes((currentNodes) =>
-      currentNodes.map((node) => (node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node)),
+      currentNodes.map((node) =>
+        node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node,
+      ),
     );
   };
 
@@ -470,7 +502,8 @@ function PipelineFlowWorkspace() {
   const addPipelineNode = () => {
     pushHistory('add-node');
     const operationCount = nodes.filter((node) => node.type === 'operation').length + 1;
-    const selectedOperation = operationOptions[operationCount % operationOptions.length] ?? operationOptions[0];
+    const selectedOperation =
+      operationOptions[operationCount % operationOptions.length] ?? operationOptions[0];
     const nodeId = `${newNodeKind}-${Date.now()}`;
     const output = nodes.find((node) => node.type === 'output');
     const beforeOutput = edges.find((edge) => output && edge.target === output.id);
@@ -480,7 +513,10 @@ function PipelineFlowWorkspace() {
     const nextNode: PipelineFlowNode = {
       id: nodeId,
       type: newNodeKind,
-      position: { x: basePosition.x + 220, y: basePosition.y + (newNodeKind === 'operation' ? 0 : 120) },
+      position: {
+        x: basePosition.x + 220,
+        y: basePosition.y + (newNodeKind === 'operation' ? 0 : 120),
+      },
       data:
         newNodeKind === 'operation'
           ? {
@@ -492,22 +528,28 @@ function PipelineFlowWorkspace() {
             ? {
                 label: `Image Input ${nodes.filter((node) => node.type === 'imageInput').length + 1}`,
                 resultId: imageResultsQuery.data?.results[0]?.resultId ?? '',
-            }
-          : newNodeKind === 'videoInput'
-            ? {
-                label: `Video Input ${nodes.filter((node) => node.type === 'videoInput').length + 1}`,
-                videoId: videosQuery.data?.videos[0]?.videoId ?? '',
               }
-          : {
-              label: `Output ${nodes.filter((node) => node.type === 'output').length + 1}`,
-              },
+            : newNodeKind === 'videoInput'
+              ? {
+                  label: `Video Input ${nodes.filter((node) => node.type === 'videoInput').length + 1}`,
+                  videoId: videosQuery.data?.videos[0]?.videoId ?? '',
+                }
+              : {
+                  label: `Output ${nodes.filter((node) => node.type === 'output').length + 1}`,
+                },
     };
 
     setNodes((currentNodes) => [...currentNodes, nextNode]);
     if (newNodeKind === 'operation') {
       setEdges((currentEdges) => [
         ...currentEdges.filter((edge) => edge.id !== beforeOutput?.id),
-        { id: `${source}-${nodeId}`, source, target: nodeId, sourceHandle: 'right-source', targetHandle: 'left-source' },
+        {
+          id: `${source}-${nodeId}`,
+          source,
+          target: nodeId,
+          sourceHandle: 'right-source',
+          targetHandle: 'left-source',
+        },
         ...(output
           ? [
               {
@@ -537,7 +579,10 @@ function PipelineFlowWorkspace() {
     setNodes((currentNodes) => currentNodes.filter((node) => !selectedNodeIds.has(node.id)));
     setEdges((currentEdges) =>
       currentEdges.filter(
-        (edge) => !selectedEdgeIds.has(edge.id) && !selectedNodeIds.has(edge.source) && !selectedNodeIds.has(edge.target),
+        (edge) =>
+          !selectedEdgeIds.has(edge.id) &&
+          !selectedNodeIds.has(edge.source) &&
+          !selectedNodeIds.has(edge.target),
       ),
     );
     const nextNode = snapshot.nodes.find((node) => !selectedNodeIds.has(node.id));
@@ -603,16 +648,31 @@ function PipelineFlowWorkspace() {
           </Stack>
 
           <Stack direction="row" spacing={1} flexWrap="wrap">
-            <Button startIcon={<UndoIcon />} variant="outlined" onClick={undoLastChange} disabled={history.length === 0}>
+            <Button
+              startIcon={<UndoIcon />}
+              variant="outlined"
+              onClick={undoLastChange}
+              disabled={history.length === 0}
+            >
               Undo
             </Button>
             <Button variant="outlined" onClick={resetPipeline}>
               New
             </Button>
-            <Button startIcon={<SaveIcon />} variant="outlined" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+            <Button
+              startIcon={<SaveIcon />}
+              variant="outlined"
+              onClick={() => saveMutation.mutate()}
+              disabled={saveMutation.isPending}
+            >
               Save
             </Button>
-            <Button startIcon={<PlayArrowIcon />} variant="contained" onClick={() => executeMutation.mutate()} disabled={executeMutation.isPending}>
+            <Button
+              startIcon={<PlayArrowIcon />}
+              variant="contained"
+              onClick={() => executeMutation.mutate()}
+              disabled={executeMutation.isPending}
+            >
               Run
             </Button>
           </Stack>
@@ -620,11 +680,14 @@ function PipelineFlowWorkspace() {
 
         {isMobile && (
           <Alert severity="info">
-            Mobile clients can inspect and run saved pipelines. Complex node editing is limited to desktop and tablet layouts.
+            Mobile clients can inspect and run saved pipelines. Complex node editing is limited to
+            desktop and tablet layouts.
           </Alert>
         )}
         {currentError && <Alert severity="error">{mutationErrorMessage(currentError)}</Alert>}
-        {execution?.status === 'failed' && <Alert severity="error">{execution.error ?? 'Pipeline execution failed.'}</Alert>}
+        {execution?.status === 'failed' && (
+          <Alert severity="error">{execution.error ?? 'Pipeline execution failed.'}</Alert>
+        )}
 
         <Grid container spacing={2}>
           <Grid item xs={12} lg={8}>
@@ -644,10 +707,11 @@ function PipelineFlowWorkspace() {
                       boxShadow: 'none !important',
                       p: 0,
                     },
-                    '& .react-flow__node:focus, & .react-flow__node:focus-visible, & .react-flow__node.selected': {
-                      outline: 'none',
-                      boxShadow: 'none !important',
-                    },
+                    '& .react-flow__node:focus, & .react-flow__node:focus-visible, & .react-flow__node.selected':
+                      {
+                        outline: 'none',
+                        boxShadow: 'none !important',
+                      },
                     '& .react-flow__node.selected .pipeline-node-card': {
                       borderColor: 'primary.main',
                       boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.24)}`,
@@ -700,7 +764,10 @@ function PipelineFlowWorkspace() {
                       boxShadow: 2,
                     },
                     '& .react-flow__minimap-mask': {
-                      fill: alpha(theme.palette.background.default, theme.palette.mode === 'dark' ? 0.72 : 0.56),
+                      fill: alpha(
+                        theme.palette.background.default,
+                        theme.palette.mode === 'dark' ? 0.72 : 0.56,
+                      ),
                     },
                     '& .react-flow__minimap-node': {
                       stroke: 'divider',
@@ -733,7 +800,10 @@ function PipelineFlowWorkspace() {
                       <MiniMap
                         pannable
                         zoomable
-                        maskColor={alpha(theme.palette.background.default, theme.palette.mode === 'dark' ? 0.72 : 0.56)}
+                        maskColor={alpha(
+                          theme.palette.background.default,
+                          theme.palette.mode === 'dark' ? 0.72 : 0.56,
+                        )}
                         nodeColor={(node) => {
                           const pipelineType = node.data.pipelineType;
                           if (pipelineType === 'imageInput') {
@@ -764,7 +834,12 @@ function PipelineFlowWorkspace() {
                 <CardContent>
                   <Stack spacing={2}>
                     <Typography variant="h6">Pipeline</Typography>
-                    <TextField label="Name" size="small" value={pipelineName} onChange={(event) => setPipelineName(event.target.value)} />
+                    <TextField
+                      label="Name"
+                      size="small"
+                      value={pipelineName}
+                      onChange={(event) => setPipelineName(event.target.value)}
+                    />
                     <TextField
                       label="Saved Pipeline"
                       select
@@ -795,7 +870,9 @@ function PipelineFlowWorkspace() {
                           p: 1,
                         }}
                       >
-                        {pipelineQuery.data?.storage.path ?? pipelineQuery.data?.storage.description ?? 'Backend pipeline storage'}
+                        {pipelineQuery.data?.storage.path ??
+                          pipelineQuery.data?.storage.description ??
+                          'Backend pipeline storage'}
                       </Typography>
                     </Stack>
                     <TextField
@@ -813,7 +890,12 @@ function PipelineFlowWorkspace() {
                       ))}
                     </TextField>
                     <Stack direction="row" spacing={1}>
-                      <Button startIcon={<AddIcon />} variant="outlined" onClick={addPipelineNode} disabled={isMobile}>
+                      <Button
+                        startIcon={<AddIcon />}
+                        variant="outlined"
+                        onClick={addPipelineNode}
+                        disabled={isMobile}
+                      >
                         Node
                       </Button>
                       <Button
@@ -821,7 +903,10 @@ function PipelineFlowWorkspace() {
                         color="error"
                         variant="outlined"
                         onClick={deleteSelectedElements}
-                        disabled={isMobile || (selectedGraph.nodeIds.length === 0 && selectedGraph.edgeIds.length === 0)}
+                        disabled={
+                          isMobile ||
+                          (selectedGraph.nodeIds.length === 0 && selectedGraph.edgeIds.length === 0)
+                        }
                       >
                         Selection
                       </Button>
@@ -838,21 +923,39 @@ function PipelineFlowWorkspace() {
                       </Button>
                     </Stack>
                     <Typography variant="caption" color="text.secondary">
-                      Connect visible dots from any side. Delete or Backspace removes selected nodes or lead lines; Ctrl+Z restores
-                      the previous graph state.
+                      Connect visible dots from any side. Delete or Backspace removes selected nodes
+                      or lead lines; Ctrl+Z restores the previous graph state.
                     </Typography>
                     <Divider />
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} flexWrap="wrap">
                       <FormControlLabel
-                        control={<Switch size="small" checked={showGrid} onChange={(event) => setShowGrid(event.target.checked)} />}
+                        control={
+                          <Switch
+                            size="small"
+                            checked={showGrid}
+                            onChange={(event) => setShowGrid(event.target.checked)}
+                          />
+                        }
                         label="Grid"
                       />
                       <FormControlLabel
-                        control={<Switch size="small" checked={showControls} onChange={(event) => setShowControls(event.target.checked)} />}
+                        control={
+                          <Switch
+                            size="small"
+                            checked={showControls}
+                            onChange={(event) => setShowControls(event.target.checked)}
+                          />
+                        }
                         label="Controls"
                       />
                       <FormControlLabel
-                        control={<Switch size="small" checked={showMiniMap} onChange={(event) => setShowMiniMap(event.target.checked)} />}
+                        control={
+                          <Switch
+                            size="small"
+                            checked={showMiniMap}
+                            onChange={(event) => setShowMiniMap(event.target.checked)}
+                          />
+                        }
                         label="Mini map"
                       />
                     </Stack>
@@ -870,7 +973,9 @@ function PipelineFlowWorkspace() {
                         select
                         size="small"
                         value={String(selectedNode.data.resultId ?? '')}
-                        onChange={(event) => updateNodeData(selectedNode.id, { resultId: event.target.value })}
+                        onChange={(event) =>
+                          updateNodeData(selectedNode.id, { resultId: event.target.value })
+                        }
                       >
                         <MenuItem value="">Select a result</MenuItem>
                         {(imageResultsQuery.data?.results ?? []).map((result) => (
@@ -886,7 +991,9 @@ function PipelineFlowWorkspace() {
                         select
                         size="small"
                         value={String(selectedNode.data.videoId ?? '')}
-                        onChange={(event) => updateNodeData(selectedNode.id, { videoId: event.target.value })}
+                        onChange={(event) =>
+                          updateNodeData(selectedNode.id, { videoId: event.target.value })
+                        }
                       >
                         <MenuItem value="">Select a video</MenuItem>
                         {(videosQuery.data?.videos ?? []).map((video) => (
@@ -913,10 +1020,14 @@ function PipelineFlowWorkspace() {
                       </TextField>
                     )}
                     {selectedNode?.type === 'output' && (
-                      <Typography color="text.secondary">The output node publishes the final preview result.</Typography>
+                      <Typography color="text.secondary">
+                        The output node publishes the final preview result.
+                      </Typography>
                     )}
                     <Typography variant="caption" color="text.secondary">
-                      {busy ? 'Refreshing server-owned pipeline state...' : `Selected: ${selectedNode?.id ?? 'none'}`}
+                      {busy
+                        ? 'Refreshing server-owned pipeline state...'
+                        : `Selected: ${selectedNode?.id ?? 'none'}`}
                     </Typography>
                   </Stack>
                 </CardContent>
@@ -929,14 +1040,28 @@ function PipelineFlowWorkspace() {
                     {execution ? (
                       <>
                         <Stack direction="row" spacing={1} flexWrap="wrap">
-                          <Chip label={execution.status} color={execution.status === 'completed' ? 'success' : 'error'} size="small" />
+                          <Chip
+                            label={execution.status}
+                            color={execution.status === 'completed' ? 'success' : 'error'}
+                            size="small"
+                          />
                           <Chip label={`job ${execution.job.id}`} size="small" variant="outlined" />
                         </Stack>
                         <Divider />
                         <Stack spacing={1}>
                           {execution.steps.map((step) => (
-                            <Stack key={`${execution.executionId}-${step.nodeId}`} direction="row" spacing={1} alignItems="center">
-                              <Chip label={step.status} size="small" color="success" variant="outlined" />
+                            <Stack
+                              key={`${execution.executionId}-${step.nodeId}`}
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                            >
+                              <Chip
+                                label={step.status}
+                                size="small"
+                                color="success"
+                                variant="outlined"
+                              />
                               <Typography variant="body2">{step.nodeId}</Typography>
                             </Stack>
                           ))}
@@ -959,7 +1084,9 @@ function PipelineFlowWorkspace() {
                         )}
                       </>
                     ) : (
-                      <Typography color="text.secondary">Run the pipeline to see synchronized node execution state.</Typography>
+                      <Typography color="text.secondary">
+                        Run the pipeline to see synchronized node execution state.
+                      </Typography>
                     )}
                   </Stack>
                 </CardContent>

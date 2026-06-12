@@ -18,7 +18,9 @@ nlohmann::json job_to_json(const JobRecord& job) {
   };
 }
 
-JobQueue::JobQueue(EventHub& event_hub, LogStore& log_store) : event_hub_(event_hub), log_store_(log_store) {
+JobQueue::JobQueue(EventHub& event_hub, LogStore& log_store)
+    : event_hub_(event_hub),
+      log_store_(log_store) {
   worker_ = std::thread([this] { run(); });
 }
 

@@ -63,7 +63,8 @@ void ApiServer::register_routes() {
       return true;
     }
 
-    const auto permission = remote_access_.permission_for_session(request.remote_addr, request.get_header_value("X-Remote-Session"));
+    const auto permission =
+        remote_access_.permission_for_session(request.remote_addr, request.get_header_value("X-Remote-Session"));
     if (permission && *permission == "control") {
       return true;
     }
@@ -83,37 +84,41 @@ void ApiServer::register_routes() {
     return false;
   };
 
-  server_.Options(".*", [](const httplib::Request&, httplib::Response& response) {
-    set_cors(response);
-  });
+  server_.Options(".*", [](const httplib::Request&, httplib::Response& response) { set_cors(response); });
 
   server_.Get("/api/health", [&](const httplib::Request&, httplib::Response& response) {
-    send_data(response, {
-                            {"status", "ok"},
-                            {"service", "ReactMUIOpenCV"},
-                            {"opencvVersion", CV_VERSION},
-                        });
+    send_data(
+        response,
+        {
+            {"status", "ok"},
+            {"service", "ReactMUIOpenCV"},
+            {"opencvVersion", CV_VERSION},
+        });
   });
 
   server_.Get("/api/server-info", [&](const httplib::Request&, httplib::Response& response) {
-    send_data(response, {
-                            {"service", "ReactMUIOpenCV"},
-                            {"httpUrl", "http://" + host_ + ":" + std::to_string(port_)},
-                            {"wsUrl", "ws://" + host_ + ":" + std::to_string(ws_port_)},
-                            {"opencvVersion", CV_VERSION},
-                        });
+    send_data(
+        response,
+        {
+            {"service", "ReactMUIOpenCV"},
+            {"httpUrl", "http://" + host_ + ":" + std::to_string(port_)},
+            {"wsUrl", "ws://" + host_ + ":" + std::to_string(ws_port_)},
+            {"opencvVersion", CV_VERSION},
+        });
   });
 
   server_.Get("/api/network-info", [&](const httplib::Request&, httplib::Response& response) {
-    send_data(response, {
-                            {"hostName", "localhost"},
-                            {"bindHost", host_},
-                            {"port", port_},
-                            {"webSocketPort", ws_port_},
-                            {"lanBound", remote_access_.lan_bound()},
-                            {"selectedIp", remote_access_.selected_ip()},
-                            {"addresses", lan_addresses_},
-                        });
+    send_data(
+        response,
+        {
+            {"hostName", "localhost"},
+            {"bindHost", host_},
+            {"port", port_},
+            {"webSocketPort", ws_port_},
+            {"lanBound", remote_access_.lan_bound()},
+            {"selectedIp", remote_access_.selected_ip()},
+            {"addresses", lan_addresses_},
+        });
   });
 
   server_.Get("/api/settings", [&](const httplib::Request&, httplib::Response& response) {
@@ -212,11 +217,13 @@ void ApiServer::register_routes() {
 
     event_hub_.publish("remote.client.connected", (*auth_result)["client"]);
     log_store_.append("info", "Remote read-only client connected from " + request.remote_addr);
-    send_data(response, {
-                            {"sessionToken", (*auth_result)["sessionToken"]},
-                            {"permission", (*auth_result)["permission"]},
-                            {"expiresAt", (*auth_result)["expiresAt"]},
-                        });
+    send_data(
+        response,
+        {
+            {"sessionToken", (*auth_result)["sessionToken"]},
+            {"permission", (*auth_result)["permission"]},
+            {"expiresAt", (*auth_result)["expiresAt"]},
+        });
   });
 
   server_.Post("/api/files/open-local", [&](const httplib::Request&, httplib::Response& response) {
@@ -307,7 +314,8 @@ void ApiServer::register_routes() {
     const auto body = parse_body(request);
     const auto result_id = body.value("resultId", std::string{});
     const auto operation = body.value("operation", std::string{});
-    const auto params = body.contains("params") && body["params"].is_object() ? body["params"] : nlohmann::json::object();
+    const auto params =
+        body.contains("params") && body["params"].is_object() ? body["params"] : nlohmann::json::object();
 
     if (result_id.empty() || operation.empty()) {
       send_error(response, "invalid_image_process_request", "resultId and operation are required.", 400);
@@ -350,49 +358,53 @@ void ApiServer::register_routes() {
     }
   });
 
-  server_.Get(R"(/api/images/results/([A-Za-z0-9_-]+)/preview)", [&](const httplib::Request& request, httplib::Response& response) {
-    const auto id = request.matches[1].str();
-    const auto variant = request.has_param("variant") ? request.get_param_value("variant") : "result";
-    const auto image = image_store_.preview(id, variant);
-    if (!image) {
-      send_error(response, "image_result_not_found", "Image result was not found.", 404);
-      return;
-    }
+  server_.Get(
+      R"(/api/images/results/([A-Za-z0-9_-]+)/preview)",
+      [&](const httplib::Request& request, httplib::Response& response) {
+        const auto id = request.matches[1].str();
+        const auto variant = request.has_param("variant") ? request.get_param_value("variant") : "result";
+        const auto image = image_store_.preview(id, variant);
+        if (!image) {
+          send_error(response, "image_result_not_found", "Image result was not found.", 404);
+          return;
+        }
 
-    std::vector<unsigned char> encoded;
-    if (!cv::imencode(".png", *image, encoded)) {
-      send_error(response, "image_preview_failed", "OpenCV failed to encode the preview.", 500);
-      return;
-    }
+        std::vector<unsigned char> encoded;
+        if (!cv::imencode(".png", *image, encoded)) {
+          send_error(response, "image_preview_failed", "OpenCV failed to encode the preview.", 500);
+          return;
+        }
 
-    set_cors(response);
-    response.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), "image/png");
-  });
+        set_cors(response);
+        response.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), "image/png");
+      });
 
-  server_.Get(R"(/api/images/results/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
-    const auto result = image_store_.get(request.matches[1].str());
-    if (!result) {
-      send_error(response, "image_result_not_found", "Image result was not found.", 404);
-      return;
-    }
+  server_.Get(
+      R"(/api/images/results/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+        const auto result = image_store_.get(request.matches[1].str());
+        if (!result) {
+          send_error(response, "image_result_not_found", "Image result was not found.", 404);
+          return;
+        }
 
-    send_data(response, *result);
-  });
+        send_data(response, *result);
+      });
 
-  server_.Delete(R"(/api/images/results/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
-    if (!is_loopback_or_control(request, response)) {
-      return;
-    }
+  server_.Delete(
+      R"(/api/images/results/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+        if (!is_loopback_or_control(request, response)) {
+          return;
+        }
 
-    const auto id = request.matches[1].str();
-    if (!image_store_.remove(id)) {
-      send_error(response, "image_result_not_found", "Image result was not found.", 404);
-      return;
-    }
+        const auto id = request.matches[1].str();
+        if (!image_store_.remove(id)) {
+          send_error(response, "image_result_not_found", "Image result was not found.", 404);
+          return;
+        }
 
-    log_store_.append("info", "Removed image result " + id);
-    send_data(response, {{"deleted", id}});
-  });
+        log_store_.append("info", "Removed image result " + id);
+        send_data(response, {{"deleted", id}});
+      });
 
   server_.Post("/api/videos/open-local", [&](const httplib::Request& request, httplib::Response& response) {
     if (!is_loopback_request(request)) {
@@ -514,7 +526,8 @@ void ApiServer::register_routes() {
       return;
     }
 
-    const auto job = job_queue_.enqueue("video-motion", "Analyzing " + operation + " motion metrics for " + video_id + ".");
+    const auto job =
+        job_queue_.enqueue("video-motion", "Analyzing " + operation + " motion metrics for " + video_id + ".");
     try {
       auto metrics = video_service_.motion_metrics(video_id, operation, sample_frames);
       const auto record = video_diagnostics_store_.record(metrics);
@@ -549,7 +562,8 @@ void ApiServer::register_routes() {
         return;
       }
 
-      const auto job = job_queue_.enqueue("video", "Queued " + filter + " frame filter preview for video " + video_id + ".");
+      const auto job =
+          job_queue_.enqueue("video", "Queued " + filter + " frame filter preview for video " + video_id + ".");
       event_hub_.publish("preview.frame.updated", {{"videoId", video_id}, {"filter", filter}});
       log_store_.append("info", "Queued video process " + filter + " for " + video_id);
       send_data(response, {{"job", job}, {"video", *video}, {"filter", filter}}, 202);
@@ -576,12 +590,8 @@ void ApiServer::register_routes() {
 
     const auto job = job_queue_.enqueue("video-export", "Exporting " + filter + " video clip for " + video_id + ".");
     try {
-      const auto result = video_service_.export_filtered_video(
-          video_id,
-          filter,
-          start_frame,
-          end_frame,
-          [&](int progress) {
+      const auto result =
+          video_service_.export_filtered_video(video_id, filter, start_frame, end_frame, [&](int progress) {
             event_hub_.publish("job.progress", {{"id", job["id"]}, {"type", "video-export"}, {"progress", progress}});
           });
       event_hub_.publish("job.completed", {{"id", job["id"]}, {"type", "video-export"}, {"progress", 100}});
@@ -610,7 +620,8 @@ void ApiServer::register_routes() {
 
     try {
       const auto result = video_service_.extract_frame(video_id, frame_index, filter);
-      const auto job = job_queue_.enqueue("video-frame", "Extracted frame " + std::to_string(frame_index) + " from " + video_id + ".");
+      const auto job = job_queue_.enqueue(
+          "video-frame", "Extracted frame " + std::to_string(frame_index) + " from " + video_id + ".");
       event_hub_.publish("preview.frame.updated", result);
       log_store_.append("info", "Extracted video frame " + std::to_string(frame_index) + " from " + video_id);
       send_data(response, {{"job", job}, {"result", result}}, 202);
@@ -620,56 +631,59 @@ void ApiServer::register_routes() {
     }
   });
 
-  server_.Get(R"(/api/videos/frame/([A-Za-z0-9_-]+)/([0-9]+))", [&](const httplib::Request& request, httplib::Response& response) {
-    const auto video_id = request.matches[1].str();
-    const auto frame_index = std::stoi(request.matches[2].str());
-    const auto filter = request.has_param("filter") ? request.get_param_value("filter") : "none";
+  server_.Get(
+      R"(/api/videos/frame/([A-Za-z0-9_-]+)/([0-9]+))",
+      [&](const httplib::Request& request, httplib::Response& response) {
+        const auto video_id = request.matches[1].str();
+        const auto frame_index = std::stoi(request.matches[2].str());
+        const auto filter = request.has_param("filter") ? request.get_param_value("filter") : "none";
 
-    try {
-      const auto frame = video_service_.read_frame(video_id, frame_index, filter);
-      if (!frame) {
-        send_error(response, "video_not_found", "Video was not found.", 404);
-        return;
-      }
+        try {
+          const auto frame = video_service_.read_frame(video_id, frame_index, filter);
+          if (!frame) {
+            send_error(response, "video_not_found", "Video was not found.", 404);
+            return;
+          }
 
-      std::vector<unsigned char> encoded;
-      if (!cv::imencode(".png", *frame, encoded)) {
-        send_error(response, "video_frame_encode_failed", "OpenCV failed to encode the frame.", 500);
-        return;
-      }
+          std::vector<unsigned char> encoded;
+          if (!cv::imencode(".png", *frame, encoded)) {
+            send_error(response, "video_frame_encode_failed", "OpenCV failed to encode the frame.", 500);
+            return;
+          }
 
-      set_cors(response);
-      response.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), "image/png");
-    } catch (const std::exception& error) {
-      log_store_.append("error", "Video frame preview failed: " + std::string(error.what()));
-      send_error(response, "video_frame_preview_failed", error.what(), 400);
-    }
-  });
+          set_cors(response);
+          response.set_content(reinterpret_cast<const char*>(encoded.data()), encoded.size(), "image/png");
+        } catch (const std::exception& error) {
+          log_store_.append("error", "Video frame preview failed: " + std::string(error.what()));
+          send_error(response, "video_frame_preview_failed", error.what(), 400);
+        }
+      });
 
-  server_.Get(R"(/api/videos/([A-Za-z0-9_-]+)/diagnostics)", [&](const httplib::Request& request, httplib::Response& response) {
-    const auto video_id = request.matches[1].str();
-    int sample_frames = 120;
-    if (request.has_param("sampleFrames")) {
-      try {
-        sample_frames = std::stoi(request.get_param_value("sampleFrames"));
-      } catch (const std::exception&) {
-        send_error(response, "invalid_video_diagnostics_request", "sampleFrames must be an integer.", 400);
-        return;
-      }
-    }
+  server_.Get(
+      R"(/api/videos/([A-Za-z0-9_-]+)/diagnostics)", [&](const httplib::Request& request, httplib::Response& response) {
+        const auto video_id = request.matches[1].str();
+        int sample_frames = 120;
+        if (request.has_param("sampleFrames")) {
+          try {
+            sample_frames = std::stoi(request.get_param_value("sampleFrames"));
+          } catch (const std::exception&) {
+            send_error(response, "invalid_video_diagnostics_request", "sampleFrames must be an integer.", 400);
+            return;
+          }
+        }
 
-    try {
-      auto diagnostics = video_service_.diagnostics(video_id, sample_frames);
-      const auto record = video_diagnostics_store_.record(diagnostics);
-      diagnostics["record"] = record;
-      event_hub_.publish("video.diagnostics.recorded", record);
-      log_store_.append("info", "Recorded video diagnostics for " + video_id);
-      send_data(response, diagnostics);
-    } catch (const std::exception& error) {
-      log_store_.append("error", "Video diagnostics failed: " + std::string(error.what()));
-      send_error(response, "video_diagnostics_failed", error.what(), 400);
-    }
-  });
+        try {
+          auto diagnostics = video_service_.diagnostics(video_id, sample_frames);
+          const auto record = video_diagnostics_store_.record(diagnostics);
+          diagnostics["record"] = record;
+          event_hub_.publish("video.diagnostics.recorded", record);
+          log_store_.append("info", "Recorded video diagnostics for " + video_id);
+          send_data(response, diagnostics);
+        } catch (const std::exception& error) {
+          log_store_.append("error", "Video diagnostics failed: " + std::string(error.what()));
+          send_error(response, "video_diagnostics_failed", error.what(), 400);
+        }
+      });
 
   server_.Get(R"(/api/videos/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
     const auto video = video_service_.get(request.matches[1].str());
@@ -728,13 +742,14 @@ void ApiServer::register_routes() {
     send_data(response, pipeline_store_.replace(request.matches[1].str(), parse_body(request)));
   });
 
-  server_.Delete(R"(/api/pipelines/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
-    if (!is_loopback_or_control(request, response)) {
-      return;
-    }
+  server_.Delete(
+      R"(/api/pipelines/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
+        if (!is_loopback_or_control(request, response)) {
+          return;
+        }
 
-    send_data(response, pipeline_store_.remove(request.matches[1].str()));
-  });
+        send_data(response, pipeline_store_.remove(request.matches[1].str()));
+      });
 
   server_.Get("/api/jobs", [&](const httplib::Request&, httplib::Response& response) {
     send_data(response, job_queue_.list());
@@ -749,17 +764,18 @@ void ApiServer::register_routes() {
     send_data(response, *job);
   });
 
-  server_.Post(R"(/api/jobs/([A-Za-z0-9_-]+)/cancel)", [&](const httplib::Request& request, httplib::Response& response) {
-    if (!is_loopback_or_control(request, response)) {
-      return;
-    }
+  server_.Post(
+      R"(/api/jobs/([A-Za-z0-9_-]+)/cancel)", [&](const httplib::Request& request, httplib::Response& response) {
+        if (!is_loopback_or_control(request, response)) {
+          return;
+        }
 
-    if (!job_queue_.cancel(request.matches[1].str())) {
-      send_error(response, "job_not_cancellable", "Job was not found or cannot be cancelled.", 404);
-      return;
-    }
-    send_data(response, {{"cancelled", request.matches[1].str()}});
-  });
+        if (!job_queue_.cancel(request.matches[1].str())) {
+          send_error(response, "job_not_cancellable", "Job was not found or cannot be cancelled.", 404);
+          return;
+        }
+        send_data(response, {{"cancelled", request.matches[1].str()}});
+      });
 
   server_.Delete(R"(/api/jobs/([A-Za-z0-9_-]+))", [&](const httplib::Request& request, httplib::Response& response) {
     if (!is_loopback_or_control(request, response)) {
@@ -795,31 +811,31 @@ void ApiServer::register_routes() {
 void ApiServer::mount_static_files() {
   if (std::filesystem::exists(static_root_)) {
     server_.set_mount_point("/", static_root_.string());
-    server_.set_error_handler([static_root = static_root_](const httplib::Request& request, httplib::Response& response) {
-      if (request.method != "GET" || request.path.rfind("/api", 0) == 0) {
-        response.status = 404;
-        response.set_content("Not found", "text/plain");
-        return;
-      }
+    server_.set_error_handler(
+        [static_root = static_root_](const httplib::Request& request, httplib::Response& response) {
+          if (request.method != "GET" || request.path.rfind("/api", 0) == 0) {
+            response.status = 404;
+            response.set_content("Not found", "text/plain");
+            return;
+          }
 
-      const auto index_file = static_root / "index.html";
-      std::ifstream file(index_file, std::ios::binary);
-      if (!file) {
-        response.status = 404;
-        response.set_content("React UI index.html was not found.", "text/plain");
-        return;
-      }
+          const auto index_file = static_root / "index.html";
+          std::ifstream file(index_file, std::ios::binary);
+          if (!file) {
+            response.status = 404;
+            response.set_content("React UI index.html was not found.", "text/plain");
+            return;
+          }
 
-      std::ostringstream buffer;
-      buffer << file.rdbuf();
-      response.status = 200;
-      response.set_content(buffer.str(), "text/html");
-    });
+          std::ostringstream buffer;
+          buffer << file.rdbuf();
+          response.status = 200;
+          response.set_content(buffer.str(), "text/html");
+        });
   } else {
     server_.Get("/", [](const httplib::Request&, httplib::Response& response) {
       response.set_content(
-          "ReactMUIOpenCV backend is running. Build frontend/dist to serve the React UI.",
-          "text/plain");
+          "ReactMUIOpenCV backend is running. Build frontend/dist to serve the React UI.", "text/plain");
     });
   }
 }

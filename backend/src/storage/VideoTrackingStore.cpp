@@ -17,7 +17,8 @@ constexpr std::size_t kMaxVideoTrackingRecords = 60;
 
 }  // namespace
 
-VideoTrackingStore::VideoTrackingStore(std::filesystem::path storage_path) : storage_path_(std::move(storage_path)) {
+VideoTrackingStore::VideoTrackingStore(std::filesystem::path storage_path)
+    : storage_path_(std::move(storage_path)) {
   load();
 }
 

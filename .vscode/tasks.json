@@ -145,6 +145,26 @@
       "problemMatcher": []
     },
     {
+      "label": "frontend: format",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "format"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "frontend: format check",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "format:check"],
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "tools: setup vcpkg",
       "type": "shell",
       "command": "powershell",
@@ -250,6 +270,38 @@
       "problemMatcher": []
     },
     {
+      "label": "backend: format",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/format.ps1",
+        "-SkipFrontend"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "backend: format check",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/check-format.ps1",
+        "-SkipFrontend"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "project: check frontend",
       "dependsOrder": "sequence",
       "dependsOn": ["frontend: typecheck", "frontend: lint", "frontend: build"],
@@ -266,6 +318,36 @@
       "dependsOrder": "sequence",
       "dependsOn": ["frontend: build", "backend: build"],
       "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "project: format",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/format.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "project: format check",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/check-format.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": []
     },
     {

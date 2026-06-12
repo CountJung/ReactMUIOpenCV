@@ -9,7 +9,13 @@ type PlaceholderPageProps = {
   children?: ReactNode;
 };
 
-export function PlaceholderPage({ title, eyebrow, description, status = 'Planned', children }: PlaceholderPageProps) {
+export function PlaceholderPage({
+  title,
+  eyebrow,
+  description,
+  status = 'Planned',
+  children,
+}: PlaceholderPageProps) {
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1180 }}>
       <Stack spacing={2.5}>

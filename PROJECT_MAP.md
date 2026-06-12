@@ -15,6 +15,9 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `reference/`: Local reference skill packages staged before project installation; currently contains the source `cpp-1.0.0` skill and archive.
 - `ENVIRONMENT.md`: Local development and dependency setup guide.
 - `.gitignore`: Git upload exclusions for generated files, build output, dependencies, logs, runtime outputs, and env files.
+- `.gitattributes`: Repository line-ending and binary-file normalization policy; keeps source/config/docs/scripts on LF while preserving Windows batch files as CRLF.
+- `.editorconfig`: Shared editor whitespace, newline, charset, and trailing-whitespace rules for source, config, docs, and scripts.
+- `.clang-format`: C++ formatting rules for backend source files, aligned with the repository's 2-space K&R style.
 - `README.md`: Fresh Windows PC quick start and script-driven setup guide.
 - `build.ps1`: Compatibility wrapper that delegates to `scripts/build.ps1` so legacy root build commands still work.
 - `docs/`: Korean user, developer setup, publishing, build/debug policy, and coding guide documentation.
@@ -25,6 +28,8 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `scripts/script-utils.ps1`: Shared PowerShell helpers for checked native command execution, installed Visual Studio generator selection, backend configure/build, and generated CMake cache cleanup when the configured generator changes.
 - `scripts/setup-webview2-sdk.ps1`: Downloads and extracts the WebView2 SDK NuGet package to `%USERPROFILE%\.nuget\packages`.
 - `scripts/ensure-frontend-deps.ps1`: Conditionally runs `npm install` when frontend dependencies are missing or stale.
+- `scripts/format.ps1`: Project formatter entrypoint. Runs frontend Prettier and backend clang-format unless skipped by parameter.
+- `scripts/check-format.ps1`: Project format verification entrypoint. Runs frontend Prettier check and backend clang-format dry-run checks unless skipped by parameter.
 - `scripts/prepare-debug.ps1`: VS Code debug preparation script for dependency checks, optional workspace runtime shutdown, frontend typecheck or static bundle build, CMake configure, and Debug backend build.
 - `scripts/build.ps1`: Release build script. Ensures frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable plus WebView2 desktop app host when the SDK is available.
 - `scripts/publish.ps1`: Creates `/publish/ReactMUIOpenCV`, versioned zip, and `ReactMUIOpenCV-latest.zip` from Release outputs.
@@ -46,8 +51,10 @@ Agents must read this file before broad file exploration. Use it to jump directl
 
 ## Frontend
 
-- `frontend/package.json`: React/Vite/MUI dependencies and npm scripts.
+- `frontend/package.json`: React/Vite/MUI dependencies and npm scripts, including Prettier format and format-check commands.
 - `frontend/package-lock.json`: npm dependency lockfile; commit this for reproducible installs.
+- `frontend/.prettierrc.json`: Prettier rules for TypeScript, React, JSON, CSS, HTML, and Markdown in the frontend workspace.
+- `frontend/.prettierignore`: Prettier exclusions for generated frontend artifacts, logs, TypeScript build info, and npm-owned lockfile output.
 - `frontend/vite.config.ts`: Vite dev server and build configuration.
 - `frontend/src/main.tsx`: React entrypoint.
 - `frontend/src/vite-env.d.ts`: Vite environment type declarations.
@@ -88,8 +95,8 @@ Agents must read this file before broad file exploration. Use it to jump directl
 ## VSCode
 
 - `.vscode/extensions.json`: Recommended extensions.
-- `.vscode/settings.json`: CMake, TypeScript, ESLint, and file visibility settings.
-- `.vscode/tasks.json`: Conditional dependency checks, fresh bootstrap, vcpkg bootstrap, debug preparation, frontend dev/build/lint/typecheck/watch, backend Debug/Release configure/build/LAN run tasks, Release build task, and publish task.
+- `.vscode/settings.json`: CMake, TypeScript, ESLint, formatter defaults, clang-format style selection, and file visibility settings.
+- `.vscode/tasks.json`: Conditional dependency checks, fresh bootstrap, vcpkg bootstrap, debug preparation, frontend dev/build/lint/typecheck/watch/format, backend Debug/Release configure/build/LAN run/format tasks, project format tasks, Release build task, and publish task.
 - `.vscode/launch.json`: Desktop app, backend, backend LAN, frontend Edge, Remote Access Edge, and compound debug configurations. App/backend launch uses explicit Debug executable paths created by `debug: prepare backend`; frontend launch starts `frontend: dev`, which prepares dependencies and typechecks first.
 
 ## Runtime Ports

@@ -8,13 +8,13 @@
 namespace app {
 
 class VideoTrackingStore {
- public:
+public:
   explicit VideoTrackingStore(std::filesystem::path storage_path);
 
   nlohmann::json list(bool include_storage_path) const;
   nlohmann::json record(const nlohmann::json& tracking);
 
- private:
+private:
   void load();
   void save_locked() const;
 
