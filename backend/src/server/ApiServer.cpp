@@ -28,6 +28,7 @@ ApiServer::ApiServer(
     VideoService& video_service,
     PipelineStore& pipeline_store,
     VideoDiagnosticsStore& video_diagnostics_store,
+    VideoTrackingStore& video_tracking_store,
     PipelineExecutor& pipeline_executor,
     std::filesystem::path static_root)
     : host_(std::move(host)),
@@ -43,6 +44,7 @@ ApiServer::ApiServer(
       video_service_(video_service),
       pipeline_store_(pipeline_store),
       video_diagnostics_store_(video_diagnostics_store),
+      video_tracking_store_(video_tracking_store),
       pipeline_executor_(pipeline_executor),
       static_root_(std::move(static_root)) {
   server_.set_payload_max_length(kMaxApiPayloadBytes);
@@ -450,6 +452,52 @@ void ApiServer::register_routes() {
 
   server_.Get("/api/videos/diagnostics", [&](const httplib::Request& request, httplib::Response& response) {
     send_data(response, video_diagnostics_store_.list(is_loopback_request(request)));
+  });
+
+  server_.Get("/api/videos/tracking", [&](const httplib::Request& request, httplib::Response& response) {
+    send_data(response, video_tracking_store_.list(is_loopback_request(request)));
+  });
+
+  server_.Post("/api/videos/track", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
+    const auto body = parse_body(request);
+    const auto video_id = body.value("videoId", std::string{});
+    const auto start_frame = body.value("startFrame", 0);
+    const auto end_frame = body.value("endFrame", 0);
+    const auto roi = body.contains("roi") && body["roi"].is_object() ? body["roi"] : nlohmann::json::object();
+    if (video_id.empty()) {
+      send_error(response, "invalid_video_tracking_request", "videoId is required.", 400);
+      return;
+    }
+
+    const auto job = job_queue_.create_manual("video-tracking", "Tracking ROI for " + video_id + ".");
+    const auto job_id = job.value("id", std::string{});
+    job_queue_.start(job_id, "Object tracking started.");
+    try {
+      auto tracking = video_service_.track_template(
+          video_id,
+          start_frame,
+          end_frame,
+          roi,
+          [&]() { return job_queue_.is_cancelled(job_id); },
+          [&](int progress) { job_queue_.progress(job_id, progress, "Tracking ROI frames."); });
+      const auto record = video_tracking_store_.record(tracking);
+      tracking["record"] = record;
+      event_hub_.publish("video.tracking.recorded", record);
+      if (!job_queue_.is_cancelled(job_id)) {
+        job_queue_.complete(job_id, "Object tracking completed.");
+      }
+      const auto current_job = job_queue_.get(job_id).value_or(job);
+      log_store_.append("info", "Recorded object tracking metadata for " + video_id);
+      send_data(response, {{"job", current_job}, {"tracking", tracking}}, 202);
+    } catch (const std::exception& error) {
+      job_queue_.fail(job_id, error.what());
+      log_store_.append("error", "Video object tracking failed: " + std::string(error.what()));
+      send_error(response, "video_tracking_failed", error.what(), 400);
+    }
   });
 
   server_.Post("/api/videos/motion-metrics", [&](const httplib::Request& request, httplib::Response& response) {

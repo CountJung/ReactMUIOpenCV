@@ -36,10 +36,16 @@ nlohmann::json step_payload(const std::string& node_id, const std::string& type,
 PipelineExecutor::PipelineExecutor(
     ImageResultStore& image_store,
     VideoService& video_service,
+    VideoTrackingStore& video_tracking_store,
     EventHub& event_hub,
     JobQueue& job_queue,
     LogStore& log_store)
-    : image_store_(image_store), video_service_(video_service), event_hub_(event_hub), job_queue_(job_queue), log_store_(log_store) {}
+    : image_store_(image_store),
+      video_service_(video_service),
+      video_tracking_store_(video_tracking_store),
+      event_hub_(event_hub),
+      job_queue_(job_queue),
+      log_store_(log_store) {}
 
 nlohmann::json PipelineExecutor::execute(const nlohmann::json& document) {
   const auto job = job_queue_.create_manual("pipeline", "Pipeline execution queued.");
@@ -52,7 +58,7 @@ nlohmann::json PipelineExecutor::execute(const nlohmann::json& document) {
   try {
     const auto ordered_nodes = order_nodes(document);
     if (ordered_nodes.empty()) {
-      throw std::runtime_error("Pipeline must contain at least one image input node.");
+      throw std::runtime_error("Pipeline must contain at least one input node.");
     }
 
     job_queue_.start(job_id, "Pipeline execution started.");
@@ -100,6 +106,21 @@ nlohmann::json PipelineExecutor::execute(const nlohmann::json& document) {
           final_result = video_service_.motion_metrics(current_video_id, operation, sample_frames);
           step["metrics"] = final_result;
           event_hub_.publish("video.motion.recorded", final_result);
+        } else if (!current_video_id.empty() && operation == "trackObject") {
+          const auto start_frame = params.value("startFrame", 0);
+          const auto end_frame = params.value("endFrame", 0);
+          const auto roi = params.contains("roi") && params["roi"].is_object() ? params["roi"] : nlohmann::json::object();
+          final_result = video_service_.track_template(
+              current_video_id,
+              start_frame,
+              end_frame,
+              roi,
+              [&]() { return job_queue_.is_cancelled(job_id); },
+              [&](int progress) { job_queue_.progress(job_id, progress, "Tracking object ROI."); });
+          const auto record = video_tracking_store_.record(final_result);
+          final_result["record"] = record;
+          step["tracking"] = final_result;
+          event_hub_.publish("video.tracking.recorded", record);
         } else {
           if (current_result_id.empty()) {
             throw std::runtime_error("Operation node requires an upstream image result.");

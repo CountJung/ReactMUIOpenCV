@@ -7,10 +7,12 @@
 #include <cctype>
 #include <cmath>
 #include <fstream>
+#include <mutex>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/video.hpp>
 #include <opencv2/videoio.hpp>
+#include <shared_mutex>
 #include <stdexcept>
 #include <vector>
 
@@ -34,6 +36,18 @@ std::string sanitize_file_stem(std::string value) {
   }
 
   return value.empty() ? "video" : value;
+}
+
+int json_int_value(const nlohmann::json& object, const char* key, int fallback) {
+  if (!object.is_object() || !object.contains(key)) {
+    return fallback;
+  }
+
+  try {
+    return object.at(key).get<int>();
+  } catch (const std::exception&) {
+    return fallback;
+  }
 }
 
 cv::Mat to_gray(const cv::Mat& frame) {
@@ -148,6 +162,40 @@ cv::Mat apply_temporal_video_filter(const cv::Mat& previous, const cv::Mat& curr
   return apply_video_filter(current, filter);
 }
 
+cv::Rect roi_from_json(const nlohmann::json& roi, int frame_width, int frame_height) {
+  const int x = json_int_value(roi, "x", 0);
+  const int y = json_int_value(roi, "y", 0);
+  const int width = json_int_value(roi, "width", std::max(8, frame_width / 5));
+  const int height = json_int_value(roi, "height", std::max(8, frame_height / 5));
+
+  if (width <= 0 || height <= 0) {
+    throw std::runtime_error("Tracking ROI width and height must be positive.");
+  }
+
+  const int clamped_x = std::clamp(x, 0, std::max(0, frame_width - 1));
+  const int clamped_y = std::clamp(y, 0, std::max(0, frame_height - 1));
+  const int clamped_width = std::clamp(width, 1, frame_width - clamped_x);
+  const int clamped_height = std::clamp(height, 1, frame_height - clamped_y);
+  if (clamped_width < 4 || clamped_height < 4) {
+    throw std::runtime_error("Tracking ROI is too small after clamping to the frame.");
+  }
+
+  return {clamped_x, clamped_y, clamped_width, clamped_height};
+}
+
+cv::Rect expand_search_window(const cv::Rect& box, int frame_width, int frame_height) {
+  const int padding = std::max({24, box.width, box.height});
+  const int x = std::max(0, box.x - padding);
+  const int y = std::max(0, box.y - padding);
+  const int right = std::min(frame_width, box.x + box.width + padding);
+  const int bottom = std::min(frame_height, box.y + box.height + padding);
+  return {x, y, std::max(1, right - x), std::max(1, bottom - y)};
+}
+
+nlohmann::json rect_to_json(const cv::Rect& box) {
+  return {{"x", box.x}, {"y", box.y}, {"width", box.width}, {"height", box.height}};
+}
+
 }  // namespace
 
 bool is_supported_video_extension(const std::filesystem::path& path) {
@@ -230,7 +278,7 @@ nlohmann::json VideoService::upload(const std::string& filename, const std::stri
 }
 
 nlohmann::json VideoService::list() const {
-  std::scoped_lock lock(mutex_);
+  std::shared_lock lock(mutex_);
   auto videos = nlohmann::json::array();
   for (const auto& [_, record] : videos_) {
     videos.push_back(video_to_json(record));
@@ -248,7 +296,7 @@ std::optional<nlohmann::json> VideoService::get(const std::string& id) const {
 }
 
 bool VideoService::remove(const std::string& id) {
-  std::scoped_lock lock(mutex_);
+  std::unique_lock lock(mutex_);
   return videos_.erase(id) > 0;
 }
 
@@ -351,6 +399,114 @@ nlohmann::json VideoService::motion_metrics(const std::string& id, const std::st
       {"writeContainer", "avi"},
       {"writeCodec", "MJPG"},
       {"previewFrameUrl", "/api/videos/frame/" + id + "/" + std::to_string(std::min(1, record->frame_count - 1)) + "?filter=" + normalized_operation},
+  };
+}
+
+nlohmann::json VideoService::track_template(
+    const std::string& id,
+    int start_frame,
+    int end_frame,
+    const nlohmann::json& roi,
+    const std::function<bool()>& should_cancel,
+    const std::function<void(int)>& progress_callback) const {
+  const auto record = find_record(id);
+  if (!record) {
+    throw std::runtime_error("Video was not found.");
+  }
+
+  start_frame = std::clamp(start_frame, 0, std::max(0, record->frame_count - 1));
+  end_frame = end_frame <= 0 ? std::min(record->frame_count - 1, start_frame + 240) : end_frame;
+  end_frame = std::clamp(end_frame, start_frame, std::max(0, record->frame_count - 1));
+  end_frame = std::min(end_frame, start_frame + 900);
+
+  cv::VideoCapture capture(record->path.string());
+  if (!capture.isOpened()) {
+    throw std::runtime_error("OpenCV could not open the video for object tracking.");
+  }
+
+  capture.set(cv::CAP_PROP_POS_FRAMES, start_frame);
+  cv::Mat frame;
+  if (!capture.read(frame) || frame.empty()) {
+    throw std::runtime_error("OpenCV could not read the tracking start frame.");
+  }
+
+  cv::Rect current_box = roi_from_json(roi, frame.cols, frame.rows);
+  const cv::Mat template_image = to_gray(frame)(current_box).clone();
+  const auto started = std::chrono::steady_clock::now();
+  auto frames = nlohmann::json::array();
+  double score_sum = 0.0;
+  int tracked_frames = 0;
+  const int total_frames = std::max(1, end_frame - start_frame + 1);
+
+  for (int frame_index = start_frame; frame_index <= end_frame; ++frame_index) {
+    if (frame_index != start_frame && (!capture.read(frame) || frame.empty())) {
+      break;
+    }
+
+    if (should_cancel && should_cancel()) {
+      const auto elapsed = std::chrono::steady_clock::now() - started;
+      return {
+          {"video", video_to_json(*record)},
+          {"method", "templateMatch"},
+          {"status", "cancelled"},
+          {"startFrame", start_frame},
+          {"endFrame", frame_index},
+          {"sourceRoi", rect_to_json(roi_from_json(roi, record->width, record->height))},
+          {"framesTracked", tracked_frames},
+          {"averageScore", tracked_frames > 0 ? score_sum / tracked_frames : 0.0},
+          {"processingMs", std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(elapsed).count()},
+          {"frames", frames},
+      };
+    }
+
+    const cv::Mat gray = to_gray(frame);
+    const cv::Rect search_window = expand_search_window(current_box, gray.cols, gray.rows);
+    const bool search_is_valid = search_window.width >= template_image.cols && search_window.height >= template_image.rows;
+    double score = 0.0;
+    bool lost = !search_is_valid;
+
+    if (search_is_valid) {
+      cv::Mat result;
+      cv::matchTemplate(gray(search_window), template_image, result, cv::TM_CCOEFF_NORMED);
+      double min_score = 0.0;
+      cv::Point min_location;
+      cv::Point max_location;
+      cv::minMaxLoc(result, &min_score, &score, &min_location, &max_location);
+      current_box.x = search_window.x + max_location.x;
+      current_box.y = search_window.y + max_location.y;
+      lost = score < 0.35;
+    }
+
+    frames.push_back({
+        {"frameIndex", frame_index},
+        {"x", current_box.x},
+        {"y", current_box.y},
+        {"width", current_box.width},
+        {"height", current_box.height},
+        {"score", score},
+        {"lost", lost},
+    });
+    score_sum += score;
+    ++tracked_frames;
+
+    const int progress = static_cast<int>(((frame_index - start_frame + 1) * 100.0) / total_frames);
+    if (progress_callback) {
+      progress_callback(std::clamp(progress, 0, 100));
+    }
+  }
+
+  const auto elapsed = std::chrono::steady_clock::now() - started;
+  return {
+      {"video", video_to_json(*record)},
+      {"method", "templateMatch"},
+      {"status", "completed"},
+      {"startFrame", start_frame},
+      {"endFrame", end_frame},
+      {"sourceRoi", rect_to_json(roi_from_json(roi, record->width, record->height))},
+      {"framesTracked", tracked_frames},
+      {"averageScore", tracked_frames > 0 ? score_sum / tracked_frames : 0.0},
+      {"processingMs", std::chrono::duration_cast<std::chrono::duration<double, std::milli>>(elapsed).count()},
+      {"frames", frames},
   };
 }
 
@@ -506,13 +662,13 @@ nlohmann::json VideoService::add_record(const std::string& name, const std::stri
     throw std::runtime_error("OpenCV opened the video but metadata was invalid.");
   }
 
-  std::scoped_lock lock(mutex_);
+  std::unique_lock lock(mutex_);
   videos_[record.id] = record;
   return video_to_json(record);
 }
 
 std::optional<VideoRecord> VideoService::find_record(const std::string& id) const {
-  std::scoped_lock lock(mutex_);
+  std::shared_lock lock(mutex_);
   const auto found = videos_.find(id);
   if (found == videos_.end()) {
     return std::nullopt;

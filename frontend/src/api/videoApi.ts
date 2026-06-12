@@ -85,8 +85,63 @@ export type VideoMotionMetrics = VideoDiagnostics & {
   previewFrameUrl: string;
 };
 
+export type TrackingRoi = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export type VideoTrackingFrame = TrackingRoi & {
+  frameIndex: number;
+  score: number;
+  lost: boolean;
+};
+
+export type VideoTrackingRecord = {
+  trackingId: string;
+  videoId: string;
+  videoName: string;
+  width: number;
+  height: number;
+  frameCount: number;
+  method: string;
+  status: string;
+  startFrame: number;
+  endFrame: number;
+  framesTracked: number;
+  averageScore: number;
+  processingMs: number;
+  sourceRoi: TrackingRoi;
+  frames: VideoTrackingFrame[];
+  createdAt: string;
+};
+
+export type VideoTrackingResult = {
+  video: VideoRecord;
+  method: string;
+  status: string;
+  startFrame: number;
+  endFrame: number;
+  sourceRoi: TrackingRoi;
+  framesTracked: number;
+  averageScore: number;
+  processingMs: number;
+  frames: VideoTrackingFrame[];
+  record?: VideoTrackingRecord;
+};
+
 export type VideoDiagnosticsList = {
   records: VideoDiagnosticsRecord[];
+  storage: {
+    kind: string;
+    description: string;
+    path?: string;
+  };
+};
+
+export type VideoTrackingList = {
+  records: VideoTrackingRecord[];
   storage: {
     kind: string;
     description: string;
@@ -135,8 +190,24 @@ export function analyzeVideoMotion(request: {
   });
 }
 
+export function trackVideo(request: {
+  videoId: string;
+  startFrame: number;
+  endFrame: number;
+  roi: TrackingRoi;
+}) {
+  return apiRequest<{ job: JobRecord; tracking: VideoTrackingResult }>('/api/videos/track', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
 export function getVideoDiagnosticsHistory() {
   return apiRequest<VideoDiagnosticsList>('/api/videos/diagnostics');
+}
+
+export function getVideoTrackingHistory() {
+  return apiRequest<VideoTrackingList>('/api/videos/tracking');
 }
 
 export function deleteVideo(videoId: string) {

@@ -10,6 +10,7 @@
 #include "../storage/PipelineStore.h"
 #include "../storage/SettingsStore.h"
 #include "../storage/VideoDiagnosticsStore.h"
+#include "../storage/VideoTrackingStore.h"
 #include "../video/VideoService.h"
 #include "../vision/PipelineExecutor.h"
 
@@ -58,6 +59,7 @@ namespace app
     VideoService video_service_;
     PipelineStore pipeline_store_;
     VideoDiagnosticsStore video_diagnostics_store_;
+    VideoTrackingStore video_tracking_store_;
     PipelineExecutor pipeline_executor_;
     WebSocketGateway websocket_gateway_;
     ApiServer api_server_;

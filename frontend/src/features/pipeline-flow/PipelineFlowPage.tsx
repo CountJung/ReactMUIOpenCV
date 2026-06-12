@@ -95,6 +95,7 @@ const operationOptions: Array<{ value: PipelineOperation; label: string; default
   { value: 'sharpen', label: 'Sharpen', defaultParams: { strength: 1 } },
   { value: 'opticalFlow', label: 'Optical Flow', defaultParams: { sampleFrames: 120 } },
   { value: 'stabilize', label: 'Video Stabilize', defaultParams: { sampleFrames: 120 } },
+  { value: 'trackObject', label: 'Track Object ROI', defaultParams: { startFrame: 0, endFrame: 120, roi: { x: 0, y: 0, width: 160, height: 120 } } },
 ];
 
 function defaultDocument(resultId = ''): PipelineDocument {

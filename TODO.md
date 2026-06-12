@@ -104,9 +104,9 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 
 ### Pack 9C - Tracking And Detection Nodes
 
-- [ ] Add object tracking pipeline nodes based on LearnOpenCV `Object Tracking using OpenCV` and `MultiTracker`.
-- [ ] Store per-frame tracking metadata for Data Grid inspection.
-- [ ] Add simple start-frame ROI selection UI before enabling long tracking jobs.
+- [x] Add object tracking pipeline nodes based on LearnOpenCV `Object Tracking using OpenCV` and `MultiTracker`.
+- [x] Store per-frame tracking metadata for Data Grid inspection.
+- [x] Add simple start-frame ROI selection UI before enabling long tracking jobs.
 - Agent focus: backend tracking service, metadata schema, Video Lab/Pipeline UI, job cancellation behavior.
 
 ### Pack 9D - Alignment, Calibration, And QR Utilities

@@ -23,6 +23,8 @@ Use this skill to keep the backend responsible for serving the React app, exposi
 6. Put each durable backend responsibility in a named class with matching `.h`/`.cpp` files under its ownership folder. Do not add new backend behavior directly to `main.cpp`.
 7. Keep inheritance, interface, and ownership references visible in the owning header when they are introduced, so class relationships are easy to inspect.
 8. Keep route handlers thin. Put processing, security, and storage logic in services.
+9. Prefer RAII value members for simple concrete services, but use heap ownership when objects are heavy, polymorphic, replaceable, or need stable lifetime. Prefer `std::unique_ptr` for exclusive heap ownership.
+10. In multi-threaded owner classes, keep lock ownership in the class that owns the mutable state. Prefer `std::shared_mutex` with `std::shared_lock` for reads and `std::unique_lock` for writes when read concurrency is useful.
 
 ## API And Events
 
@@ -37,6 +39,7 @@ Use this skill to keep the backend responsible for serving the React app, exposi
 - Keep image, video, and pipeline processing off request and UI threads.
 - Use job IDs for long-running work and send progress events.
 - Separate preview generation from full export.
+- Keep OpenCV buffers local or cloned at service boundaries; avoid storing borrowed `cv::Mat` views beyond the owning frame lifetime.
 - Log codec, file, parameter, and processing failures with enough context to debug.
 - Add cleanup policies for temp files and result files.
 

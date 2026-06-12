@@ -105,6 +105,10 @@ std::optional<nlohmann::json> JobQueue::update_record(
     }
 
     auto& job = found->second;
+    if (job.status == "cancelled" && (status == "running" || status == "completed")) {
+      return job_to_json(job);
+    }
+
     job.status = status;
     job.progress = std::clamp(progress, 0, 100);
     job.message = message;
@@ -133,6 +137,12 @@ std::optional<nlohmann::json> JobQueue::get(const std::string& id) const {
   }
 
   return job_to_json(found->second);
+}
+
+bool JobQueue::is_cancelled(const std::string& id) const {
+  std::scoped_lock lock(mutex_);
+  const auto found = jobs_.find(id);
+  return found != jobs_.end() && found->second.status == "cancelled";
 }
 
 bool JobQueue::cancel(const std::string& id) {

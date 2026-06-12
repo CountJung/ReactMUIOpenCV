@@ -7,6 +7,7 @@
 #include "../storage/PipelineStore.h"
 #include "../storage/SettingsStore.h"
 #include "../storage/VideoDiagnosticsStore.h"
+#include "../storage/VideoTrackingStore.h"
 #include "../video/VideoService.h"
 #include "../vision/PipelineExecutor.h"
 #include "EventHub.h"
@@ -35,6 +36,7 @@ class ApiServer {
       VideoService& video_service,
       PipelineStore& pipeline_store,
       VideoDiagnosticsStore& video_diagnostics_store,
+      VideoTrackingStore& video_tracking_store,
       PipelineExecutor& pipeline_executor,
       std::filesystem::path static_root);
 
@@ -57,6 +59,7 @@ class ApiServer {
   VideoService& video_service_;
   PipelineStore& pipeline_store_;
   VideoDiagnosticsStore& video_diagnostics_store_;
+  VideoTrackingStore& video_tracking_store_;
   PipelineExecutor& pipeline_executor_;
   std::filesystem::path static_root_;
   httplib::Server server_;

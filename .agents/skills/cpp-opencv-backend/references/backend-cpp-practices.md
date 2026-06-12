@@ -8,6 +8,10 @@ Use this reference when editing `backend/src` C++ code. It captures project-spec
 - `server/ApiServer.*` owns route registration only. Route handlers validate shape, check auth, call services, publish events, and translate responses.
 - Durable behavior belongs in named services under `security`, `jobs`, `logging`, `storage`, `image`, `video`, or `vision`.
 - CMake source lists must be updated in the same change when a new `.cpp` file is added.
+- Prefer value members for light concrete services and RAII resources. Use heap ownership when objects are heavy, polymorphic, replaceable, or need stable lifetime across composition boundaries.
+- Prefer `std::unique_ptr` for exclusive heap ownership. Use `std::shared_ptr` only for genuine shared ownership with a documented lifetime reason.
+- In classes that own mutable state accessed by multiple threads, the owning class owns the lock. Keep the lock member beside the protected state in the header.
+- For read-heavy stores and service registries, prefer `std::shared_mutex`: use `std::shared_lock` for reads and `std::unique_lock` for writes. Do not publish events or call callbacks while holding a state lock unless unavoidable and documented.
 
 ## Security Defaults
 

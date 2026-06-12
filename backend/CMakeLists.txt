@@ -35,6 +35,7 @@ add_executable(ReactMUIOpenCV
   src/storage/PipelineStore.cpp
   src/storage/SettingsStore.cpp
   src/storage/VideoDiagnosticsStore.cpp
+  src/storage/VideoTrackingStore.cpp
   src/video/VideoService.cpp
   src/vision/PipelineExecutor.cpp
 )

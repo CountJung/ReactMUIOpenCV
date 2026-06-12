@@ -5,10 +5,10 @@
 #include <filesystem>
 #include <functional>
 #include <map>
-#include <mutex>
 #include <nlohmann/json.hpp>
 #include <opencv2/core.hpp>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 
 namespace app {
@@ -35,6 +35,13 @@ class VideoService {
   bool remove(const std::string& id);
   nlohmann::json diagnostics(const std::string& id, int sample_frames) const;
   nlohmann::json motion_metrics(const std::string& id, const std::string& operation, int sample_frames) const;
+  nlohmann::json track_template(
+      const std::string& id,
+      int start_frame,
+      int end_frame,
+      const nlohmann::json& roi,
+      const std::function<bool()>& should_cancel,
+      const std::function<void(int)>& progress_callback) const;
   std::optional<cv::Mat> read_frame(const std::string& id, int frame_index, const std::string& filter) const;
   nlohmann::json extract_frame(const std::string& id, int frame_index, const std::string& filter);
   nlohmann::json export_filtered_video(
@@ -48,7 +55,7 @@ class VideoService {
   nlohmann::json add_record(const std::string& name, const std::string& source_type, const std::filesystem::path& path);
   std::optional<VideoRecord> find_record(const std::string& id) const;
 
-  mutable std::mutex mutex_;
+  mutable std::shared_mutex mutex_;
   std::map<std::string, VideoRecord> videos_;
 };
 

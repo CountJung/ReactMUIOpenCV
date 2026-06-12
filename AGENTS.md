@@ -24,6 +24,8 @@ Read `PROJECT_MAP.md`, `MasterPlan.md`, and `TODO.md` before making architectura
 - Keep server-owned state authoritative for jobs, progress, results, logs, connected clients, remote access, and OpenCV processing state.
 - Use WebSocket events to update or invalidate TanStack Query caches.
 - Run long image/video/pipeline work through backend jobs.
+- Prefer value members for simple RAII state, but use heap ownership when objects are heavy, polymorphic, replaceable, or need stable lifetime across composition boundaries. Prefer `std::unique_ptr` for exclusive heap ownership.
+- In multi-threaded backend services, the class that owns mutable state owns the lock protecting that state. Use shared/read locks for const reads and unique/write locks for mutations when read concurrency is useful.
 
 ## Sub-Agent Delegation Rules
 
@@ -60,6 +62,7 @@ When the main agent discovers one of the following conditions while working, del
 - Put each durable backend responsibility in a named class with matching `.h`/`.cpp` files under its ownership folder. Keep inheritance or interface relationships visible in the same header when they are introduced so references are easy to inspect.
 - Keep route handlers thin in `server/ApiServer.cpp`; route handlers should validate request shape, call service classes, publish events, and translate errors into the shared API envelope.
 - Keep file-system access, path validation, upload isolation, and cleanup policies in backend-owned services.
+- Keep ownership and synchronization visible in backend headers: use RAII values for light local resources, `std::unique_ptr` for exclusive heap-owned services or heavy replaceable components, and `std::shared_mutex` with `std::shared_lock`/`std::unique_lock` for owner-managed read/write state where concurrent reads are expected.
 - Default network binding to `127.0.0.1`; bind to `0.0.0.0` only when LAN Web UI Mode is explicitly enabled.
 - Require PIN or temporary token auth for LAN access, apply session timeout, and default remote clients to read-only mode.
 - Log codec failures, processing failures, auth failures, and remote client lifecycle events.

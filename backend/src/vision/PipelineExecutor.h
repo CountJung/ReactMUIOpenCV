@@ -4,6 +4,7 @@
 #include "../jobs/JobQueue.h"
 #include "../logging/LogStore.h"
 #include "../server/EventHub.h"
+#include "../storage/VideoTrackingStore.h"
 #include "../video/VideoService.h"
 
 #include <nlohmann/json.hpp>
@@ -16,7 +17,13 @@ namespace app {
 
 class PipelineExecutor {
  public:
-  PipelineExecutor(ImageResultStore& image_store, VideoService& video_service, EventHub& event_hub, JobQueue& job_queue, LogStore& log_store);
+  PipelineExecutor(
+      ImageResultStore& image_store,
+      VideoService& video_service,
+      VideoTrackingStore& video_tracking_store,
+      EventHub& event_hub,
+      JobQueue& job_queue,
+      LogStore& log_store);
 
   nlohmann::json execute(const nlohmann::json& document);
 
@@ -26,6 +33,7 @@ class PipelineExecutor {
 
   ImageResultStore& image_store_;
   VideoService& video_service_;
+  VideoTrackingStore& video_tracking_store_;
   EventHub& event_hub_;
   JobQueue& job_queue_;
   LogStore& log_store_;

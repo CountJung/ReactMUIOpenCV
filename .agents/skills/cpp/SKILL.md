@@ -53,6 +53,12 @@ Modern C++ (C++11 and beyond) patterns including RAII, smart pointers, templates
 
 ### Smart Pointers
 
+Project defaults:
+
+- Prefer value members and RAII locals for small, concrete resources.
+- Use heap ownership when an object is heavy, polymorphic, replaceable, or needs stable lifetime across composition boundaries.
+- Prefer `std::unique_ptr` for exclusive heap ownership. Reach for `std::shared_ptr` only when multiple owners are real and documented.
+
 ```cpp
 #include <memory>
 #include <iostream>
@@ -432,12 +438,19 @@ void algorithm_examples() {
 
 ## Concurrency
 
+Project defaults:
+
+- The class that owns mutable shared state owns the synchronization for that state.
+- Use `std::shared_mutex` when read-heavy access matters: `std::shared_lock` for reads and `std::unique_lock` for writes.
+- Keep locks scoped tightly and avoid calling user callbacks, logging, or event publication while holding a state lock unless the class documents that contract.
+
 ```cpp
 #include <thread>
 #include <future>
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <shared_mutex>
 
 // Basic threading
 void thread_example() {
@@ -506,6 +519,22 @@ class AtomicCounter {
 public:
     void increment() { count_.fetch_add(1, std::memory_order_relaxed); }
     int get() const { return count_.load(std::memory_order_relaxed); }
+};
+
+class SharedState {
+    mutable std::shared_mutex mutex_;
+    std::vector<int> values_;
+
+public:
+    std::vector<int> snapshot() const {
+        std::shared_lock lock(mutex_);
+        return values_;
+    }
+
+    void append(int value) {
+        std::unique_lock lock(mutex_);
+        values_.push_back(value);
+    }
 };
 ```
 

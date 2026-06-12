@@ -34,10 +34,10 @@ import { useMemo, useState } from 'react';
 import { getFileLibrary, type FileLibraryItem } from '../../api/filesApi';
 import { getImageResults, type ImageResult } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
-import { getVideoDiagnosticsHistory, type VideoDiagnosticsRecord } from '../../api/videoApi';
+import { getVideoDiagnosticsHistory, getVideoTrackingHistory, type VideoDiagnosticsRecord, type VideoTrackingRecord } from '../../api/videoApi';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
 
-type TabKey = 'jobs' | 'results' | 'files' | 'video-diagnostics';
+type TabKey = 'jobs' | 'results' | 'files' | 'video-diagnostics' | 'video-tracking';
 
 function formatDate(value?: string) {
   if (!value) {
@@ -156,11 +156,13 @@ export function DataGridPage() {
   const resultsQuery = useQuery({ queryKey: ['image-results'], queryFn: getImageResults, refetchInterval: 10000 });
   const filesQuery = useQuery({ queryKey: ['file-library'], queryFn: getFileLibrary, refetchInterval: 15000 });
   const diagnosticsQuery = useQuery({ queryKey: ['video-diagnostics'], queryFn: getVideoDiagnosticsHistory, refetchInterval: 10000 });
+  const trackingQuery = useQuery({ queryKey: ['video-tracking'], queryFn: getVideoTrackingHistory, refetchInterval: 10000 });
 
   const jobs = jobsQuery.data?.jobs ?? [];
   const results = resultsQuery.data?.results ?? [];
   const files = filesQuery.data?.files ?? [];
   const diagnostics = diagnosticsQuery.data?.records ?? [];
+  const tracking = trackingQuery.data?.records ?? [];
 
   const jobColumns = useMemo<ColumnDef<JobRecord>[]>(
     () => [
@@ -295,6 +297,67 @@ export function DataGridPage() {
     [],
   );
 
+  const trackingColumns = useMemo<ColumnDef<VideoTrackingRecord>[]>(
+    () => [
+      { accessorKey: 'trackingId', header: 'ID' },
+      { accessorKey: 'videoName', header: 'Video' },
+      { accessorKey: 'method', header: 'Method' },
+      {
+        accessorKey: 'status',
+        header: 'Status',
+        cell: ({ getValue }) => <Chip label={String(getValue())} size="small" color={statusColor(String(getValue()))} />,
+      },
+      {
+        id: 'range',
+        header: 'Range',
+        accessorFn: (row) => `${row.startFrame} - ${row.endFrame}`,
+      },
+      { accessorKey: 'framesTracked', header: 'Frames' },
+      {
+        accessorKey: 'averageScore',
+        header: 'Score',
+        cell: ({ getValue }) => getValue<number>().toFixed(3),
+      },
+      {
+        id: 'sourceRoi',
+        header: 'ROI',
+        accessorFn: (row) => `${row.sourceRoi.x},${row.sourceRoi.y} ${row.sourceRoi.width}x${row.sourceRoi.height}`,
+      },
+      {
+        id: 'frameMetadata',
+        header: 'Frame Metadata',
+        cell: ({ row }) => {
+          const first = row.original.frames[0];
+          const last = row.original.frames[row.original.frames.length - 1];
+          if (!first || !last) {
+            return 'n/a';
+          }
+          return (
+            <Stack spacing={0.25}>
+              <Typography variant="caption">
+                {first.frameIndex}: {first.x},{first.y} {first.width}x{first.height} / {first.score.toFixed(2)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {last.frameIndex}: {last.x},{last.y} {last.width}x{last.height} / {last.score.toFixed(2)}
+              </Typography>
+            </Stack>
+          );
+        },
+      },
+      {
+        accessorKey: 'processingMs',
+        header: 'Elapsed',
+        cell: ({ getValue }) => `${getValue<number>().toFixed(1)} ms`,
+      },
+      {
+        accessorKey: 'createdAt',
+        header: 'Created',
+        cell: ({ getValue }) => formatDate(getValue<string>()),
+      },
+    ],
+    [],
+  );
+
   const currentDataCount =
     activeTab === 'jobs'
       ? jobs.length
@@ -302,7 +365,9 @@ export function DataGridPage() {
         ? results.length
         : activeTab === 'files'
           ? files.length
-          : diagnostics.length;
+          : activeTab === 'video-diagnostics'
+            ? diagnostics.length
+            : tracking.length;
 
   return (
     <PlaceholderPage
@@ -312,7 +377,7 @@ export function DataGridPage() {
       description="Server-owned job history, image results, file library entries, and video diagnostics are browsed in sortable tables."
     >
       <Stack spacing={2}>
-        {(jobsQuery.isError || resultsQuery.isError || filesQuery.isError || diagnosticsQuery.isError) && (
+        {(jobsQuery.isError || resultsQuery.isError || filesQuery.isError || diagnosticsQuery.isError || trackingQuery.isError) && (
           <Alert severity="warning">Some table data is not available from the backend.</Alert>
         )}
 
@@ -325,6 +390,7 @@ export function DataGridPage() {
                   <Tab label={`Image Results (${results.length})`} value="results" />
                   <Tab label={`Files (${files.length})`} value="files" />
                   <Tab label={`Video Diagnostics (${diagnostics.length})`} value="video-diagnostics" />
+                  <Tab label={`Tracking (${tracking.length})`} value="video-tracking" />
                 </Tabs>
                 <TextField
                   value={filter}
@@ -361,6 +427,14 @@ export function DataGridPage() {
                   columns={diagnosticsColumns}
                   data={diagnostics}
                   emptyLabel="Run Measure FPS in Video Lab to collect video diagnostics."
+                  filter={filter}
+                />
+              )}
+              {activeTab === 'video-tracking' && (
+                <ServerTable
+                  columns={trackingColumns}
+                  data={tracking}
+                  emptyLabel="Run Track ROI in Video Lab to collect object tracking metadata."
                   filter={filter}
                 />
               )}

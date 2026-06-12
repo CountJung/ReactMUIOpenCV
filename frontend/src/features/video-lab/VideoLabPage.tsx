@@ -6,6 +6,7 @@ import PauseIcon from '@mui/icons-material/Pause';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SpeedIcon from '@mui/icons-material/Speed';
+import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import UndoIcon from '@mui/icons-material/Undo';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
@@ -34,13 +35,16 @@ import {
   getVideoDiagnostics,
   getVideos,
   processVideo,
+  trackVideo,
   videoFrameUrl,
+  type TrackingRoi,
   type VideoExportResult,
   type VideoDiagnostics,
   type VideoFilter,
   type VideoFrameResult,
   type VideoMotionMetrics,
   type VideoRecord,
+  type VideoTrackingResult,
 } from '../../api/videoApi';
 import { getVideoOpenCapabilities, openVideoFromLocalPath, openVideoFromUpload } from '../../runtime/fileAdapter';
 import { getRuntimeMode, type RuntimeMode } from '../../runtime/runtimeMode';
@@ -143,6 +147,9 @@ export function VideoLabPage() {
   const [frameResult, setFrameResult] = useState<VideoFrameResult | null>(null);
   const [exportResult, setExportResult] = useState<VideoExportResult | null>(null);
   const [diagnostics, setDiagnostics] = useState<VideoDiagnostics | VideoMotionMetrics | null>(null);
+  const [trackingRoi, setTrackingRoi] = useState<TrackingRoi>({ x: 0, y: 0, width: 160, height: 120 });
+  const [trackingEndFrame, setTrackingEndFrame] = useState(120);
+  const [trackingResult, setTrackingResult] = useState<VideoTrackingResult | null>(null);
 
   useEffect(() => {
     setRuntimeMode(getRuntimeMode());
@@ -200,6 +207,14 @@ export function VideoLabPage() {
     setFrameResult(null);
     setExportResult(null);
     setDiagnostics(null);
+    setTrackingRoi({
+      x: 0,
+      y: 0,
+      width: Math.max(16, Math.min(160, video.width)),
+      height: Math.max(16, Math.min(120, video.height)),
+    });
+    setTrackingEndFrame(Math.min(video.frameCount - 1, 120));
+    setTrackingResult(null);
     setCacheKey(Date.now());
   };
 
@@ -284,6 +299,21 @@ export function VideoLabPage() {
     },
   });
 
+  const trackingMutation = useMutation({
+    mutationFn: () =>
+      trackVideo({
+        videoId: activeVideo?.videoId ?? '',
+        startFrame: frameIndex,
+        endFrame: Math.min(maxFrame, Math.max(frameIndex, trackingEndFrame)),
+        roi: trackingRoi,
+      }),
+    onSuccess: ({ tracking }) => {
+      setTrackingResult(tracking);
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      void queryClient.invalidateQueries({ queryKey: ['video-tracking'] });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => deleteVideo(activeVideo?.videoId ?? ''),
     onSuccess: () => {
@@ -295,6 +325,7 @@ export function VideoLabPage() {
       setFrameResult(null);
       setExportResult(null);
       setDiagnostics(null);
+      setTrackingResult(null);
       void queryClient.invalidateQueries({ queryKey: videosQueryKey });
     },
   });
@@ -307,6 +338,7 @@ export function VideoLabPage() {
     exportMutation.isPending ||
     diagnosticsMutation.isPending ||
     motionMetricsMutation.isPending ||
+    trackingMutation.isPending ||
     deleteMutation.isPending;
   const currentError =
     openLocalMutation.error ??
@@ -316,6 +348,7 @@ export function VideoLabPage() {
     exportMutation.error ??
     diagnosticsMutation.error ??
     motionMetricsMutation.error ??
+    trackingMutation.error ??
     deleteMutation.error;
 
   const changeFilter = (event: ChangeEvent<HTMLInputElement>) => {
@@ -342,6 +375,13 @@ export function VideoLabPage() {
     setCacheKey(Date.now());
   };
 
+  const updateTrackingRoi = (key: keyof TrackingRoi, value: number) => {
+    setTrackingRoi((current) => ({
+      ...current,
+      [key]: Math.max(0, Math.round(value)),
+    }));
+  };
+
   return (
     <PlaceholderPage
       title="Video Lab"
@@ -357,6 +397,11 @@ export function VideoLabPage() {
         {previewError && <Alert severity="warning">{previewError}</Alert>}
         {frameResult && <Alert severity="success">Frame saved to {frameResult.path}</Alert>}
         {exportResult && <Alert severity="success">Video exported to {exportResult.path}</Alert>}
+        {trackingResult && (
+          <Alert severity="success">
+            Tracking {trackingResult.status}: {trackingResult.framesTracked} frames, score {trackingResult.averageScore.toFixed(3)}
+          </Alert>
+        )}
 
         <Grid container spacing={2}>
           <Grid item xs={12} lg={4}>
@@ -534,7 +579,49 @@ export function VideoLabPage() {
                     >
                       Analyze Motion
                     </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<TrackChangesIcon />}
+                      onClick={() => trackingMutation.mutate()}
+                      disabled={!activeVideo || busy}
+                    >
+                      Track ROI
+                    </Button>
                   </Box>
+
+                  <Stack spacing={1}>
+                    <Divider />
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                      <Typography variant="subtitle2">Tracking ROI</Typography>
+                      <Chip label={`start ${frameIndex}`} size="small" variant="outlined" />
+                    </Stack>
+                    <Grid container spacing={1}>
+                      {(['x', 'y', 'width', 'height'] as const).map((key) => (
+                        <Grid item xs={6} sm={3} key={key}>
+                          <TextField
+                            label={key.toUpperCase()}
+                            type="number"
+                            size="small"
+                            value={trackingRoi[key]}
+                            onChange={(event) => updateTrackingRoi(key, Number(event.target.value))}
+                            disabled={!activeVideo || busy}
+                            fullWidth
+                          />
+                        </Grid>
+                      ))}
+                      <Grid item xs={12}>
+                        <TextField
+                          label="End Frame"
+                          type="number"
+                          size="small"
+                          value={trackingEndFrame}
+                          onChange={(event) => setTrackingEndFrame(clampFrame(Number(event.target.value), activeVideo))}
+                          disabled={!activeVideo || busy}
+                          fullWidth
+                        />
+                      </Grid>
+                    </Grid>
+                  </Stack>
 
                   {diagnostics && (
                     <Stack spacing={1}>

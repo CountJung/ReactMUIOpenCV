@@ -43,6 +43,7 @@ class JobQueue {
   std::optional<nlohmann::json> fail(const std::string& id, const std::string& message);
   nlohmann::json list() const;
   std::optional<nlohmann::json> get(const std::string& id) const;
+  bool is_cancelled(const std::string& id) const;
   bool cancel(const std::string& id);
   bool remove(const std::string& id);
 
