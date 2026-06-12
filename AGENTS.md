@@ -39,7 +39,7 @@ When the main agent discovers one of the following conditions while working, del
 - For this project type, VS Code debugging must prepare the program so it can run immediately: check frontend dependencies, typecheck frontend code, bootstrap backend dependencies, configure CMake, build the Debug executable, verify the executable path, and then enter the debugger.
 - When both app and web modes exist, provide separate debug entries for desktop app mode and web/server mode. The app host must load the same local UI URL as browser web mode.
 - Do not rely on editor-global or manually selected launch targets when a stable Debug executable path is available. Prelaunch tasks must create and verify the exact executable used by `launch.json`.
-- A root build script must build the project in Release mode. Running `.\build.ps1` from the workspace root must prepare frontend dependencies, build the production frontend bundle, configure the backend, build the Release executable, and fail clearly if the expected executable is missing.
+- The Release build implementation must live under `scripts\build.ps1`. Running `.\build.ps1` from the workspace root must remain supported as a thin compatibility wrapper that delegates to `scripts\build.ps1`, prepares frontend dependencies, builds the production frontend bundle, configures the backend, builds the Release executable, and fails clearly if the expected executable is missing.
 - If external distribution is requested, publish artifacts under `/publish` and write user-facing guide documents under `/docs`.
 - Publish bundles for this project type should include app-mode and web-mode launch scripts when both modes are supported.
 - When migrating AGENTS.md, project skills, or template instructions to another similar React + C++ desktop/web project, migrate these build/debug/publish rules with them.
@@ -69,7 +69,7 @@ When the main agent discovers one of the following conditions while working, del
 - When frontend dependencies exist, run the project lint/typecheck/build commands available in `package.json`.
 - When backend targets exist, configure and build with CMake, then run available tests.
 - For debug workflow changes, run the debug preparation script and verify the exact executable referenced by VS Code exists.
-- For Release build changes, run `.\build.ps1`.
+- For Release build changes, run `scripts\build.ps1` and keep the compatibility wrapper `.\build.ps1` working.
 - For publish workflow changes, run `scripts/publish.ps1` and verify the generated bundle can serve `/api/health` and the React UI.
 - For UI changes, verify both desktop-sized and mobile-sized layouts.
 - When the Browser plugin cannot expose an in-app browser through `agent.browsers.get("iab")`, use the `mcp__playwright` browser tools as the internal-browser fallback for localhost/UI verification before falling back to an external browser.

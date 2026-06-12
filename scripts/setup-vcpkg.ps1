@@ -3,6 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "script-utils.ps1")
 
 $resolvedInstallDir = [System.IO.Path]::GetFullPath($InstallDir)
 $vcpkgExe = Join-Path $resolvedInstallDir "vcpkg.exe"
@@ -18,15 +19,9 @@ if (-not (Test-Path $parent)) {
 }
 
 if (-not (Test-Path $resolvedInstallDir)) {
-  git clone https://github.com/microsoft/vcpkg.git $resolvedInstallDir
+  Invoke-Checked -FilePath "git" -ArgumentList @("clone", "https://github.com/microsoft/vcpkg.git", $resolvedInstallDir)
 }
 
-Push-Location $resolvedInstallDir
-try {
-  .\bootstrap-vcpkg.bat -disableMetrics
-}
-finally {
-  Pop-Location
-}
+Invoke-Checked -FilePath (Join-Path $resolvedInstallDir "bootstrap-vcpkg.bat") -ArgumentList @("-disableMetrics") -WorkingDirectory $resolvedInstallDir
 
 Write-Host "vcpkg ready at $vcpkgExe"

@@ -11,6 +11,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\publish.ps1
 ```
 
 게시 스크립트는 루트 Release 빌드를 먼저 실행한 뒤 `/publish` 아래에 결과물을 만듭니다.
+내부적으로는 `scripts\build.ps1`을 호출합니다.
 
 ```txt
 publish/

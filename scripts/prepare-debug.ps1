@@ -7,6 +7,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "script-utils.ps1")
 
 $root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $frontendDir = Join-Path $root "frontend"
@@ -43,13 +44,7 @@ if (-not $SkipFrontend) {
 
   if ($BuildFrontend) {
     Write-Host "Building frontend bundle for debug static hosting..."
-    Push-Location $frontendDir
-    try {
-      npm run build
-    }
-    finally {
-      Pop-Location
-    }
+    Invoke-Checked -FilePath "npm" -ArgumentList @("run", "build") -WorkingDirectory $frontendDir
 
     $frontendDist = Join-Path $frontendDir "dist\index.html"
     if (-not (Test-Path $frontendDist)) {
@@ -59,13 +54,7 @@ if (-not $SkipFrontend) {
     Write-Host "Frontend debug bundle ready: $frontendDist"
   } elseif (-not $SkipTypecheck) {
     Write-Host "Type-checking frontend..."
-    Push-Location $frontendDir
-    try {
-      npm run typecheck
-    }
-    finally {
-      Pop-Location
-    }
+    Invoke-Checked -FilePath "npm" -ArgumentList @("run", "typecheck") -WorkingDirectory $frontendDir
   }
 }
 
@@ -73,14 +62,8 @@ if (-not $SkipBackend) {
   & (Join-Path $PSScriptRoot "setup-vcpkg.ps1")
 
   Write-Host "Configuring backend..."
-  Push-Location $backendDir
-  try {
-    cmake --preset windows-msvc-vcpkg
-    cmake --build --preset windows-msvc-vcpkg-debug
-  }
-  finally {
-    Pop-Location
-  }
+  Invoke-BackendConfigure -BackendDir $backendDir
+  Invoke-BackendBuild -BackendDir $backendDir -Configuration "Debug"
 
   $debugExe = Join-Path $backendDir "out\build\windows-msvc-vcpkg\Debug\ReactMUIOpenCV.exe"
   if (-not (Test-Path $debugExe)) {

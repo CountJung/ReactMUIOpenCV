@@ -3,6 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "script-utils.ps1")
 
 $resolvedFrontendDir = [System.IO.Path]::GetFullPath($FrontendDir)
 $packageJson = Join-Path $resolvedFrontendDir "package.json"
@@ -27,13 +28,7 @@ if (-not $needsInstall -and (Test-Path $packageLock)) {
 
 if ($needsInstall) {
   Write-Host "Installing frontend dependencies..."
-  Push-Location $resolvedFrontendDir
-  try {
-    npm install
-  }
-  finally {
-    Pop-Location
-  }
+  Invoke-Checked -FilePath "npm" -ArgumentList @("install") -WorkingDirectory $resolvedFrontendDir
 } else {
   Write-Host "Frontend dependencies are ready."
 }

@@ -122,7 +122,7 @@ cmake --build --preset windows-msvc-vcpkg-debug
 루트 Release 빌드:
 
 ```powershell
-.\build.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1
 ```
 
 게시 번들 생성:

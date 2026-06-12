@@ -184,37 +184,53 @@
     {
       "label": "backend: configure",
       "type": "shell",
-      "command": "cmake",
-      "args": ["--preset", "windows-msvc-vcpkg"],
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/configure-backend.ps1"
+      ],
       "options": {
-        "cwd": "${workspaceFolder}/backend"
+        "cwd": "${workspaceFolder}"
       },
-      "dependsOn": ["tools: setup vcpkg"],
       "problemMatcher": []
     },
     {
       "label": "backend: build",
       "type": "shell",
-      "command": "cmake",
-      "args": ["--build", "--preset", "windows-msvc-vcpkg-debug"],
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-backend.ps1",
+        "-Configuration",
+        "Debug"
+      ],
       "options": {
-        "cwd": "${workspaceFolder}/backend"
+        "cwd": "${workspaceFolder}"
       },
       "group": "build",
-      "problemMatcher": "$msCompile",
-      "dependsOn": ["backend: configure"]
+      "problemMatcher": "$msCompile"
     },
     {
       "label": "backend: build release",
       "type": "shell",
-      "command": "cmake",
-      "args": ["--build", "--preset", "windows-msvc-vcpkg-release"],
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-backend.ps1",
+        "-Configuration",
+        "Release"
+      ],
       "options": {
-        "cwd": "${workspaceFolder}/backend"
+        "cwd": "${workspaceFolder}"
       },
       "group": "build",
-      "problemMatcher": "$msCompile",
-      "dependsOn": ["backend: configure"]
+      "problemMatcher": "$msCompile"
     },
     {
       "label": "backend: run lan",
@@ -260,7 +276,23 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/build.ps1"
+        "${workspaceFolder}/scripts/build.ps1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "project: bootstrap",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/bootstrap.ps1"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

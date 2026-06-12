@@ -15,12 +15,21 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `reference/`: Local reference skill packages staged before project installation; currently contains the source `cpp-1.0.0` skill and archive.
 - `ENVIRONMENT.md`: Local development and dependency setup guide.
 - `.gitignore`: Git upload exclusions for generated files, build output, dependencies, logs, runtime outputs, and env files.
-- `build.ps1`: Root Release build entrypoint. Ensures frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable plus WebView2 desktop app host when the SDK is available.
+- `README.md`: Fresh Windows PC quick start and script-driven setup guide.
+- `build.ps1`: Compatibility wrapper that delegates to `scripts/build.ps1` so legacy root build commands still work.
 - `docs/`: Korean user, developer setup, publishing, build/debug policy, and coding guide documentation.
+- `scripts/bootstrap.ps1`: Fresh Windows PC bootstrap entrypoint. Optionally installs Windows prerequisites, prepares WebView2 SDK, frontend dependencies, vcpkg, and runs the Release build.
+- `scripts/configure-backend.ps1`: Configures the backend build directory after selecting the newest supported installed Visual Studio CMake generator.
+- `scripts/build-backend.ps1`: Builds the backend Debug or Release configuration using the configured backend build directory.
+- `scripts/install-windows-prereqs.ps1`: winget-based installer for Node.js LTS, CMake, Visual Studio 2022 Build Tools, and WebView2 Runtime.
+- `scripts/script-utils.ps1`: Shared PowerShell helpers for checked native command execution, installed Visual Studio generator selection, backend configure/build, and generated CMake cache cleanup when the configured generator changes.
+- `scripts/setup-webview2-sdk.ps1`: Downloads and extracts the WebView2 SDK NuGet package to `%USERPROFILE%\.nuget\packages`.
 - `scripts/ensure-frontend-deps.ps1`: Conditionally runs `npm install` when frontend dependencies are missing or stale.
 - `scripts/prepare-debug.ps1`: VS Code debug preparation script for dependency checks, optional workspace runtime shutdown, frontend typecheck or static bundle build, CMake configure, and Debug backend build.
+- `scripts/build.ps1`: Release build script. Ensures frontend dependencies, builds `frontend/dist`, configures CMake, and builds the Release backend executable plus WebView2 desktop app host when the SDK is available.
 - `scripts/publish.ps1`: Creates `/publish/ReactMUIOpenCV`, versioned zip, and `ReactMUIOpenCV-latest.zip` from Release outputs.
 - `scripts/setup-vcpkg.ps1`: Workspace-local vcpkg bootstrap script used by VSCode tasks.
+- `scripts/start.ps1`: Starts Debug or Release outputs in desktop app, web browser, or LAN mode.
 - `scripts/run-backend.ps1`: Finds and runs the newest built backend executable to avoid hardcoded debug path issues.
 - `data/pipelines.json`: Backend-owned persisted pipeline documents and recent pipeline execution summaries. Created at runtime when pipelines are saved.
 - `data/video-diagnostics.json`: Backend-owned persisted Video Lab FPS/read diagnostics. Created at runtime when Measure FPS is executed.
@@ -53,7 +62,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 ## Backend
 
 - `backend/CMakeLists.txt`: C++ executable and library linkage, warning options, and CMake compile command export request for generators that support it.
-- `backend/CMakePresets.json`: Visual Studio 2026/MSVC x64 CMake presets with workspace-local vcpkg and system-package variants.
+- `backend/CMakePresets.json`: Manual Visual Studio 2022/MSVC x64 CMake presets with workspace-local vcpkg and system-package variants. Project scripts auto-select the newest supported installed Visual Studio generator while preserving the same `backend/out/build/windows-msvc-vcpkg` output path.
 - `backend/vcpkg.json`: C++ dependency manifest.
 - `backend/src/main.cpp`: Thin composition root. Parses launch args, constructs backend services, starts WebSocket and HTTP runtimes, and reports process status.
 - `backend/src/app/AppContext.*`: Backend runtime context. Builds runtime config, owns service lifetimes, wires dependencies, starts WebSocket and HTTP runtimes, and preserves shutdown order.
@@ -78,7 +87,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 
 - `.vscode/extensions.json`: Recommended extensions.
 - `.vscode/settings.json`: CMake, TypeScript, ESLint, and file visibility settings.
-- `.vscode/tasks.json`: Conditional dependency checks, vcpkg bootstrap, debug preparation, frontend dev/build/lint/typecheck/watch, backend Debug/Release configure/build/LAN run tasks, root Release build task, and publish task.
+- `.vscode/tasks.json`: Conditional dependency checks, fresh bootstrap, vcpkg bootstrap, debug preparation, frontend dev/build/lint/typecheck/watch, backend Debug/Release configure/build/LAN run tasks, Release build task, and publish task.
 - `.vscode/launch.json`: Desktop app, backend, backend LAN, frontend Edge, Remote Access Edge, and compound debug configurations. App/backend launch uses explicit Debug executable paths created by `debug: prepare backend`; frontend launch starts `frontend: dev`, which prepares dependencies and typechecks first.
 
 ## Runtime Ports
@@ -108,4 +117,4 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - Backend Image Lab processing: start at `backend/src/image/ImageResultStore.*` and `backend/src/image/ImageFilters.*`.
 - Backend Video Lab processing: start at `backend/src/video/VideoService.*` and `backend/src/server/ApiServer.cpp` video routes.
 - Desktop app mode: start at `backend/src/host/WebViewHost.cpp`.
-- Build/debug/publish workflow: start at `build.ps1`, `scripts/prepare-debug.ps1`, `scripts/publish.ps1`, and `docs/BUILD_AND_DEBUG_POLICY.md`.
+- Build/debug/publish workflow: start at `scripts/bootstrap.ps1`, `scripts/build.ps1`, `scripts/prepare-debug.ps1`, `scripts/publish.ps1`, and `docs/BUILD_AND_DEBUG_POLICY.md`.

@@ -17,7 +17,7 @@ $archivePath = Join-Path $publishRoot "$bundleName-$Version.zip"
 $latestArchivePath = Join-Path $publishRoot "$bundleName-latest.zip"
 
 if (-not $SkipBuild) {
-  & (Join-Path $root "build.ps1")
+  & (Join-Path $PSScriptRoot "build.ps1")
 }
 
 if (-not (Test-Path $releaseExe)) {
