@@ -17,7 +17,6 @@ import {
   Divider,
   Grid,
   MenuItem,
-  Slider,
   Stack,
   TextField,
   Typography,
@@ -34,7 +33,6 @@ import {
   processImage,
   saveImageResult,
   type ImageOperation,
-  type ImageResult,
 } from '../../api/imageApi';
 import {
   getImageOpenCapabilities,
@@ -43,88 +41,18 @@ import {
 } from '../../runtime/fileAdapter';
 import { getRuntimeMode, type RuntimeMode } from '../../runtime/runtimeMode';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
-import { useImageLabStore, type ImageParams } from '../../store/useImageLabStore';
+import { useImageLabStore } from '../../store/useImageLabStore';
+import { ImageOperationControls } from './ImageOperationControls';
+import {
+  advancedRenderOperations,
+  alignmentUtilityOperations,
+  defaultParams,
+  labelForOperation,
+  operationLabels,
+  shapeAnalysisOperations,
+} from './imageOperations';
 
 const imageResultsQueryKey = ['image-results'];
-
-const operationLabels: Array<{ value: ImageOperation; label: string }> = [
-  { value: 'resize', label: 'Resize' },
-  { value: 'crop', label: 'Crop' },
-  { value: 'rotate', label: 'Rotate' },
-  { value: 'flip', label: 'Flip' },
-  { value: 'grayscale', label: 'Grayscale' },
-  { value: 'blur', label: 'Blur' },
-  { value: 'gaussianBlur', label: 'Gaussian Blur' },
-  { value: 'sharpen', label: 'Sharpen' },
-  { value: 'threshold', label: 'Threshold' },
-  { value: 'edgeDetect', label: 'Edge Detect' },
-  { value: 'contourDetect', label: 'Contour Detect' },
-  { value: 'histogram', label: 'Histogram' },
-  { value: 'colorConvert', label: 'Color Convert' },
-  { value: 'compare', label: 'Compare Diff' },
-  { value: 'featureAlign', label: 'Feature Align' },
-  { value: 'eccAlign', label: 'ECC Align' },
-  { value: 'qrScan', label: 'QR Scanner' },
-  { value: 'calibrationBoard', label: 'Calibration Board' },
-  { value: 'blobCentroid', label: 'Blob Centroid' },
-  { value: 'convexHull', label: 'Convex Hull' },
-  { value: 'huMoments', label: 'Hu Moments' },
-  { value: 'houghTransform', label: 'Hough Transform' },
-];
-
-function defaultParams(operation: ImageOperation, result?: ImageResult): ImageParams {
-  switch (operation) {
-    case 'resize':
-      return { width: result?.width ?? 1280, height: result?.height ?? 720 };
-    case 'crop':
-      return {
-        x: 0,
-        y: 0,
-        width: Math.max(1, Math.floor((result?.width ?? 640) * 0.75)),
-        height: Math.max(1, Math.floor((result?.height ?? 480) * 0.75)),
-      };
-    case 'rotate':
-      return { angle: 90 };
-    case 'flip':
-      return { direction: 'horizontal' };
-    case 'blur':
-    case 'gaussianBlur':
-      return { kernel: 7 };
-    case 'sharpen':
-      return { strength: 1 };
-    case 'threshold':
-      return { threshold: 128 };
-    case 'edgeDetect':
-    case 'contourDetect':
-      return { low: 80, high: 160 };
-    case 'colorConvert':
-      return { target: 'hsv' };
-    case 'featureAlign':
-      return { maxFeatures: 500, keepRatio: 0.18 };
-    case 'eccAlign':
-      return { iterations: 80, epsilon: 0.0001 };
-    case 'calibrationBoard':
-      return { boardWidth: 9, boardHeight: 6, squareSize: 1 };
-    case 'blobCentroid':
-      return { threshold: 128, polarity: 'dark', minArea: 80, maxShapes: 24 };
-    case 'convexHull':
-      return { threshold: 128, polarity: 'dark', minArea: 80, maxShapes: 16 };
-    case 'huMoments':
-      return { threshold: 128, polarity: 'dark', minArea: 80, maxShapes: 8 };
-    case 'houghTransform':
-      return {
-        mode: 'lines',
-        low: 80,
-        high: 160,
-        threshold: 80,
-        minLineLength: 40,
-        maxLineGap: 12,
-        maxShapes: 32,
-      };
-    default:
-      return {};
-  }
-}
 
 function mutationErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Image operation failed.';
@@ -336,35 +264,6 @@ export function ImageLabPage() {
     setSavePath(null);
   };
 
-  const renderNumberField = (key: string, label: string, minimum = 0, step = 1) => (
-    <TextField
-      key={key}
-      label={label}
-      type="number"
-      value={params[key] ?? minimum}
-      onChange={(event) => setParam(key, Number(event.target.value))}
-      inputProps={{ min: minimum, step }}
-      size="small"
-      fullWidth
-    />
-  );
-
-  const renderSlider = (key: string, label: string, minimum: number, maximum: number, step = 1) => (
-    <Stack key={key} spacing={0.5}>
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
-      <Slider
-        value={Number(params[key] ?? minimum)}
-        min={minimum}
-        max={maximum}
-        step={step}
-        valueLabelDisplay="auto"
-        onChange={(_, value) => setParam(key, Array.isArray(value) ? value[0] : value)}
-      />
-    </Stack>
-  );
-
   return (
     <PlaceholderPage
       title="Image Lab"
@@ -477,224 +376,11 @@ export function ImageLabPage() {
                     ))}
                   </TextField>
 
-                  <Grid container spacing={1.5}>
-                    {operation === 'resize' && (
-                      <>
-                        <Grid item xs={6}>
-                          {renderNumberField('width', 'Width', 1)}
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderNumberField('height', 'Height', 1)}
-                        </Grid>
-                      </>
-                    )}
-                    {operation === 'crop' && (
-                      <>
-                        <Grid item xs={6}>
-                          {renderNumberField('x', 'X')}
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderNumberField('y', 'Y')}
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderNumberField('width', 'Width', 1)}
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderNumberField('height', 'Height', 1)}
-                        </Grid>
-                      </>
-                    )}
-                    {operation === 'rotate' && (
-                      <Grid item xs={12}>
-                        <TextField
-                          select
-                          label="Angle"
-                          value={params.angle ?? 90}
-                          onChange={(event) => setParam('angle', Number(event.target.value))}
-                          fullWidth
-                          size="small"
-                        >
-                          {[90, 180, 270].map((angle) => (
-                            <MenuItem key={angle} value={angle}>
-                              {angle}
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      </Grid>
-                    )}
-                    {operation === 'flip' && (
-                      <Grid item xs={12}>
-                        <TextField
-                          select
-                          label="Direction"
-                          value={params.direction ?? 'horizontal'}
-                          onChange={(event) => setParam('direction', event.target.value)}
-                          fullWidth
-                          size="small"
-                        >
-                          <MenuItem value="horizontal">Horizontal</MenuItem>
-                          <MenuItem value="vertical">Vertical</MenuItem>
-                          <MenuItem value="both">Both</MenuItem>
-                        </TextField>
-                      </Grid>
-                    )}
-                    {(operation === 'blur' || operation === 'gaussianBlur') && (
-                      <Grid item xs={12}>
-                        {renderSlider('kernel', 'Kernel', 1, 31, 2)}
-                      </Grid>
-                    )}
-                    {operation === 'sharpen' && (
-                      <Grid item xs={12}>
-                        {renderSlider('strength', 'Strength', 0.2, 4, 0.1)}
-                      </Grid>
-                    )}
-                    {operation === 'threshold' && (
-                      <Grid item xs={12}>
-                        {renderSlider('threshold', 'Threshold', 0, 255)}
-                      </Grid>
-                    )}
-                    {(operation === 'edgeDetect' || operation === 'contourDetect') && (
-                      <>
-                        <Grid item xs={12}>
-                          {renderSlider('low', 'Low', 0, 255)}
-                        </Grid>
-                        <Grid item xs={12}>
-                          {renderSlider('high', 'High', 0, 255)}
-                        </Grid>
-                      </>
-                    )}
-                    {operation === 'colorConvert' && (
-                      <Grid item xs={12}>
-                        <TextField
-                          select
-                          label="Target"
-                          value={params.target ?? 'hsv'}
-                          onChange={(event) => setParam('target', event.target.value)}
-                          fullWidth
-                          size="small"
-                        >
-                          <MenuItem value="hsv">HSV</MenuItem>
-                          <MenuItem value="lab">Lab</MenuItem>
-                          <MenuItem value="gray">Gray</MenuItem>
-                        </TextField>
-                      </Grid>
-                    )}
-                    {operation === 'featureAlign' && (
-                      <>
-                        <Grid item xs={12}>
-                          {renderNumberField('maxFeatures', 'Max Features', 50)}
-                        </Grid>
-                        <Grid item xs={12}>
-                          {renderSlider('keepRatio', 'Keep Ratio', 0.05, 1, 0.01)}
-                        </Grid>
-                      </>
-                    )}
-                    {operation === 'eccAlign' && (
-                      <>
-                        <Grid item xs={12}>
-                          {renderNumberField('iterations', 'Iterations', 10)}
-                        </Grid>
-                        <Grid item xs={12}>
-                          {renderSlider('epsilon', 'Epsilon', 0.000001, 0.01, 0.000001)}
-                        </Grid>
-                      </>
-                    )}
-                    {operation === 'calibrationBoard' && (
-                      <>
-                        <Grid item xs={4}>
-                          {renderNumberField('boardWidth', 'Board W', 2)}
-                        </Grid>
-                        <Grid item xs={4}>
-                          {renderNumberField('boardHeight', 'Board H', 2)}
-                        </Grid>
-                        <Grid item xs={4}>
-                          {renderNumberField('squareSize', 'Square', 0.001, 0.001)}
-                        </Grid>
-                      </>
-                    )}
-                    {(['blobCentroid', 'convexHull', 'huMoments'] as ImageOperation[]).includes(
-                      operation,
-                    ) && (
-                      <>
-                        <Grid item xs={12}>
-                          {renderSlider('threshold', 'Threshold', 0, 255)}
-                        </Grid>
-                        <Grid item xs={12}>
-                          <TextField
-                            select
-                            label="Foreground"
-                            value={params.polarity ?? 'dark'}
-                            onChange={(event) => setParam('polarity', event.target.value)}
-                            fullWidth
-                            size="small"
-                          >
-                            <MenuItem value="dark">Dark shapes</MenuItem>
-                            <MenuItem value="light">Light shapes</MenuItem>
-                          </TextField>
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderNumberField('minArea', 'Min Area', 1)}
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderNumberField('maxShapes', 'Max Shapes', 1)}
-                        </Grid>
-                      </>
-                    )}
-                    {operation === 'houghTransform' && (
-                      <>
-                        <Grid item xs={12}>
-                          <TextField
-                            select
-                            label="Mode"
-                            value={params.mode ?? 'lines'}
-                            onChange={(event) => setParam('mode', event.target.value)}
-                            fullWidth
-                            size="small"
-                          >
-                            <MenuItem value="lines">Lines</MenuItem>
-                            <MenuItem value="circles">Circles</MenuItem>
-                          </TextField>
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderSlider('low', 'Low', 0, 255)}
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderSlider('high', 'High', 0, 255)}
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderNumberField('threshold', 'Votes', 1)}
-                        </Grid>
-                        <Grid item xs={6}>
-                          {renderNumberField('maxShapes', 'Max Shapes', 1)}
-                        </Grid>
-                        {params.mode !== 'circles' ? (
-                          <>
-                            <Grid item xs={6}>
-                              {renderNumberField('minLineLength', 'Min Line', 1)}
-                            </Grid>
-                            <Grid item xs={6}>
-                              {renderNumberField('maxLineGap', 'Line Gap', 0)}
-                            </Grid>
-                          </>
-                        ) : (
-                          <>
-                            <Grid item xs={6}>
-                              {renderNumberField('minDist', 'Min Dist', 1)}
-                            </Grid>
-                            <Grid item xs={6}>
-                              {renderNumberField('accumulator', 'Accumulator', 1)}
-                            </Grid>
-                            <Grid item xs={6}>
-                              {renderNumberField('minRadius', 'Min Radius', 0)}
-                            </Grid>
-                            <Grid item xs={6}>
-                              {renderNumberField('maxRadius', 'Max Radius', 0)}
-                            </Grid>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </Grid>
+                  <ImageOperationControls
+                    operation={operation}
+                    params={params}
+                    setParam={setParam}
+                  />
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                     <Button
@@ -781,12 +467,10 @@ export function ImageLabPage() {
                     <QrCodeScannerIcon color="primary" />
                   </Stack>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    {(['featureAlign', 'eccAlign', 'qrScan'] as ImageOperation[]).map((utility) => (
+                    {alignmentUtilityOperations.map((utility) => (
                       <Chip
                         key={utility}
-                        label={
-                          operationLabels.find((item) => item.value === utility)?.label ?? utility
-                        }
+                        label={labelForOperation(utility)}
                         color={operation === utility ? 'primary' : 'default'}
                         onClick={() => {
                           setOperation(utility);
@@ -805,19 +489,10 @@ export function ImageLabPage() {
                 <Stack spacing={1.5}>
                   <Typography variant="h6">Shape Analysis</Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    {(
-                      [
-                        'blobCentroid',
-                        'convexHull',
-                        'huMoments',
-                        'houghTransform',
-                      ] as ImageOperation[]
-                    ).map((utility) => (
+                    {shapeAnalysisOperations.map((utility) => (
                       <Chip
                         key={utility}
-                        label={
-                          operationLabels.find((item) => item.value === utility)?.label ?? utility
-                        }
+                        label={labelForOperation(utility)}
                         color={operation === utility ? 'primary' : 'default'}
                         onClick={() => {
                           setOperation(utility);
@@ -845,6 +520,37 @@ export function ImageLabPage() {
                           variant="outlined"
                         />
                       )}
+                    </Stack>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Typography variant="h6">Advanced Rendering</Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {advancedRenderOperations.map((utility) => (
+                      <Chip
+                        key={utility}
+                        label={labelForOperation(utility)}
+                        color={operation === utility ? 'primary' : 'default'}
+                        onClick={() => {
+                          setOperation(utility);
+                          setParams(defaultParams(utility, activeResult ?? undefined));
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                  {activeResult?.metadata?.composition && (
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      <Chip
+                        label={String(activeResult.metadata.composition.operation ?? 'composition')}
+                        size="small"
+                        variant="outlined"
+                      />
                     </Stack>
                   )}
                 </Stack>

@@ -23,7 +23,14 @@ export type ImageOperation =
   | 'blobCentroid'
   | 'convexHull'
   | 'huMoments'
-  | 'houghTransform';
+  | 'houghTransform'
+  | 'inpaint'
+  | 'seamlessClone'
+  | 'alphaBlend'
+  | 'exposureFusion'
+  | 'hdrTonemap'
+  | 'stylization'
+  | 'pencilSketch';
 
 export type ShapeAnalysisMetadata = {
   operation: 'blobCentroid' | 'convexHull' | 'huMoments' | 'houghTransform' | string;
@@ -55,6 +62,10 @@ export type ImageResult = {
   originalPreviewUrl: string;
   metadata?: {
     shape?: ShapeAnalysisMetadata;
+    composition?: {
+      operation?: string;
+      [key: string]: unknown;
+    };
     [key: string]: unknown;
   };
 };

@@ -597,6 +597,15 @@ function PipelineFlowWorkspace() {
               Save
             </Button>
             <Button
+              startIcon={<DeleteIcon />}
+              color="error"
+              variant="outlined"
+              onClick={() => pipelineId && deleteSavedMutation.mutate(pipelineId)}
+              disabled={!pipelineId || deleteSavedMutation.isPending}
+            >
+              Delete
+            </Button>
+            <Button
               startIcon={<PlayArrowIcon />}
               variant="contained"
               onClick={() => executeMutation.mutate()}
@@ -838,17 +847,6 @@ function PipelineFlowWorkspace() {
                         }
                       >
                         Selection
-                      </Button>
-                    </Stack>
-                    <Stack direction="row" spacing={1}>
-                      <Button
-                        startIcon={<DeleteIcon />}
-                        color="error"
-                        variant="outlined"
-                        onClick={() => pipelineId && deleteSavedMutation.mutate(pipelineId)}
-                        disabled={!pipelineId || deleteSavedMutation.isPending}
-                      >
-                        Saved
                       </Button>
                     </Stack>
                     <Typography variant="caption" color="text.secondary">

@@ -10,6 +10,7 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
+#include <opencv2/photo.hpp>
 #include <opencv2/video/tracking.hpp>
 #include <stdexcept>
 #include <utility>
@@ -55,6 +56,156 @@ nlohmann::json point_to_json(const cv::Point_<T>& point) {
 
 nlohmann::json rect_to_json(const cv::Rect& rect) {
   return {{"x", rect.x}, {"y", rect.y}, {"width", rect.width}, {"height", rect.height}};
+}
+
+cv::Rect centered_rect(const cv::Mat& source, const nlohmann::json& params, double scale = 0.35) {
+  if (source.cols < 4 || source.rows < 4) {
+    throw std::runtime_error("Image is too small for an ROI-based operation.");
+  }
+
+  const int fallback_width = std::max(8, static_cast<int>(source.cols * scale));
+  const int fallback_height = std::max(8, static_cast<int>(source.rows * scale));
+  const int width = std::clamp(json_int(params, "width", fallback_width), 4, std::max(4, source.cols));
+  const int height = std::clamp(json_int(params, "height", fallback_height), 4, std::max(4, source.rows));
+  const int fallback_x = std::max(0, (source.cols - width) / 2);
+  const int fallback_y = std::max(0, (source.rows - height) / 2);
+  const int x = std::clamp(json_int(params, "x", fallback_x), 0, source.cols - width);
+  const int y = std::clamp(json_int(params, "y", fallback_y), 0, source.rows - height);
+  return {x, y, width, height};
+}
+
+cv::Mat normalize_preview_float(const cv::Mat& source) {
+  cv::Mat normalized;
+  cv::normalize(source, normalized, 0.0, 1.0, cv::NORM_MINMAX);
+  cv::Mat output;
+  normalized.convertTo(output, CV_8UC3, 255.0);
+  return output;
+}
+
+cv::Mat apply_gamma(const cv::Mat& source, double gamma) {
+  cv::Mat normalized;
+  to_bgr(source).convertTo(normalized, CV_32F, 1.0 / 255.0);
+  cv::pow(normalized, std::max(0.05, gamma), normalized);
+  cv::Mat output;
+  normalized.convertTo(output, CV_8UC3, 255.0);
+  return output;
+}
+
+ImageOperationResult apply_inpaint_filter(const cv::Mat& source, const nlohmann::json& params) {
+  const auto mask_mode = params.value("maskMode", std::string{"edges"});
+  const double threshold = std::clamp(json_double(params, "threshold", 220.0), 0.0, 255.0);
+  const double radius = std::clamp(json_double(params, "radius", 3.0), 1.0, 24.0);
+
+  cv::Mat mask;
+  if (mask_mode == "center") {
+    mask = cv::Mat::zeros(source.size(), CV_8UC1);
+    cv::rectangle(mask, centered_rect(source, params, 0.24), cv::Scalar(255), cv::FILLED);
+  } else if (mask_mode == "dark") {
+    cv::threshold(to_gray(source), mask, threshold, 255, cv::THRESH_BINARY_INV);
+  } else if (mask_mode == "bright") {
+    cv::threshold(to_gray(source), mask, threshold, 255, cv::THRESH_BINARY);
+  } else {
+    cv::Canny(to_gray(source), mask, 80, 180);
+    cv::dilate(mask, mask, cv::Mat(), cv::Point(-1, -1), 1);
+  }
+
+  cv::Mat output;
+  cv::inpaint(to_bgr(source), mask, output, radius, cv::INPAINT_TELEA);
+  return {output, {{"composition", {{"operation", "inpaint"}, {"maskMode", mask_mode}, {"radius", radius}}}}};
+}
+
+ImageOperationResult apply_seamless_clone_filter(const cv::Mat& source, const nlohmann::json& params) {
+  const cv::Mat bgr = to_bgr(source);
+  const cv::Rect roi = centered_rect(bgr, params, 0.32);
+  const int half_width = std::max(1, roi.width / 2);
+  const int half_height = std::max(1, roi.height / 2);
+  const int target_x = std::clamp(json_int(params, "targetX", bgr.cols / 2), half_width, bgr.cols - half_width);
+  const int target_y = std::clamp(json_int(params, "targetY", bgr.rows / 2), half_height, bgr.rows - half_height);
+  const auto mode = params.value("mode", std::string{"mixed"});
+  const int flags = mode == "normal" ? cv::NORMAL_CLONE : cv::MIXED_CLONE;
+
+  const cv::Mat patch = bgr(roi).clone();
+  const cv::Mat mask(patch.size(), CV_8UC1, cv::Scalar(255));
+  cv::Mat output;
+  cv::seamlessClone(patch, bgr, mask, cv::Point(target_x, target_y), output, flags);
+  return {
+      output,
+      {{"composition",
+        {{"operation", "seamlessClone"},
+         {"sourceRoi", rect_to_json(roi)},
+         {"target", point_to_json(cv::Point(target_x, target_y))},
+         {"mode", mode}}}}};
+}
+
+ImageOperationResult apply_alpha_blend_filter(
+    const cv::Mat& original, const cv::Mat& source, const nlohmann::json& params) {
+  const double alpha = std::clamp(json_double(params, "alpha", 0.5), 0.0, 1.0);
+  cv::Mat baseline = to_bgr(original.empty() ? source : original);
+  cv::Mat candidate = to_bgr(source);
+  if (baseline.size() != candidate.size()) {
+    cv::resize(baseline, baseline, candidate.size(), 0, 0, cv::INTER_AREA);
+  }
+
+  cv::Mat output;
+  cv::addWeighted(candidate, alpha, baseline, 1.0 - alpha, 0.0, output);
+  return {output, {{"composition", {{"operation", "alphaBlend"}, {"alpha", alpha}}}}};
+}
+
+ImageOperationResult apply_exposure_fusion_filter(const cv::Mat& source, const nlohmann::json& params) {
+  std::vector<cv::Mat> exposures = {
+      apply_gamma(source, std::clamp(json_double(params, "darkGamma", 1.8), 0.2, 4.0)),
+      to_bgr(source),
+      apply_gamma(source, std::clamp(json_double(params, "brightGamma", 0.55), 0.2, 4.0)),
+  };
+
+  cv::Mat fusion;
+  cv::createMergeMertens(
+      static_cast<float>(std::clamp(json_double(params, "contrast", 1.0), 0.0, 3.0)),
+      static_cast<float>(std::clamp(json_double(params, "saturation", 1.0), 0.0, 3.0)),
+      static_cast<float>(std::clamp(json_double(params, "exposure", 0.0), 0.0, 3.0)))
+      ->process(exposures, fusion);
+  cv::Mat output;
+  fusion.convertTo(output, CV_8UC3, 255.0);
+  return {output, {{"composition", {{"operation", "exposureFusion"}, {"exposureCount", exposures.size()}}}}};
+}
+
+ImageOperationResult apply_hdr_tonemap_filter(const cv::Mat& source, const nlohmann::json& params) {
+  cv::Mat hdr;
+  to_bgr(source).convertTo(hdr, CV_32F, std::clamp(json_double(params, "exposureScale", 2.2), 0.5, 8.0) / 255.0);
+  cv::Mat tonemapped;
+  cv::createTonemapReinhard(
+      static_cast<float>(std::clamp(json_double(params, "gamma", 1.0), 0.2, 3.0)),
+      static_cast<float>(std::clamp(json_double(params, "intensity", 0.0), -8.0, 8.0)),
+      static_cast<float>(std::clamp(json_double(params, "lightAdapt", 0.8), 0.0, 1.0)),
+      static_cast<float>(std::clamp(json_double(params, "colorAdapt", 0.0), 0.0, 1.0)))
+      ->process(hdr, tonemapped);
+  return {normalize_preview_float(tonemapped), {{"composition", {{"operation", "hdrTonemap"}}}}};
+}
+
+ImageOperationResult apply_stylization_filter(const cv::Mat& source, const nlohmann::json& params) {
+  cv::Mat output;
+  cv::stylization(
+      to_bgr(source),
+      output,
+      static_cast<float>(std::clamp(json_double(params, "sigmaS", 60.0), 1.0, 200.0)),
+      static_cast<float>(std::clamp(json_double(params, "sigmaR", 0.45), 0.01, 1.0)));
+  return {output, {{"composition", {{"operation", "stylization"}}}}};
+}
+
+ImageOperationResult apply_pencil_sketch_filter(const cv::Mat& source, const nlohmann::json& params) {
+  cv::Mat grayscale;
+  cv::Mat color;
+  cv::pencilSketch(
+      to_bgr(source),
+      grayscale,
+      color,
+      static_cast<float>(std::clamp(json_double(params, "sigmaS", 60.0), 1.0, 200.0)),
+      static_cast<float>(std::clamp(json_double(params, "sigmaR", 0.07), 0.01, 1.0)),
+      static_cast<float>(std::clamp(json_double(params, "shade", 0.02), 0.0, 0.2)));
+  const auto mode = params.value("mode", std::string{"color"});
+  return {
+      mode == "gray" ? grayscale : color,
+      {{"composition", {{"operation", "pencilSketch"}, {"mode", mode}}}}};
 }
 
 std::vector<std::vector<cv::Point>> find_shape_contours(const cv::Mat& source, const nlohmann::json& params) {
@@ -621,6 +772,34 @@ ImageOperationResult apply_image_operation(
 
   if (operation == "houghTransform") {
     return apply_hough_transform(source, params);
+  }
+
+  if (operation == "inpaint") {
+    return apply_inpaint_filter(source, params);
+  }
+
+  if (operation == "seamlessClone") {
+    return apply_seamless_clone_filter(source, params);
+  }
+
+  if (operation == "alphaBlend") {
+    return apply_alpha_blend_filter(original, source, params);
+  }
+
+  if (operation == "exposureFusion") {
+    return apply_exposure_fusion_filter(source, params);
+  }
+
+  if (operation == "hdrTonemap") {
+    return apply_hdr_tonemap_filter(source, params);
+  }
+
+  if (operation == "stylization") {
+    return apply_stylization_filter(source, params);
+  }
+
+  if (operation == "pencilSketch") {
+    return apply_pencil_sketch_filter(source, params);
   }
 
   throw std::runtime_error("Unsupported image operation: " + operation);

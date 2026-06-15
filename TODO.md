@@ -125,8 +125,8 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 
 ### Pack 9F - Advanced Image Composition And Rendering
 
-- [ ] Add inpainting, seamless cloning, alpha blending, exposure fusion, HDR, and non-photorealistic rendering operations as Image Lab advanced filters.
-- [ ] Add operation-specific parameter controls and before/after examples.
+- [x] Add inpainting, seamless cloning, alpha blending, exposure fusion, HDR, and non-photorealistic rendering operations as Image Lab advanced filters.
+- [x] Add operation-specific parameter controls and before/after examples.
 - Agent focus: Image Lab filters with small verified parameter sets, output save/export behavior.
 
 ### Pack 9G - Optional DNN Examples
@@ -140,6 +140,13 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 - [ ] Add performance demo for parallel pixel access with OpenCV `forEach` and compare it with existing filter implementations.
 - [ ] Record benchmark samples as jobs and chart them in Dashboard/Charts.
 - Agent focus: backend benchmark service, job/event integration, chart visualization.
+
+### Pack 9I - Interactive Contour Perspective Extraction
+
+- [ ] Add backend support to detect contour candidates, expose candidate quadrilateral metadata, and perspective-warp a selected contour into an independent Image Lab result.
+- [ ] Add Image Lab overlay UI for mouse/touch candidate selection, selected-contour highlighting, and before/after extraction preview.
+- [ ] Store selected contour metadata so extracted documents/labels/parts can be inspected in Data Grid and reused by pipeline operation nodes.
+- Agent focus: contour candidate ranking, perspective transform service, interactive preview overlay, result metadata schema.
 
 ## Guardrails
 

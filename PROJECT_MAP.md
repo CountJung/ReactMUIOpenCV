@@ -66,7 +66,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `frontend/src/api/`: REST and WebSocket client code. `remoteApi.ts` owns Remote Access and Network Info calls; `imageApi.ts` owns Image Lab open/upload/process/save/result/calibration calls; `videoApi.ts` owns Video Lab open/upload/frame/extract/export/motion metrics/tracking calls; `pipelineApi.ts` owns Phase 6 pipeline document, CRUD, execution, and execution result types including image/video/tracking nodes; `jobsApi.ts`, `logsApi.ts`, and `filesApi.ts` feed Dashboard, Charts, Logs, and Data Grid state.
 - `frontend/src/runtime/`: Desktop vs LAN runtime detection and adapters. `fileAdapter.ts` hides local-path vs upload image/video opening.
 - `frontend/src/store/`: Client-owned UI state stores. `useImageLabStore.ts` preserves Image Lab path/result/filter/parameter state across route navigation.
-- `frontend/src/features/`: Route-level pages for dashboard, remote access, image/video lab, pipeline, charts, data grid, logs, and settings. Pipeline Flow keeps reusable node/operation choices in `frontend/src/features/pipeline-flow/pipelineOptions.ts`.
+- `frontend/src/features/`: Route-level pages for dashboard, remote access, image/video lab, pipeline, charts, data grid, logs, and settings. Image Lab keeps reusable operation labels/default parameters in `frontend/src/features/image-lab/imageOperations.ts` and parameter controls in `frontend/src/features/image-lab/ImageOperationControls.tsx`. Pipeline Flow keeps reusable node/operation choices in `frontend/src/features/pipeline-flow/pipelineOptions.ts`.
 - `frontend/src/shared/`: Reusable layouts, components, hooks, utilities, and shared types.
 
 ## Backend

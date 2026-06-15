@@ -48,6 +48,37 @@ export const operationOptions: Array<{
       maxShapes: 32,
     },
   },
+  { value: 'inpaint', label: 'Inpaint', defaultParams: { maskMode: 'edges', radius: 3 } },
+  {
+    value: 'seamlessClone',
+    label: 'Seamless Clone',
+    defaultParams: {
+      x: 0,
+      y: 0,
+      width: 160,
+      height: 120,
+      targetX: 240,
+      targetY: 180,
+      mode: 'mixed',
+    },
+  },
+  { value: 'alphaBlend', label: 'Alpha Blend', defaultParams: { alpha: 0.5 } },
+  {
+    value: 'exposureFusion',
+    label: 'Exposure Fusion',
+    defaultParams: { darkGamma: 1.8, brightGamma: 0.55, contrast: 1, saturation: 1, exposure: 0 },
+  },
+  {
+    value: 'hdrTonemap',
+    label: 'HDR Tonemap',
+    defaultParams: { exposureScale: 2.2, gamma: 1, intensity: 0, lightAdapt: 0.8, colorAdapt: 0 },
+  },
+  { value: 'stylization', label: 'Stylization', defaultParams: { sigmaS: 60, sigmaR: 0.45 } },
+  {
+    value: 'pencilSketch',
+    label: 'Pencil Sketch',
+    defaultParams: { mode: 'color', sigmaS: 60, sigmaR: 0.07, shade: 0.02 },
+  },
   { value: 'opticalFlow', label: 'Optical Flow', defaultParams: { sampleFrames: 120 } },
   { value: 'stabilize', label: 'Video Stabilize', defaultParams: { sampleFrames: 120 } },
   {
