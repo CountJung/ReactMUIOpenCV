@@ -13,7 +13,7 @@
 namespace app {
 
 nlohmann::json image_metadata_to_json(const ImageResultRecord& record) {
-  return {
+  auto metadata = nlohmann::json{
       {"resultId", record.id},
       {"name", record.name},
       {"sourceType", record.source_type},
@@ -27,6 +27,10 @@ nlohmann::json image_metadata_to_json(const ImageResultRecord& record) {
       {"previewUrl", "/api/images/results/" + record.id + "/preview?variant=result"},
       {"originalPreviewUrl", "/api/images/results/" + record.id + "/preview?variant=original"},
   };
+  if (record.metadata.is_object() && !record.metadata.empty()) {
+    metadata["metadata"] = record.metadata;
+  }
+  return metadata;
 }
 
 nlohmann::json ImageResultStore::open_local(const std::filesystem::path& path) {
@@ -76,7 +80,15 @@ ImageResultStore::process(const std::string& source_id, const std::string& opera
   }
 
   const auto processed = apply_image_operation(source.original, source.image, operation, params);
-  return add(source.name, source.source_type, source.source_path, source.original, processed, operation, params);
+  return add(
+      source.name,
+      source.source_type,
+      source.source_path,
+      source.original,
+      processed.image,
+      operation,
+      params,
+      processed.metadata);
 }
 
 std::optional<nlohmann::json> ImageResultStore::get(const std::string& id) const {
@@ -150,7 +162,8 @@ nlohmann::json ImageResultStore::add(
     const cv::Mat& original,
     const cv::Mat& image,
     const std::string& operation,
-    const nlohmann::json& params) {
+    const nlohmann::json& params,
+    const nlohmann::json& metadata) {
   ImageResultRecord record;
   record.id = random_hex(12);
   record.name = name;
@@ -158,6 +171,7 @@ nlohmann::json ImageResultStore::add(
   record.source_path = source_path;
   record.operation = operation;
   record.params = params;
+  record.metadata = metadata.is_object() ? metadata : nlohmann::json::object();
   record.original = original.clone();
   record.image = image.clone();
   record.created_at = Clock::now();

@@ -66,6 +66,10 @@ const operationLabels: Array<{ value: ImageOperation; label: string }> = [
   { value: 'eccAlign', label: 'ECC Align' },
   { value: 'qrScan', label: 'QR Scanner' },
   { value: 'calibrationBoard', label: 'Calibration Board' },
+  { value: 'blobCentroid', label: 'Blob Centroid' },
+  { value: 'convexHull', label: 'Convex Hull' },
+  { value: 'huMoments', label: 'Hu Moments' },
+  { value: 'houghTransform', label: 'Hough Transform' },
 ];
 
 function defaultParams(operation: ImageOperation, result?: ImageResult): ImageParams {
@@ -101,6 +105,22 @@ function defaultParams(operation: ImageOperation, result?: ImageResult): ImagePa
       return { iterations: 80, epsilon: 0.0001 };
     case 'calibrationBoard':
       return { boardWidth: 9, boardHeight: 6, squareSize: 1 };
+    case 'blobCentroid':
+      return { threshold: 128, polarity: 'dark', minArea: 80, maxShapes: 24 };
+    case 'convexHull':
+      return { threshold: 128, polarity: 'dark', minArea: 80, maxShapes: 16 };
+    case 'huMoments':
+      return { threshold: 128, polarity: 'dark', minArea: 80, maxShapes: 8 };
+    case 'houghTransform':
+      return {
+        mode: 'lines',
+        low: 80,
+        high: 160,
+        threshold: 80,
+        minLineLength: 40,
+        maxLineGap: 12,
+        maxShapes: 32,
+      };
     default:
       return {};
   }
@@ -592,6 +612,88 @@ export function ImageLabPage() {
                         </Grid>
                       </>
                     )}
+                    {(['blobCentroid', 'convexHull', 'huMoments'] as ImageOperation[]).includes(
+                      operation,
+                    ) && (
+                      <>
+                        <Grid item xs={12}>
+                          {renderSlider('threshold', 'Threshold', 0, 255)}
+                        </Grid>
+                        <Grid item xs={12}>
+                          <TextField
+                            select
+                            label="Foreground"
+                            value={params.polarity ?? 'dark'}
+                            onChange={(event) => setParam('polarity', event.target.value)}
+                            fullWidth
+                            size="small"
+                          >
+                            <MenuItem value="dark">Dark shapes</MenuItem>
+                            <MenuItem value="light">Light shapes</MenuItem>
+                          </TextField>
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('minArea', 'Min Area', 1)}
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('maxShapes', 'Max Shapes', 1)}
+                        </Grid>
+                      </>
+                    )}
+                    {operation === 'houghTransform' && (
+                      <>
+                        <Grid item xs={12}>
+                          <TextField
+                            select
+                            label="Mode"
+                            value={params.mode ?? 'lines'}
+                            onChange={(event) => setParam('mode', event.target.value)}
+                            fullWidth
+                            size="small"
+                          >
+                            <MenuItem value="lines">Lines</MenuItem>
+                            <MenuItem value="circles">Circles</MenuItem>
+                          </TextField>
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderSlider('low', 'Low', 0, 255)}
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderSlider('high', 'High', 0, 255)}
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('threshold', 'Votes', 1)}
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderNumberField('maxShapes', 'Max Shapes', 1)}
+                        </Grid>
+                        {params.mode !== 'circles' ? (
+                          <>
+                            <Grid item xs={6}>
+                              {renderNumberField('minLineLength', 'Min Line', 1)}
+                            </Grid>
+                            <Grid item xs={6}>
+                              {renderNumberField('maxLineGap', 'Line Gap', 0)}
+                            </Grid>
+                          </>
+                        ) : (
+                          <>
+                            <Grid item xs={6}>
+                              {renderNumberField('minDist', 'Min Dist', 1)}
+                            </Grid>
+                            <Grid item xs={6}>
+                              {renderNumberField('accumulator', 'Accumulator', 1)}
+                            </Grid>
+                            <Grid item xs={6}>
+                              {renderNumberField('minRadius', 'Min Radius', 0)}
+                            </Grid>
+                            <Grid item xs={6}>
+                              {renderNumberField('maxRadius', 'Max Radius', 0)}
+                            </Grid>
+                          </>
+                        )}
+                      </>
+                    )}
                   </Grid>
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
@@ -693,6 +795,58 @@ export function ImageLabPage() {
                       />
                     ))}
                   </Stack>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Typography variant="h6">Shape Analysis</Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {(
+                      [
+                        'blobCentroid',
+                        'convexHull',
+                        'huMoments',
+                        'houghTransform',
+                      ] as ImageOperation[]
+                    ).map((utility) => (
+                      <Chip
+                        key={utility}
+                        label={
+                          operationLabels.find((item) => item.value === utility)?.label ?? utility
+                        }
+                        color={operation === utility ? 'primary' : 'default'}
+                        onClick={() => {
+                          setOperation(utility);
+                          setParams(defaultParams(utility, activeResult ?? undefined));
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                  {activeResult?.metadata?.shape && (
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      <Chip
+                        label={`Shapes ${activeResult.metadata.shape.shapeCount ?? 0}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                      <Chip
+                        label={`Contours ${activeResult.metadata.shape.contourCount ?? 0}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                      {activeResult.metadata.shape.largestArea !== undefined && (
+                        <Chip
+                          label={`Largest ${activeResult.metadata.shape.largestArea.toFixed(1)}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                    </Stack>
+                  )}
                 </Stack>
               </CardContent>
             </Card>

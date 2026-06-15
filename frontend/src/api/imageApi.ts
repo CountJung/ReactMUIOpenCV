@@ -19,7 +19,26 @@ export type ImageOperation =
   | 'featureAlign'
   | 'eccAlign'
   | 'qrScan'
-  | 'calibrationBoard';
+  | 'calibrationBoard'
+  | 'blobCentroid'
+  | 'convexHull'
+  | 'huMoments'
+  | 'houghTransform';
+
+export type ShapeAnalysisMetadata = {
+  operation: 'blobCentroid' | 'convexHull' | 'huMoments' | 'houghTransform' | string;
+  contourCount?: number;
+  shapeCount?: number;
+  largestArea?: number;
+  lineCount?: number;
+  circleCount?: number;
+  mode?: string;
+  blobs?: unknown[];
+  hulls?: unknown[];
+  shapes?: unknown[];
+  lines?: unknown[];
+  circles?: unknown[];
+};
 
 export type ImageResult = {
   resultId: string;
@@ -34,6 +53,10 @@ export type ImageResult = {
   createdAt: string;
   previewUrl: string;
   originalPreviewUrl: string;
+  metadata?: {
+    shape?: ShapeAnalysisMetadata;
+    [key: string]: unknown;
+  };
 };
 
 export type ProcessImageResponse = {

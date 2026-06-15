@@ -234,6 +234,31 @@ export function DataGridPage() {
         accessorFn: (row) => `${row.width} x ${row.height}`,
       },
       { accessorKey: 'channels', header: 'Channels' },
+      {
+        id: 'shapeCount',
+        header: 'Shapes',
+        accessorFn: (row) => row.metadata?.shape?.shapeCount ?? '',
+      },
+      {
+        id: 'shapeMetric',
+        header: 'Shape Metric',
+        accessorFn: (row) => {
+          const shape = row.metadata?.shape;
+          if (!shape) {
+            return '';
+          }
+          if (shape.lineCount !== undefined) {
+            return `${shape.lineCount} lines`;
+          }
+          if (shape.circleCount !== undefined) {
+            return `${shape.circleCount} circles`;
+          }
+          if (shape.largestArea !== undefined) {
+            return `area ${shape.largestArea.toFixed(1)}`;
+          }
+          return shape.operation;
+        },
+      },
       { accessorKey: 'sourceType', header: 'Source' },
       {
         accessorKey: 'createdAt',

@@ -118,9 +118,9 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 
 ### Pack 9E - Shape Analysis And Classical Vision
 
-- [ ] Add shape-analysis operations for blob centroid, convex hull, Hu moments, and Hough transform based on LearnOpenCV examples.
-- [ ] Show result overlays and structured shape metadata in Data Grid.
-- [ ] Add corresponding pipeline operation nodes for reusable inspections.
+- [x] Add shape-analysis operations for blob centroid, convex hull, Hu moments, and Hough transform based on LearnOpenCV examples.
+- [x] Show result overlays and structured shape metadata in Data Grid.
+- [x] Add corresponding pipeline operation nodes for reusable inspections.
 - Agent focus: image filters/vision metadata, preview overlays, table schema.
 
 ### Pack 9F - Advanced Image Composition And Rendering

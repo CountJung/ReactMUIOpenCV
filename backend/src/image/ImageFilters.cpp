@@ -5,12 +5,14 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/features2d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/objdetect.hpp>
 #include <opencv2/video/tracking.hpp>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace app {
@@ -40,6 +42,246 @@ double json_double(const nlohmann::json& params, const std::string& key, double 
 int odd_kernel(int value) {
   value = std::clamp(value, 1, 99);
   return value % 2 == 0 ? value + 1 : value;
+}
+
+ImageOperationResult image_only(cv::Mat image) {
+  return {std::move(image), nlohmann::json::object()};
+}
+
+template <typename T>
+nlohmann::json point_to_json(const cv::Point_<T>& point) {
+  return {{"x", point.x}, {"y", point.y}};
+}
+
+nlohmann::json rect_to_json(const cv::Rect& rect) {
+  return {{"x", rect.x}, {"y", rect.y}, {"width", rect.width}, {"height", rect.height}};
+}
+
+std::vector<std::vector<cv::Point>> find_shape_contours(const cv::Mat& source, const nlohmann::json& params) {
+  const double threshold = std::clamp(json_double(params, "threshold", 128.0), 0.0, 255.0);
+  const int min_area = std::clamp(json_int(params, "minArea", 80), 1, 1000000);
+  const auto polarity = params.value("polarity", std::string{"dark"});
+
+  cv::Mat binary;
+  cv::threshold(
+      to_gray(source),
+      binary,
+      threshold,
+      255,
+      polarity == "light" ? cv::THRESH_BINARY : cv::THRESH_BINARY_INV);
+
+  std::vector<std::vector<cv::Point>> contours;
+  cv::findContours(binary, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  std::erase_if(contours, [&](const auto& contour) {
+    return std::abs(cv::contourArea(contour)) < static_cast<double>(min_area);
+  });
+  std::sort(contours.begin(), contours.end(), [](const auto& left, const auto& right) {
+    return std::abs(cv::contourArea(left)) > std::abs(cv::contourArea(right));
+  });
+  return contours;
+}
+
+ImageOperationResult apply_blob_centroid(const cv::Mat& source, const nlohmann::json& params) {
+  const auto contours = find_shape_contours(source, params);
+  cv::Mat output = to_bgr(source);
+  auto blobs = nlohmann::json::array();
+
+  const int max_shapes = std::clamp(json_int(params, "maxShapes", 24), 1, 128);
+  for (std::size_t index = 0; index < contours.size() && index < static_cast<std::size_t>(max_shapes); ++index) {
+    const auto& contour = contours[index];
+    const auto moments = cv::moments(contour);
+    if (std::abs(moments.m00) < 1e-6) {
+      continue;
+    }
+
+    const cv::Point2d centroid(moments.m10 / moments.m00, moments.m01 / moments.m00);
+    const cv::Rect bounds = cv::boundingRect(contour);
+    const double area = std::abs(cv::contourArea(contour));
+    const double perimeter = cv::arcLength(contour, true);
+    cv::drawContours(output, std::vector<std::vector<cv::Point>>{contour}, -1, cv::Scalar(15, 118, 110), 2);
+    cv::circle(output, centroid, 5, cv::Scalar(194, 65, 12), cv::FILLED, cv::LINE_AA);
+    cv::putText(
+        output,
+        std::to_string(index + 1),
+        cv::Point(bounds.x, std::max(16, bounds.y - 6)),
+        cv::FONT_HERSHEY_SIMPLEX,
+        0.55,
+        cv::Scalar(37, 99, 235),
+        2,
+        cv::LINE_AA);
+
+    blobs.push_back(
+        {{"index", index + 1},
+         {"area", area},
+         {"perimeter", perimeter},
+         {"centroid", point_to_json(centroid)},
+         {"boundingBox", rect_to_json(bounds)}});
+  }
+
+  return {
+      output,
+      {{"shape",
+        {{"operation", "blobCentroid"},
+         {"contourCount", contours.size()},
+         {"shapeCount", blobs.size()},
+         {"largestArea", blobs.empty() ? 0.0 : blobs.front().value("area", 0.0)},
+         {"blobs", blobs}}}}};
+}
+
+ImageOperationResult apply_convex_hull(const cv::Mat& source, const nlohmann::json& params) {
+  const auto contours = find_shape_contours(source, params);
+  cv::Mat output = to_bgr(source);
+  auto hulls = nlohmann::json::array();
+
+  const int max_shapes = std::clamp(json_int(params, "maxShapes", 16), 1, 128);
+  for (std::size_t index = 0; index < contours.size() && index < static_cast<std::size_t>(max_shapes); ++index) {
+    std::vector<cv::Point> hull;
+    cv::convexHull(contours[index], hull);
+    const double area = std::abs(cv::contourArea(contours[index]));
+    const double hull_area = std::abs(cv::contourArea(hull));
+    const double solidity = hull_area > 1e-6 ? area / hull_area : 0.0;
+    cv::drawContours(output, std::vector<std::vector<cv::Point>>{contours[index]}, -1, cv::Scalar(37, 99, 235), 2);
+    cv::polylines(output, hull, true, cv::Scalar(194, 65, 12), 2, cv::LINE_AA);
+    hulls.push_back(
+        {{"index", index + 1},
+         {"area", area},
+         {"hullArea", hull_area},
+         {"solidity", solidity},
+         {"hullPointCount", hull.size()},
+         {"boundingBox", rect_to_json(cv::boundingRect(contours[index]))}});
+  }
+
+  return {
+      output,
+      {{"shape",
+        {{"operation", "convexHull"},
+         {"contourCount", contours.size()},
+         {"shapeCount", hulls.size()},
+         {"largestArea", hulls.empty() ? 0.0 : hulls.front().value("area", 0.0)},
+         {"hulls", hulls}}}}};
+}
+
+ImageOperationResult apply_hu_moments(const cv::Mat& source, const nlohmann::json& params) {
+  const auto contours = find_shape_contours(source, params);
+  cv::Mat output = to_bgr(source);
+  auto shapes = nlohmann::json::array();
+
+  const int max_shapes = std::clamp(json_int(params, "maxShapes", 8), 1, 64);
+  for (std::size_t index = 0; index < contours.size() && index < static_cast<std::size_t>(max_shapes); ++index) {
+    double raw_hu[7] = {};
+    cv::HuMoments(cv::moments(contours[index]), raw_hu);
+    auto hu = nlohmann::json::array();
+    auto log_hu = nlohmann::json::array();
+    for (double value : raw_hu) {
+      hu.push_back(value);
+      const double magnitude = std::abs(value);
+      log_hu.push_back(magnitude > 1e-30 ? -std::copysign(1.0, value) * std::log10(magnitude) : 0.0);
+    }
+
+    const double area = std::abs(cv::contourArea(contours[index]));
+    const auto bounds = cv::boundingRect(contours[index]);
+    cv::drawContours(output, std::vector<std::vector<cv::Point>>{contours[index]}, -1, cv::Scalar(15, 118, 110), 2);
+    cv::putText(
+        output,
+        "Hu " + std::to_string(index + 1),
+        cv::Point(bounds.x, std::max(16, bounds.y - 6)),
+        cv::FONT_HERSHEY_SIMPLEX,
+        0.55,
+        cv::Scalar(194, 65, 12),
+        2,
+        cv::LINE_AA);
+
+    shapes.push_back(
+        {{"index", index + 1},
+         {"area", area},
+         {"boundingBox", rect_to_json(bounds)},
+         {"huMoments", hu},
+         {"logHuMoments", log_hu}});
+  }
+
+  return {
+      output,
+      {{"shape",
+        {{"operation", "huMoments"},
+         {"contourCount", contours.size()},
+         {"shapeCount", shapes.size()},
+         {"largestArea", shapes.empty() ? 0.0 : shapes.front().value("area", 0.0)},
+         {"shapes", shapes}}}}};
+}
+
+ImageOperationResult apply_hough_transform(const cv::Mat& source, const nlohmann::json& params) {
+  const auto mode = params.value("mode", std::string{"lines"});
+  cv::Mat gray = to_gray(source);
+  cv::Mat output = to_bgr(source);
+  cv::Mat edges;
+  cv::Canny(
+      gray,
+      edges,
+      std::clamp(json_double(params, "low", 80.0), 0.0, 255.0),
+      std::clamp(json_double(params, "high", 160.0), 0.0, 255.0));
+
+  if (mode == "circles") {
+    cv::GaussianBlur(gray, gray, cv::Size(9, 9), 2);
+    std::vector<cv::Vec3f> circles;
+    cv::HoughCircles(
+        gray,
+        circles,
+        cv::HOUGH_GRADIENT,
+        1.0,
+        std::clamp(json_double(params, "minDist", 40.0), 1.0, 1000.0),
+        std::clamp(json_double(params, "high", 160.0), 1.0, 255.0),
+        std::clamp(json_double(params, "accumulator", 32.0), 1.0, 255.0),
+        std::clamp(json_int(params, "minRadius", 0), 0, 4096),
+        std::clamp(json_int(params, "maxRadius", 0), 0, 4096));
+    auto items = nlohmann::json::array();
+    const int max_shapes = std::clamp(json_int(params, "maxShapes", 32), 1, 256);
+    for (std::size_t index = 0; index < circles.size() && index < static_cast<std::size_t>(max_shapes); ++index) {
+      const auto circle = circles[index];
+      const cv::Point center(cvRound(circle[0]), cvRound(circle[1]));
+      const int radius = cvRound(circle[2]);
+      cv::circle(output, center, radius, cv::Scalar(15, 118, 110), 2, cv::LINE_AA);
+      cv::circle(output, center, 3, cv::Scalar(194, 65, 12), cv::FILLED, cv::LINE_AA);
+      items.push_back({{"index", index + 1}, {"center", point_to_json(center)}, {"radius", radius}});
+    }
+
+    return {
+        output,
+        {{"shape",
+          {{"operation", "houghTransform"},
+           {"mode", "circles"},
+           {"circleCount", circles.size()},
+           {"shapeCount", items.size()},
+           {"circles", items}}}}};
+  }
+
+  std::vector<cv::Vec4i> lines;
+  cv::HoughLinesP(
+      edges,
+      lines,
+      1,
+      CV_PI / 180,
+      std::clamp(json_int(params, "threshold", 80), 1, 512),
+      std::clamp(json_double(params, "minLineLength", 40.0), 1.0, 4096.0),
+      std::clamp(json_double(params, "maxLineGap", 12.0), 0.0, 1024.0));
+  auto items = nlohmann::json::array();
+  const int max_shapes = std::clamp(json_int(params, "maxShapes", 32), 1, 256);
+  for (std::size_t index = 0; index < lines.size() && index < static_cast<std::size_t>(max_shapes); ++index) {
+    const auto line = lines[index];
+    const cv::Point start(line[0], line[1]);
+    const cv::Point end(line[2], line[3]);
+    const double length = cv::norm(start - end);
+    cv::line(output, start, end, cv::Scalar(194, 65, 12), 2, cv::LINE_AA);
+    items.push_back({{"index", index + 1}, {"start", point_to_json(start)}, {"end", point_to_json(end)}, {"length", length}});
+  }
+
+  return {
+      output,
+      {{"shape",
+        {{"operation", "houghTransform"},
+         {"mode", "lines"},
+         {"lineCount", lines.size()},
+         {"shapeCount", items.size()},
+         {"lines", items}}}}};
 }
 
 cv::Mat apply_histogram_preview(const cv::Mat& source) {
@@ -209,14 +451,14 @@ cv::Mat apply_calibration_board_preview(const cv::Mat& source, const nlohmann::j
 
 }  // namespace
 
-cv::Mat apply_image_operation(
+ImageOperationResult apply_image_operation(
     const cv::Mat& original, const cv::Mat& source, const std::string& operation, const nlohmann::json& params) {
   if (source.empty()) {
     throw std::runtime_error("Source image is empty.");
   }
 
   if (operation == "open") {
-    return source.clone();
+    return image_only(source.clone());
   }
 
   if (operation == "resize") {
@@ -224,7 +466,7 @@ cv::Mat apply_image_operation(
     const int height = std::clamp(json_int(params, "height", source.rows), 1, 8192);
     cv::Mat output;
     cv::resize(source, output, cv::Size(width, height), 0, 0, cv::INTER_AREA);
-    return output;
+    return image_only(output);
   }
 
   if (operation == "crop") {
@@ -232,7 +474,7 @@ cv::Mat apply_image_operation(
     const int y = std::clamp(json_int(params, "y", 0), 0, std::max(0, source.rows - 1));
     const int width = std::clamp(json_int(params, "width", source.cols - x), 1, source.cols - x);
     const int height = std::clamp(json_int(params, "height", source.rows - y), 1, source.rows - y);
-    return source(cv::Rect(x, y, width, height)).clone();
+    return image_only(source(cv::Rect(x, y, width, height)).clone());
   }
 
   if (operation == "rotate") {
@@ -247,7 +489,7 @@ cv::Mat apply_image_operation(
     } else {
       output = source.clone();
     }
-    return output;
+    return image_only(output);
   }
 
   if (operation == "flip") {
@@ -255,25 +497,25 @@ cv::Mat apply_image_operation(
     const int flip_code = direction == "vertical" ? 0 : direction == "both" ? -1 : 1;
     cv::Mat output;
     cv::flip(source, output, flip_code);
-    return output;
+    return image_only(output);
   }
 
   if (operation == "grayscale") {
-    return to_gray(source);
+    return image_only(to_gray(source));
   }
 
   if (operation == "blur") {
     const int kernel = odd_kernel(json_int(params, "kernel", 5));
     cv::Mat output;
     cv::blur(source, output, cv::Size(kernel, kernel));
-    return output;
+    return image_only(output);
   }
 
   if (operation == "gaussianBlur") {
     const int kernel = odd_kernel(json_int(params, "kernel", 7));
     cv::Mat output;
     cv::GaussianBlur(source, output, cv::Size(kernel, kernel), 0);
-    return output;
+    return image_only(output);
   }
 
   if (operation == "sharpen") {
@@ -282,7 +524,7 @@ cv::Mat apply_image_operation(
     const cv::Mat kernel =
         (cv::Mat_<double>(3, 3) << 0, -strength, 0, -strength, 1 + 4 * strength, -strength, 0, -strength, 0);
     cv::filter2D(source, output, source.depth(), kernel);
-    return output;
+    return image_only(output);
   }
 
   if (operation == "threshold") {
@@ -293,7 +535,7 @@ cv::Mat apply_image_operation(
         std::clamp(json_double(params, "threshold", 128.0), 0.0, 255.0),
         255,
         cv::THRESH_BINARY);
-    return output;
+    return image_only(output);
   }
 
   if (operation == "edgeDetect") {
@@ -303,7 +545,7 @@ cv::Mat apply_image_operation(
         output,
         std::clamp(json_double(params, "low", 80.0), 0.0, 255.0),
         std::clamp(json_double(params, "high", 160.0), 0.0, 255.0));
-    return output;
+    return image_only(output);
   }
 
   if (operation == "contourDetect") {
@@ -317,25 +559,25 @@ cv::Mat apply_image_operation(
     cv::findContours(edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
     cv::Mat output = to_bgr(source);
     cv::drawContours(output, contours, -1, cv::Scalar(15, 118, 110), 2);
-    return output;
+    return image_only(output);
   }
 
   if (operation == "histogram") {
-    return apply_histogram_preview(source);
+    return image_only(apply_histogram_preview(source));
   }
 
   if (operation == "colorConvert") {
     const auto target = params.value("target", std::string{"hsv"});
     cv::Mat converted;
     if (target == "gray") {
-      return to_gray(source);
+      return image_only(to_gray(source));
     }
     if (target == "lab") {
       cv::cvtColor(to_bgr(source), converted, cv::COLOR_BGR2Lab);
     } else {
       cv::cvtColor(to_bgr(source), converted, cv::COLOR_BGR2HSV);
     }
-    return converted;
+    return image_only(converted);
   }
 
   if (operation == "compare") {
@@ -346,23 +588,39 @@ cv::Mat apply_image_operation(
     }
     cv::Mat diff;
     cv::absdiff(baseline, candidate, diff);
-    return diff;
+    return image_only(diff);
   }
 
   if (operation == "featureAlign") {
-    return apply_feature_alignment(original, source, params);
+    return image_only(apply_feature_alignment(original, source, params));
   }
 
   if (operation == "eccAlign") {
-    return apply_ecc_alignment(original, source, params);
+    return image_only(apply_ecc_alignment(original, source, params));
   }
 
   if (operation == "qrScan") {
-    return apply_qr_overlay(source);
+    return image_only(apply_qr_overlay(source));
   }
 
   if (operation == "calibrationBoard") {
-    return apply_calibration_board_preview(source, params);
+    return image_only(apply_calibration_board_preview(source, params));
+  }
+
+  if (operation == "blobCentroid") {
+    return apply_blob_centroid(source, params);
+  }
+
+  if (operation == "convexHull") {
+    return apply_convex_hull(source, params);
+  }
+
+  if (operation == "huMoments") {
+    return apply_hu_moments(source, params);
+  }
+
+  if (operation == "houghTransform") {
+    return apply_hough_transform(source, params);
   }
 
   throw std::runtime_error("Unsupported image operation: " + operation);

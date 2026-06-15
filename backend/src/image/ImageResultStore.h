@@ -20,6 +20,7 @@ struct ImageResultRecord {
   std::string source_path;
   std::string operation;
   nlohmann::json params;
+  nlohmann::json metadata = nlohmann::json::object();
   cv::Mat original;
   cv::Mat image;
   Clock::time_point created_at;
@@ -46,7 +47,8 @@ private:
       const cv::Mat& original,
       const cv::Mat& image,
       const std::string& operation,
-      const nlohmann::json& params);
+      const nlohmann::json& params,
+      const nlohmann::json& metadata = nlohmann::json::object());
 
   mutable std::mutex mutex_;
   std::map<std::string, ImageResultRecord> results_;

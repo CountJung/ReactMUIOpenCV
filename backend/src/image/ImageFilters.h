@@ -8,8 +8,13 @@
 
 namespace app {
 
+struct ImageOperationResult {
+  cv::Mat image;
+  nlohmann::json metadata = nlohmann::json::object();
+};
+
 bool is_supported_image_extension(const std::filesystem::path& path);
-cv::Mat apply_image_operation(
+ImageOperationResult apply_image_operation(
     const cv::Mat& original, const cv::Mat& source, const std::string& operation, const nlohmann::json& params);
 
 }  // namespace app
