@@ -31,14 +31,12 @@ double checksum(const cv::Mat& image) {
 
 cv::Mat invert_with_pointer_loop(const cv::Mat& source) {
   cv::Mat output(source.size(), source.type());
+  const int channels = source.channels();
   for (int row = 0; row < source.rows; ++row) {
-    const auto* input_row = source.ptr<cv::Vec3b>(row);
-    auto* output_row = output.ptr<cv::Vec3b>(row);
-    for (int col = 0; col < source.cols; ++col) {
-      output_row[col] = cv::Vec3b(
-          static_cast<unsigned char>(255 - input_row[col][0]),
-          static_cast<unsigned char>(255 - input_row[col][1]),
-          static_cast<unsigned char>(255 - input_row[col][2]));
+    const auto* input_row = source.ptr<unsigned char>(row);
+    auto* output_row = output.ptr<unsigned char>(row);
+    for (int col = 0; col < source.cols * channels; ++col) {
+      output_row[col] = static_cast<unsigned char>(255 - input_row[col]);
     }
   }
   return output;
@@ -46,11 +44,9 @@ cv::Mat invert_with_pointer_loop(const cv::Mat& source) {
 
 cv::Mat invert_with_for_each(const cv::Mat& source) {
   cv::Mat output = source.clone();
-  output.forEach<cv::Vec3b>([](cv::Vec3b& pixel, const int*) {
-    pixel[0] = static_cast<unsigned char>(255 - pixel[0]);
-    pixel[1] = static_cast<unsigned char>(255 - pixel[1]);
-    pixel[2] = static_cast<unsigned char>(255 - pixel[2]);
-  });
+  cv::Mat bytes = output.reshape(1);
+  bytes.forEach<unsigned char>(
+      [](unsigned char& value, const int*) { value = static_cast<unsigned char>(255 - value); });
   return output;
 }
 
@@ -127,6 +123,7 @@ PerformanceBenchmarkService::PerformanceBenchmarkService(
 nlohmann::json PerformanceBenchmarkService::run_pixel_access_benchmark(
     const std::string& image_result_id,
     int iterations,
+    int max_iterations,
     const std::function<bool()>& is_cancelled,
     const std::function<void(int, const std::string&)>& report_progress) {
   const auto image_metadata = image_store_.get(image_result_id);
@@ -143,11 +140,14 @@ nlohmann::json PerformanceBenchmarkService::run_pixel_access_benchmark(
   if (source.empty()) {
     throw std::runtime_error("OpenCV could not normalize the image for benchmarking.");
   }
-  if (source.type() != CV_8UC3) {
-    source.convertTo(source, CV_8UC3);
+  if (source.depth() != CV_8U) {
+    source.convertTo(source, CV_8U);
+  }
+  if (!source.isContinuous()) {
+    source = source.clone();
   }
 
-  const int repeat_count = std::clamp(iterations, 1, 20);
+  const int repeat_count = std::clamp(iterations, 1, std::clamp(max_iterations, 1, 100));
   const std::vector<BenchmarkMethod> methods = {
       {"pointerLoop", "Manual pointer loop", invert_with_pointer_loop},
       {"opencvForEach", "OpenCV forEach pixel loop", invert_with_for_each},

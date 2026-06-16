@@ -6,6 +6,7 @@
 #include "../common/StringUtils.h"
 #include "../image/DnnModelCatalog.h"
 #include "../image/ImageDnnFilters.h"
+#include "../logging/LogStore.h"
 
 #include <fstream>
 #include <filesystem>
@@ -35,6 +36,7 @@ ApiServer::ApiServer(
     CalibrationStore& calibration_store,
     PerformanceBenchmarkStore& performance_benchmark_store,
     CalibrationService& calibration_service,
+    ContourExtractionService& contour_extraction_service,
     PerformanceBenchmarkService& performance_benchmark_service,
     PipelineExecutor& pipeline_executor,
     std::filesystem::path static_root)
@@ -55,6 +57,7 @@ ApiServer::ApiServer(
       calibration_store_(calibration_store),
       performance_benchmark_store_(performance_benchmark_store),
       calibration_service_(calibration_service),
+      contour_extraction_service_(contour_extraction_service),
       performance_benchmark_service_(performance_benchmark_service),
       pipeline_executor_(pipeline_executor),
       static_root_(std::move(static_root)) {
@@ -142,14 +145,22 @@ void ApiServer::register_routes() {
     }
 
     const auto body = parse_body(request);
-    const auto next_mode = body.value("themeMode", std::string{"system"});
-    const auto updated = settings_store_.update_theme_mode(next_mode);
+    const auto updated = settings_store_.update(body);
     if (!updated) {
-      send_error(response, "invalid_settings", "themeMode must be light, dark, or system.", 400);
+      send_error(response, "invalid_settings", "Settings payload contains invalid values.", 400);
       return;
     }
 
+    try {
+      configure_file_logging(*updated);
+    } catch (const std::exception& error) {
+      log_store_.append("error", "Log settings could not be applied: " + std::string(error.what()));
+      send_error(
+          response, "logging_settings_failed", "Settings were saved, but log settings could not be applied.", 500);
+      return;
+    }
     log_store_.append("info", "Settings updated");
+    event_hub_.publish("settings.updated", *updated);
     send_data(response, *updated);
   });
 
@@ -496,44 +507,8 @@ void ApiServer::register_routes() {
     }
   });
 
-  server_.Get("/api/performance/benchmarks", [&](const httplib::Request& request, httplib::Response& response) {
-    send_data(response, performance_benchmark_store_.list(is_loopback_request(request)));
-  });
-
-  server_.Post("/api/performance/benchmarks/run", [&](const httplib::Request& request, httplib::Response& response) {
-    if (!is_loopback_or_control(request, response)) {
-      return;
-    }
-
-    const auto body = parse_body(request);
-    const auto result_id = body.value("resultId", std::string{});
-    const auto iterations = body.value("iterations", 5);
-    if (result_id.empty()) {
-      send_error(response, "invalid_performance_benchmark_request", "resultId is required.", 400);
-      return;
-    }
-
-    const auto job = job_queue_.create_manual("performance-benchmark", "Benchmarking image result " + result_id + ".");
-    const auto job_id = job.value("id", std::string{});
-    job_queue_.start(job_id, "OpenCV pixel benchmark started.");
-    try {
-      const auto benchmark = performance_benchmark_service_.run_pixel_access_benchmark(
-          result_id,
-          iterations,
-          [&]() { return job_queue_.is_cancelled(job_id); },
-          [&](int progress, const std::string& message) { job_queue_.progress(job_id, progress, message); });
-      const auto completed_job = job_queue_.complete(job_id, "OpenCV pixel benchmark completed.");
-      event_hub_.publish("performance.benchmark.recorded", benchmark);
-      log_store_.append("info", "Recorded OpenCV pixel benchmark for image " + result_id);
-      send_data(response, {{"job", completed_job.value_or(job)}, {"benchmark", benchmark}}, 202);
-    } catch (const std::exception& error) {
-      if (!job_queue_.is_cancelled(job_id)) {
-        job_queue_.fail(job_id, error.what());
-      }
-      log_store_.append("error", "OpenCV pixel benchmark failed: " + std::string(error.what()));
-      send_error(response, "performance_benchmark_failed", error.what(), job_queue_.is_cancelled(job_id) ? 409 : 400);
-    }
-  });
+  register_contour_routes(is_loopback_or_control);
+  register_performance_routes(is_loopback_or_control);
 
   server_.Post("/api/videos/open-local", [&](const httplib::Request& request, httplib::Response& response) {
     if (!is_loopback_request(request)) {

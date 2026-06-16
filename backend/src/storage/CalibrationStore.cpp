@@ -14,7 +14,8 @@ constexpr std::size_t kMaxCalibrationRecords = 100;
 
 }  // namespace
 
-CalibrationStore::CalibrationStore(std::filesystem::path storage_path) : storage_path_(std::move(storage_path)) {
+CalibrationStore::CalibrationStore(std::filesystem::path storage_path)
+    : storage_path_(std::move(storage_path)) {
   load();
 }
 

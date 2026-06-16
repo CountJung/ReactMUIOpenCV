@@ -54,6 +54,54 @@ template <typename T> nlohmann::json point_to_json(const cv::Point_<T>& point) {
   return {{"x", point.x}, {"y", point.y}};
 }
 
+std::array<cv::Point2f, 4> order_quad_points(std::array<cv::Point2f, 4> points) {
+  const auto sum_compare = [](const cv::Point2f& left, const cv::Point2f& right) {
+    return left.x + left.y < right.x + right.y;
+  };
+  const auto diff_compare = [](const cv::Point2f& left, const cv::Point2f& right) {
+    return left.x - left.y < right.x - right.y;
+  };
+
+  std::array<cv::Point2f, 4> ordered{};
+  ordered[0] = *std::min_element(points.begin(), points.end(), sum_compare);
+  ordered[2] = *std::max_element(points.begin(), points.end(), sum_compare);
+  ordered[1] = *std::max_element(points.begin(), points.end(), diff_compare);
+  ordered[3] = *std::min_element(points.begin(), points.end(), diff_compare);
+  return ordered;
+}
+
+std::array<cv::Point2f, 4> quad_points_from_json(const nlohmann::json& params, const cv::Size& size) {
+  const auto points = params.value("points", nlohmann::json::array());
+  if (!points.is_array() || points.size() != 4) {
+    throw std::runtime_error("Perspective extraction requires exactly four selected contour points.");
+  }
+
+  std::array<cv::Point2f, 4> parsed{};
+  for (std::size_t index = 0; index < parsed.size(); ++index) {
+    const auto& point = points[index];
+    if (!point.is_object() || !point.contains("x") || !point.contains("y")) {
+      throw std::runtime_error("Perspective extraction points must contain x and y values.");
+    }
+    const auto x = std::clamp(point.value("x", 0.0), 0.0, static_cast<double>(std::max(0, size.width - 1)));
+    const auto y = std::clamp(point.value("y", 0.0), 0.0, static_cast<double>(std::max(0, size.height - 1)));
+    parsed[index] = cv::Point2f(static_cast<float>(x), static_cast<float>(y));
+  }
+  return order_quad_points(parsed);
+}
+
+double point_distance(const cv::Point2f& left, const cv::Point2f& right) {
+  return cv::norm(left - right);
+}
+
+cv::Rect bounding_rect_from_quad(const std::array<cv::Point2f, 4>& points) {
+  std::vector<cv::Point> integer_points;
+  integer_points.reserve(points.size());
+  for (const auto& point : points) {
+    integer_points.emplace_back(cvRound(point.x), cvRound(point.y));
+  }
+  return cv::boundingRect(integer_points);
+}
+
 cv::Rect centered_rect(const cv::Mat& source, const nlohmann::json& params, double scale = 0.35) {
   if (source.cols < 4 || source.rows < 4) {
     throw std::runtime_error("Image is too small for an ROI-based operation.");
@@ -200,6 +248,47 @@ ImageOperationResult apply_pencil_sketch_filter(const cv::Mat& source, const nlo
       static_cast<float>(std::clamp(json_double(params, "shade", 0.02), 0.0, 0.2)));
   const auto mode = params.value("mode", std::string{"color"});
   return {mode == "gray" ? grayscale : color, {{"composition", {{"operation", "pencilSketch"}, {"mode", mode}}}}};
+}
+
+ImageOperationResult apply_perspective_extract_filter(const cv::Mat& source, const nlohmann::json& params) {
+  const auto source_points = quad_points_from_json(params, source.size());
+  const double top_width = point_distance(source_points[0], source_points[1]);
+  const double bottom_width = point_distance(source_points[3], source_points[2]);
+  const double right_height = point_distance(source_points[1], source_points[2]);
+  const double left_height = point_distance(source_points[0], source_points[3]);
+
+  const int default_width = std::clamp(cvRound(std::max(top_width, bottom_width)), 16, 8192);
+  const int default_height = std::clamp(cvRound(std::max(left_height, right_height)), 16, 8192);
+  const int output_width = std::clamp(json_int(params, "outputWidth", default_width), 16, 8192);
+  const int output_height = std::clamp(json_int(params, "outputHeight", default_height), 16, 8192);
+
+  const std::array<cv::Point2f, 4> target_points = {
+      cv::Point2f(0.0F, 0.0F),
+      cv::Point2f(static_cast<float>(output_width - 1), 0.0F),
+      cv::Point2f(static_cast<float>(output_width - 1), static_cast<float>(output_height - 1)),
+      cv::Point2f(0.0F, static_cast<float>(output_height - 1)),
+  };
+
+  const std::vector<cv::Point2f> source_vector(source_points.begin(), source_points.end());
+  const std::vector<cv::Point2f> target_vector(target_points.begin(), target_points.end());
+  const auto transform = cv::getPerspectiveTransform(source_vector, target_vector);
+  cv::Mat output;
+  cv::warpPerspective(to_bgr(source), output, transform, cv::Size(output_width, output_height), cv::INTER_LINEAR);
+
+  const double area = std::abs(cv::contourArea(source_vector));
+  return {
+      output,
+      {{"contourExtraction",
+        {{"operation", "perspectiveExtract"},
+         {"candidateId", params.value("candidateId", std::string{"manual"})},
+         {"sourcePoints",
+          {point_to_json(source_points[0]),
+           point_to_json(source_points[1]),
+           point_to_json(source_points[2]),
+           point_to_json(source_points[3])}},
+         {"outputSize", {{"width", output_width}, {"height", output_height}}},
+         {"area", area},
+         {"boundingBox", rect_to_json(bounding_rect_from_quad(source_points))}}}}};
 }
 
 void draw_sample_text(
@@ -950,6 +1039,10 @@ ImageOperationResult apply_image_operation(
 
   if (operation == "visionSampleBoard") {
     return apply_vision_sample_board(source, params);
+  }
+
+  if (operation == "perspectiveExtract") {
+    return apply_perspective_extract_filter(source, params);
   }
 
   if (is_dnn_operation(operation)) {

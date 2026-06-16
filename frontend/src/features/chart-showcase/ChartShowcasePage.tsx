@@ -23,11 +23,12 @@ import {
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getImageResults, processImage, type ImageOperation } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
 import { getPerformanceBenchmarks, runPerformanceBenchmark } from '../../api/performanceApi';
 import { executePipeline, getPipelines } from '../../api/pipelineApi';
+import { getSettings } from '../../api/settingsApi';
 import {
   exportVideo,
   getVideoDiagnosticsHistory,
@@ -188,8 +189,14 @@ export function ChartShowcasePage() {
   const [imageOperation, setImageOperation] = useState<ImageOperation>('grayscale');
   const [videoFilter, setVideoFilter] = useState<VideoFilter>('grayscale');
   const [benchmarkIterations, setBenchmarkIterations] = useState(5);
+  const [benchmarkIterationsCustomized, setBenchmarkIterationsCustomized] = useState(false);
   const [assignedJob, setAssignedJob] = useState<JobRecord | null>(null);
 
+  const settingsQuery = useQuery({
+    queryKey: ['settings'],
+    queryFn: getSettings,
+    refetchInterval: 30000,
+  });
   const jobsQuery = useQuery({ queryKey: ['jobs'], queryFn: getJobs, refetchInterval: 5000 });
   const imageResultsQuery = useQuery({
     queryKey: ['image-results'],
@@ -224,6 +231,8 @@ export function ChartShowcasePage() {
   const diagnostics = diagnosticsQuery.data?.records ?? [];
   const benchmarks = benchmarksQuery.data?.records ?? [];
   const pipelines = pipelinesQuery.data?.pipelines ?? [];
+  const benchmarkSettings = settingsQuery.data?.opencv.performanceBenchmark;
+  const maxBenchmarkIterations = benchmarkSettings?.maxIterations ?? 20;
   const statusData = toData(countBy(jobs, (job) => job.status));
   const operationData = toData(countBy(results, (result) => result.operation));
   const pipelineStatusData = toData(countBy(executions, (execution) => execution.status));
@@ -255,6 +264,18 @@ export function ChartShowcasePage() {
   const selectedVideo = videos.find((video) => video.videoId === effectiveVideoId);
   const selectedPipeline = pipelines.find((pipeline) => pipeline.id === effectivePipelineId);
 
+  useEffect(() => {
+    if (!benchmarkSettings) {
+      return;
+    }
+    setBenchmarkIterations((current) => {
+      if (benchmarkIterationsCustomized) {
+        return Math.max(1, Math.min(benchmarkSettings.maxIterations, current));
+      }
+      return benchmarkSettings.defaultIterations;
+    });
+  }, [benchmarkSettings, benchmarkIterationsCustomized]);
+
   const assignJobMutation = useMutation({
     mutationFn: async () => {
       if (jobTemplate === 'image') {
@@ -269,7 +290,7 @@ export function ChartShowcasePage() {
       if (jobTemplate === 'performance-benchmark') {
         const response = await runPerformanceBenchmark({
           resultId: effectiveImageId,
-          iterations: benchmarkIterations,
+          iterations: Math.max(1, Math.min(maxBenchmarkIterations, benchmarkIterations)),
         });
         return response.job;
       }
@@ -313,7 +334,9 @@ export function ChartShowcasePage() {
   const canAssignJob =
     !assignJobMutation.isPending &&
     ((jobTemplate === 'image' && Boolean(effectiveImageId)) ||
-      (jobTemplate === 'performance-benchmark' && Boolean(effectiveImageId)) ||
+      (jobTemplate === 'performance-benchmark' &&
+        Boolean(effectiveImageId) &&
+        Boolean(benchmarkSettings)) ||
       ((jobTemplate === 'video-preview' || jobTemplate === 'video-export') &&
         Boolean(effectiveVideoId)) ||
       (jobTemplate === 'pipeline' && Boolean(selectedPipeline)));
@@ -331,7 +354,8 @@ export function ChartShowcasePage() {
           pipelinesQuery.isError ||
           videosQuery.isError ||
           diagnosticsQuery.isError ||
-          benchmarksQuery.isError) && (
+          benchmarksQuery.isError ||
+          settingsQuery.isError) && (
           <Alert severity="warning">Some chart data is not available from the backend.</Alert>
         )}
         {assignJobMutation.isError && (
@@ -483,12 +507,17 @@ export function ChartShowcasePage() {
                         fullWidth
                         type="number"
                         value={benchmarkIterations}
-                        inputProps={{ min: 1, max: 20 }}
-                        onChange={(event) =>
+                        inputProps={{ min: 1, max: maxBenchmarkIterations }}
+                        helperText={`Max ${maxBenchmarkIterations}`}
+                        onChange={(event) => {
+                          setBenchmarkIterationsCustomized(true);
                           setBenchmarkIterations(
-                            Math.max(1, Math.min(20, Number(event.target.value) || 1)),
-                          )
-                        }
+                            Math.max(
+                              1,
+                              Math.min(maxBenchmarkIterations, Number(event.target.value) || 1),
+                            ),
+                          );
+                        }}
                       />
                     </Grid>
                   </>
@@ -561,7 +590,10 @@ export function ChartShowcasePage() {
                     fullWidth
                     variant="contained"
                     startIcon={<PlayArrowIcon />}
-                    onClick={() => assignJobMutation.mutate()}
+                    onClick={() => {
+                      assignJobMutation.reset();
+                      assignJobMutation.mutate();
+                    }}
                     disabled={!canAssignJob}
                     sx={{ height: '100%' }}
                   >

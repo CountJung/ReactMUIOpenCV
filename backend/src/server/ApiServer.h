@@ -12,6 +12,7 @@
 #include "../storage/VideoTrackingStore.h"
 #include "../video/VideoService.h"
 #include "../vision/CalibrationService.h"
+#include "../vision/ContourExtractionService.h"
 #include "../vision/PerformanceBenchmarkService.h"
 #include "../vision/PipelineExecutor.h"
 #include "EventHub.h"
@@ -19,6 +20,7 @@
 #include <httplib.h>
 
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -44,6 +46,7 @@ public:
       CalibrationStore& calibration_store,
       PerformanceBenchmarkStore& performance_benchmark_store,
       CalibrationService& calibration_service,
+      ContourExtractionService& contour_extraction_service,
       PerformanceBenchmarkService& performance_benchmark_service,
       PipelineExecutor& pipeline_executor,
       std::filesystem::path static_root);
@@ -51,7 +54,11 @@ public:
   bool listen();
 
 private:
+  using RequestGuard = std::function<bool(const httplib::Request&, httplib::Response&)>;
+
   void register_routes();
+  void register_contour_routes(RequestGuard is_loopback_or_control);
+  void register_performance_routes(RequestGuard is_loopback_or_control);
   void mount_static_files();
 
   std::string host_;
@@ -71,6 +78,7 @@ private:
   CalibrationStore& calibration_store_;
   PerformanceBenchmarkStore& performance_benchmark_store_;
   CalibrationService& calibration_service_;
+  ContourExtractionService& contour_extraction_service_;
   PerformanceBenchmarkService& performance_benchmark_service_;
   PipelineExecutor& pipeline_executor_;
   std::filesystem::path static_root_;

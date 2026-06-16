@@ -38,7 +38,7 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 - [x] Implement a WebSocket server and event envelope.
 - [x] Broadcast `job.*`, `log.appended`, `backend.status.changed`, `remote.client.*`, `preview.*`, and `pipeline.node.*` events.
 - [x] Add a backend job queue for long-running image and video work.
-- [x] Add `spdlog` file logging and a recent-log API.
+- [x] Add `spdlog` rolling file logging, retention/size settings, and a recent-log API.
 - [x] Wire frontend WebSocket events to TanStack Query cache invalidation or updates.
 - [x] Refactor the backend from a monolithic `main.cpp` into class-based source files under `common`, `server`, `security`, `jobs`, `logging`, `storage`, and `image`.
 
@@ -144,14 +144,15 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 ### Pack 9H - Performance Instrumentation
 
 - [x] Add performance demo for parallel pixel access with OpenCV `forEach` and compare it with existing filter implementations.
-- [x] Record benchmark samples as jobs and chart them in Dashboard/Charts.
+- [x] Record benchmark samples as jobs and expose them through Dashboard, Charts, Data Grid, and a direct Performance Lab entrypoint.
+- [x] Manage benchmark iteration defaults through Settings and share them across Performance Lab and Charts job assignment.
 - Agent focus: backend benchmark service, job/event integration, chart visualization.
 
 ### Pack 9I - Interactive Contour Perspective Extraction
 
-- [ ] Add backend support to detect contour candidates, expose candidate quadrilateral metadata, and perspective-warp a selected contour into an independent Image Lab result.
-- [ ] Add Image Lab overlay UI for mouse/touch candidate selection, selected-contour highlighting, and before/after extraction preview.
-- [ ] Store selected contour metadata so extracted documents/labels/parts can be inspected in Data Grid and reused by pipeline operation nodes.
+- [x] Add backend support to detect contour candidates, expose candidate quadrilateral metadata, and perspective-warp a selected contour into an independent Image Lab result.
+- [x] Add a Contour Extractor overlay UI for mouse/touch candidate selection, selected-contour highlighting, click-to-preview perspective view, and extraction history controls.
+- [x] Store selected contour metadata so extracted documents/labels/parts can be inspected in Data Grid and reused by pipeline operation nodes.
 - Agent focus: contour candidate ranking, perspective transform service, interactive preview overlay, result metadata schema.
 
 ## Guardrails
@@ -163,3 +164,4 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 - [ ] Prevent path traversal on every file API.
 - [ ] Run long OpenCV work through the job queue, not the UI or request thread.
 - [ ] Avoid repeatedly sending large image or video payloads as base64.
+- [ ] Keep OpenCV result-affecting defaults visible in feature UI or Settings, and persist expert defaults through backend-owned settings storage.

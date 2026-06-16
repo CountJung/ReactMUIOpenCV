@@ -24,6 +24,7 @@ Read `PROJECT_MAP.md`, `MasterPlan.md`, and `TODO.md` before making architectura
 - Keep server-owned state authoritative for jobs, progress, results, logs, connected clients, remote access, and OpenCV processing state.
 - Use WebSocket events to update or invalidate TanStack Query caches.
 - Run long image/video/pipeline work through backend jobs.
+- Avoid burying OpenCV/user-tunable behavior in hardcoded literals. Operation parameters that affect output should be visible and adjustable in the relevant UI; defaults or sensitive expert knobs should live in Settings and be persisted by the backend in an appropriate settings file such as `data/settings.json`.
 - Prefer value members for simple RAII state, but use heap ownership when objects are heavy, polymorphic, replaceable, or need stable lifetime across composition boundaries. Prefer `std::unique_ptr` for exclusive heap ownership.
 - In multi-threaded backend services, the class that owns mutable state owns the lock protecting that state. Use shared/read locks for const reads and unique/write locks for mutations when read concurrency is useful.
 
@@ -51,6 +52,7 @@ When the main agent discovers one of the following conditions while working, del
 - Follow the planned `frontend/src` layout from `MasterPlan.md`.
 - Use MUI theme tokens for colors, typography, shape, shadows, density, and component overrides.
 - Avoid hardcoded component colors when a theme token can express the intent.
+- Expose OpenCV operation parameters in the feature UI whenever users need to understand or reproduce a result. If a parameter is too sensitive or too rarely changed for the feature page, put its default in Settings instead of hiding it in code.
 - Support desktop, tablet, and mobile layouts. Mobile should focus on status, previews, logs, and simple start/stop controls.
 - Keep complex pipeline editing, large video upload, precise timeline editing, arbitrary local-path save, and system settings off mobile unless explicitly enabled later.
 
@@ -62,6 +64,7 @@ When the main agent discovers one of the following conditions while working, del
 - Put each durable backend responsibility in a named class with matching `.h`/`.cpp` files under its ownership folder. Keep inheritance or interface relationships visible in the same header when they are introduced so references are easy to inspect.
 - Keep route handlers thin in `server/ApiServer.cpp`; route handlers should validate request shape, call service classes, publish events, and translate errors into the shared API envelope.
 - Keep file-system access, path validation, upload isolation, and cleanup policies in backend-owned services.
+- Persist application-level OpenCV defaults and expert settings through backend-owned settings storage rather than frontend-only local state. Prefer `data/settings.json` for normal user preferences; use `.env` only for deployment/environment concerns.
 - Keep ownership and synchronization visible in backend headers: use RAII values for light local resources, `std::unique_ptr` for exclusive heap-owned services or heavy replaceable components, and `std::shared_mutex` with `std::shared_lock`/`std::unique_lock` for owner-managed read/write state where concurrent reads are expected.
 - Do not reimplement reusable utility functions in each `.cpp` file. Before adding local helpers for OpenCV conversion, ROI/rect JSON, filename sanitizing, extension matching, or safe JSON extraction, use or extend `backend/src/common/*Utils.*`.
 - For C++ edits, follow `.clang-format` in the repository root. If `clang-format` is available, format touched C++ files with `--style=file`.

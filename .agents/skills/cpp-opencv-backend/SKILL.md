@@ -36,12 +36,14 @@ Use this skill to keep the backend responsible for serving the React app, exposi
 - Emit WebSocket events for job lifecycle, logs, backend status, remote clients, previews, and pipeline node state.
 - Treat the backend as authoritative for jobs, progress, results, logs, connected clients, remote access, and OpenCV state.
 - Register HTTP routes in `server/ApiServer.cpp`; if route logic grows beyond request validation, service invocation, event publication, and response translation, move it into a service class.
+- Avoid silent hardcoded defaults for OpenCV behavior that changes outputs. Route handlers should merge request parameters with backend-owned Settings defaults, and services should receive explicit parameter JSON for reproducible processing.
 
 ## OpenCV And Jobs
 
 - Keep image, video, and pipeline processing off request and UI threads.
 - Use job IDs for long-running work and send progress events.
 - Separate preview generation from full export.
+- Keep user-tunable and expert OpenCV defaults in backend settings storage, normally `data/settings.json`; reserve `.env` for deployment/environment settings rather than algorithm preferences.
 - Keep OpenCV buffers local or cloned at service boundaries; avoid storing borrowed `cv::Mat` views beyond the owning frame lifetime.
 - Use shared OpenCV utilities from `backend/src/common/OpenCvUtils.*` for repeated conversions such as grayscale/BGR normalization and ROI/rect helpers.
 - Log codec, file, parameter, and processing failures with enough context to debug.

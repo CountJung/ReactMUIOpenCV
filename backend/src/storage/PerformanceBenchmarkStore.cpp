@@ -4,6 +4,7 @@
 #include "../common/Random.h"
 #include "../common/Time.h"
 
+#include <algorithm>
 #include <fstream>
 #include <utility>
 
@@ -47,6 +48,27 @@ nlohmann::json PerformanceBenchmarkStore::record(const nlohmann::json& benchmark
   }
   save_locked();
   return item;
+}
+
+bool PerformanceBenchmarkStore::remove(const std::string& benchmark_id) {
+  std::scoped_lock lock(mutex_);
+  const auto old_size = records_.size();
+  std::erase_if(records_, [&](const auto& record) {
+    return record.is_object() && record.value("benchmarkId", std::string{}) == benchmark_id;
+  });
+  if (records_.size() == old_size) {
+    return false;
+  }
+  save_locked();
+  return true;
+}
+
+int PerformanceBenchmarkStore::clear() {
+  std::scoped_lock lock(mutex_);
+  const auto count = static_cast<int>(records_.size());
+  records_.clear();
+  save_locked();
+  return count;
 }
 
 void PerformanceBenchmarkStore::load() {

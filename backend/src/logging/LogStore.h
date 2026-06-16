@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include <deque>
+#include <filesystem>
 #include <mutex>
 #include <string>
 
@@ -23,6 +24,7 @@ private:
   std::deque<nlohmann::json> entries_;
 };
 
-void configure_file_logging();
+void configure_file_logging(const nlohmann::json& settings = nlohmann::json::object());
+void configure_file_logging_from_settings_file(const std::filesystem::path& settings_path);
 
 }  // namespace app

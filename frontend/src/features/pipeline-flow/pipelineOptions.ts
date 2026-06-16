@@ -85,6 +85,18 @@ export const operationOptions: Array<{
     defaultParams: { tileWidth: 350, tileHeight: 460 },
   },
   {
+    value: 'perspectiveExtract',
+    label: 'Perspective Extract',
+    defaultParams: {
+      points: [
+        { x: 0, y: 0 },
+        { x: 320, y: 0 },
+        { x: 320, y: 220 },
+        { x: 0, y: 220 },
+      ],
+    },
+  },
+  {
     value: 'dnnFaceDetection',
     label: 'DNN Face Detection',
     defaultParams: {

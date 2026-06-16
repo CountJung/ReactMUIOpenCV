@@ -33,6 +33,7 @@ add_executable(ReactMUIOpenCV
   src/main.cpp
   src/security/RemoteAccessManager.cpp
   src/server/ApiServer.cpp
+  src/server/ApiServerVisionRoutes.cpp
   src/server/EventHub.cpp
   src/server/NetworkInfo.cpp
   src/server/WebSocketGateway.cpp
@@ -44,6 +45,7 @@ add_executable(ReactMUIOpenCV
   src/storage/VideoTrackingStore.cpp
   src/video/VideoService.cpp
   src/vision/CalibrationService.cpp
+  src/vision/ContourExtractionService.cpp
   src/vision/PerformanceBenchmarkService.cpp
   src/vision/PipelineExecutor.cpp
 )

@@ -760,6 +760,7 @@ OpenCV
 ├─ Default Video Codec
 ├─ Default FPS
 ├─ Preview Resolution
+├─ Contour Detection Defaults
 └─ Enable CUDA
 
 Logging

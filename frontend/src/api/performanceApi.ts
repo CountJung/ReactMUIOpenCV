@@ -48,3 +48,15 @@ export function runPerformanceBenchmark(request: { resultId: string; iterations?
     },
   );
 }
+
+export function deletePerformanceBenchmark(benchmarkId: string) {
+  return apiRequest<{ deleted: string }>(`/api/performance/benchmarks/${benchmarkId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function clearPerformanceBenchmarks() {
+  return apiRequest<{ deleted: number }>('/api/performance/benchmarks', {
+    method: 'DELETE',
+  });
+}

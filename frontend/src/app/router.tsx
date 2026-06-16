@@ -1,9 +1,11 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { ChartShowcasePage } from '../features/chart-showcase/ChartShowcasePage';
+import { ContourExtractorPage } from '../features/contour-extractor/ContourExtractorPage';
 import { DataGridPage } from '../features/data-grid/DataGridPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { ImageLabPage } from '../features/image-lab/ImageLabPage';
 import { LogsPage } from '../features/logs/LogsPage';
+import { PerformanceLabPage } from '../features/performance-lab/PerformanceLabPage';
 import { PipelineFlowPage } from '../features/pipeline-flow/PipelineFlowPage';
 import { RemoteAccessPage } from '../features/remote-access/RemoteAccessPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
@@ -18,6 +20,8 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'remote-access', element: <RemoteAccessPage /> },
       { path: 'image-lab', element: <ImageLabPage /> },
+      { path: 'contour-extractor', element: <ContourExtractorPage /> },
+      { path: 'performance-lab', element: <PerformanceLabPage /> },
       { path: 'video-lab', element: <VideoLabPage /> },
       { path: 'pipeline-flow', element: <PipelineFlowPage /> },
       { path: 'charts', element: <ChartShowcasePage /> },

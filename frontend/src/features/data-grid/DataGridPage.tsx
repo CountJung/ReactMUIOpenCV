@@ -1,9 +1,11 @@
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SearchIcon from '@mui/icons-material/Search';
 import {
   Alert,
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
@@ -31,6 +33,7 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { getFileLibrary, type FileLibraryItem } from '../../api/filesApi';
 import { getImageResults, type ImageResult } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
@@ -273,6 +276,28 @@ export function DataGridPage() {
             return `area ${shape.largestArea.toFixed(1)}`;
           }
           return shape.operation;
+        },
+      },
+      {
+        id: 'contourExtraction',
+        header: 'Contour Extraction',
+        accessorFn: (row) => {
+          const extraction = row.metadata?.contourExtraction;
+          if (!extraction) {
+            return '';
+          }
+          const size = extraction.outputSize
+            ? `${extraction.outputSize.width} x ${extraction.outputSize.height}`
+            : 'warp';
+          return `${extraction.candidateId ?? 'manual'} / ${size}`;
+        },
+      },
+      {
+        id: 'contourBounds',
+        header: 'Contour Bounds',
+        accessorFn: (row) => {
+          const bounds = row.metadata?.contourExtraction?.boundingBox;
+          return bounds ? `${bounds.x},${bounds.y} ${bounds.width}x${bounds.height}` : '';
         },
       },
       { accessorKey: 'sourceType', header: 'Source' },
@@ -597,12 +622,31 @@ export function DataGridPage() {
                 />
               )}
               {activeTab === 'performance-benchmarks' && (
-                <ServerTable
-                  columns={benchmarkColumns}
-                  data={benchmarks}
-                  emptyLabel="Assign a performance benchmark job in Charts to collect OpenCV pixel timings."
-                  filter={filter}
-                />
+                <Stack spacing={2}>
+                  <Alert
+                    severity="info"
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        component={RouterLink}
+                        to="/performance-lab"
+                        startIcon={<PlayArrowIcon />}
+                      >
+                        Run
+                      </Button>
+                    }
+                  >
+                    Benchmark rows are created in Performance Lab. Run a benchmark there, then
+                    return here to sort, search, and compare the saved records.
+                  </Alert>
+                  <ServerTable
+                    columns={benchmarkColumns}
+                    data={benchmarks}
+                    emptyLabel="Run a benchmark in Performance Lab to collect OpenCV pixel timings."
+                    filter={filter}
+                  />
+                </Stack>
               )}
             </Stack>
           </CardContent>

@@ -20,15 +20,36 @@ function isApiEnvelope<T>(value: unknown): value is ApiEnvelope<T> {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-    ...init,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
+      ...init,
+    });
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? `Backend request failed: ${error.message}`
+        : 'Backend request failed. Check that the local backend is running.',
+    );
+  }
 
-  const body = (await response.json()) as unknown;
+  let body: unknown = null;
+  try {
+    body = (await response.json()) as unknown;
+  } catch (error) {
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    throw new Error(
+      error instanceof Error
+        ? `API response could not be parsed: ${error.message}`
+        : 'API response could not be parsed.',
+    );
+  }
 
   if (isApiEnvelope<T>(body)) {
     if (!body.ok) {

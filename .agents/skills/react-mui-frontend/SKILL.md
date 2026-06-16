@@ -35,6 +35,7 @@ Use this skill to build the shared UI that runs both inside WebView2 and in LAN 
 - Use `api/client.ts` for REST conventions and `api/wsClient.ts` for WebSocket event handling.
 - Treat jobs, progress, results, logs, clients, and remote access as server-owned state.
 - Use TanStack Query cache updates or invalidation after WebSocket events.
+- Do not hide OpenCV/result-affecting parameters in component constants. Feature pages should show and allow adjustment of normal operation parameters; sensitive or rarely changed defaults should be edited in Settings and loaded through typed API clients.
 
 ## Responsive Rules
 
@@ -42,6 +43,7 @@ Use this skill to build the shared UI that runs both inside WebView2 and in LAN 
 - Tablet: collapsible sidebar, bottom-sheet parameter panels, touch-friendly controls.
 - Mobile: bottom navigation, status, previews, logs, and simple start/stop actions.
 - Restrict complex node editing, large video upload, timeline editing, arbitrary path save, and system settings on mobile.
+- Keep Settings controls clear and bounded for expert defaults. Persist them through the backend settings API rather than frontend-only local storage unless the value is purely visual and client-local.
 
 ## Verification
 

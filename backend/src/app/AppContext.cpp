@@ -95,6 +95,7 @@ AppContext::AppContext(AppRuntimeConfig config)
     : config_(std::move(config)),
       log_store_(event_hub_),
       job_queue_(event_hub_, log_store_),
+      settings_store_(config_.data_dir / "settings.json"),
       remote_access_(config_.lan_mode, config_.host, config_.selected_ip),
       pipeline_store_(config_.data_dir / "pipelines.json"),
       video_diagnostics_store_(config_.data_dir / "video-diagnostics.json"),
@@ -102,6 +103,7 @@ AppContext::AppContext(AppRuntimeConfig config)
       calibration_store_(config_.data_dir / "calibration-results.json"),
       performance_benchmark_store_(config_.data_dir / "performance-benchmarks.json"),
       calibration_service_(image_store_, calibration_store_),
+      contour_extraction_service_(image_store_),
       performance_benchmark_service_(image_store_, performance_benchmark_store_),
       pipeline_executor_(image_store_, video_service_, video_tracking_store_, event_hub_, job_queue_, log_store_),
       websocket_gateway_(config_.host, config_.ws_port, event_hub_, log_store_, remote_access_),
@@ -123,6 +125,7 @@ AppContext::AppContext(AppRuntimeConfig config)
           calibration_store_,
           performance_benchmark_store_,
           calibration_service_,
+          contour_extraction_service_,
           performance_benchmark_service_,
           pipeline_executor_,
           config_.static_root) {}

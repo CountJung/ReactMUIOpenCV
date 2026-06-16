@@ -15,6 +15,7 @@
 #include "../storage/VideoTrackingStore.h"
 #include "../video/VideoService.h"
 #include "../vision/CalibrationService.h"
+#include "../vision/ContourExtractionService.h"
 #include "../vision/PerformanceBenchmarkService.h"
 #include "../vision/PipelineExecutor.h"
 
@@ -64,6 +65,7 @@ private:
   CalibrationStore calibration_store_;
   PerformanceBenchmarkStore performance_benchmark_store_;
   CalibrationService calibration_service_;
+  ContourExtractionService contour_extraction_service_;
   PerformanceBenchmarkService performance_benchmark_service_;
   PipelineExecutor pipeline_executor_;
   WebSocketGateway websocket_gateway_;

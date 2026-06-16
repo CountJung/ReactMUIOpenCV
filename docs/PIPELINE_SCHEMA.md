@@ -1,6 +1,6 @@
 # Pipeline JSON Schema
 
-Phase 6 uses one JSON document shape across the React Flow editor and the C++ `PipelineExecutor`. Phase 9B extends the same schema with video input nodes for motion-analysis pipelines. Phase 9C adds ROI object tracking through `trackObject` operation nodes. Phase 9E adds reusable shape-analysis image operations: `blobCentroid`, `convexHull`, `huMoments`, and `houghTransform`. Phase 9F adds advanced image composition and rendering operations such as `inpaint`, `seamlessClone`, `alphaBlend`, `exposureFusion`, `hdrTonemap`, `stylization`, and `pencilSketch`. README showcase generation uses the same operation node shape through `visionSampleBoard`. Phase 9G adds optional DNN operations that run only when model assets are present under `models/dnn`.
+Phase 6 uses one JSON document shape across the React Flow editor and the C++ `PipelineExecutor`. Phase 9B extends the same schema with video input nodes for motion-analysis pipelines. Phase 9C adds ROI object tracking through `trackObject` operation nodes. Phase 9E adds reusable shape-analysis image operations: `blobCentroid`, `convexHull`, `huMoments`, and `houghTransform`. Phase 9F adds advanced image composition and rendering operations such as `inpaint`, `seamlessClone`, `alphaBlend`, `exposureFusion`, `hdrTonemap`, `stylization`, and `pencilSketch`. README showcase generation uses the same operation node shape through `visionSampleBoard`. Phase 9G adds optional DNN operations that run only when model assets are present under `models/dnn`. Phase 9I adds coordinate-based `perspectiveExtract` for reusing Contour Extractor selections in pipelines.
 
 ```json
 {
@@ -103,6 +103,27 @@ Advanced Image Lab rendering operations also use normal image operation nodes an
 ```
 
 The result metadata includes `metadata.sampleBoard.contourCount` and `metadata.sampleBoard.orbKeypoints`.
+
+## Perspective Extract Operation
+
+`perspectiveExtract` creates an independent Image Lab result by warping four selected contour points into a rectangular output. Points are image-space pixels ordered approximately top-left, top-right, bottom-right, bottom-left; the backend reorders defensively before warping.
+
+```json
+{
+  "operation": "perspectiveExtract",
+  "params": {
+    "candidateId": "candidate-1",
+    "points": [
+      { "x": 10, "y": 20 },
+      { "x": 300, "y": 18 },
+      { "x": 310, "y": 240 },
+      { "x": 12, "y": 250 }
+    ]
+  }
+}
+```
+
+The result metadata includes `metadata.contourExtraction.candidateId`, `sourcePoints`, `outputSize`, `area`, and `boundingBox`.
 
 ## Optional DNN Operations
 

@@ -16,6 +16,7 @@ public:
   nlohmann::json run_pixel_access_benchmark(
       const std::string& image_result_id,
       int iterations,
+      int max_iterations,
       const std::function<bool()>& is_cancelled,
       const std::function<void(int, const std::string&)>& report_progress);
 

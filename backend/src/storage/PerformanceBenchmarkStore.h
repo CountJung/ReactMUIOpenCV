@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <string>
 #include <vector>
 
 namespace app {
@@ -13,6 +14,8 @@ public:
 
   nlohmann::json list(bool include_storage_path) const;
   nlohmann::json record(const nlohmann::json& benchmark);
+  bool remove(const std::string& benchmark_id);
+  int clear();
 
 private:
   void load();

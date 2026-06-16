@@ -36,7 +36,8 @@ nlohmann::json vector_to_json(const cv::Mat& vector) {
 }  // namespace
 
 CalibrationService::CalibrationService(ImageResultStore& image_store, CalibrationStore& calibration_store)
-    : image_store_(image_store), calibration_store_(calibration_store) {}
+    : image_store_(image_store),
+      calibration_store_(calibration_store) {}
 
 nlohmann::json CalibrationService::calibrate_from_image(
     const std::string& result_id, int board_width, int board_height, double square_size) {

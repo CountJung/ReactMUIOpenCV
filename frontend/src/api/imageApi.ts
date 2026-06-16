@@ -36,7 +36,8 @@ export type ImageOperation =
   | 'dnnYoloDetection'
   | 'dnnTextDetection'
   | 'dnnPoseEstimation'
-  | 'dnnMaskRcnn';
+  | 'dnnMaskRcnn'
+  | 'perspectiveExtract';
 
 export type ShapeAnalysisMetadata = {
   operation: 'blobCentroid' | 'convexHull' | 'huMoments' | 'houghTransform' | string;
@@ -87,6 +88,14 @@ export type ImageResult = {
       jointCount?: number;
       detections?: unknown[];
       joints?: unknown[];
+    };
+    contourExtraction?: {
+      operation?: string;
+      candidateId?: string;
+      sourcePoints?: Array<{ x: number; y: number }>;
+      outputSize?: { width: number; height: number };
+      area?: number;
+      boundingBox?: { x: number; y: number; width: number; height: number };
     };
     [key: string]: unknown;
   };
