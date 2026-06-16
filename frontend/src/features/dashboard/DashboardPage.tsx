@@ -3,6 +3,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import LanIcon from '@mui/icons-material/Lan';
 import MemoryIcon from '@mui/icons-material/Memory';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import SpeedIcon from '@mui/icons-material/Speed';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import {
   Alert,
@@ -27,6 +28,7 @@ import { getHealth, getServerInfo } from '../../api/client';
 import { absoluteImageUrl, getImageResults } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
 import { getRecentLogs, type LogEntry } from '../../api/logsApi';
+import { getPerformanceBenchmarks } from '../../api/performanceApi';
 import { getPipelines } from '../../api/pipelineApi';
 import { getRemoteStatus } from '../../api/remoteApi';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
@@ -208,6 +210,11 @@ export function DashboardPage() {
     queryFn: getPipelines,
     refetchInterval: 10000,
   });
+  const benchmarksQuery = useQuery({
+    queryKey: ['performance-benchmarks'],
+    queryFn: getPerformanceBenchmarks,
+    refetchInterval: 10000,
+  });
 
   const jobs = jobsQuery.data?.jobs ?? [];
   const logs = logsQuery.data?.logs ?? [];
@@ -216,6 +223,8 @@ export function DashboardPage() {
   const errorLogs = logs.filter((log) => log.level === 'error');
   const remoteStatus = remoteStatusQuery.data;
   const latestResult = results[0];
+  const benchmarks = benchmarksQuery.data?.records ?? [];
+  const latestBenchmark = benchmarks[0];
 
   return (
     <PlaceholderPage
@@ -225,7 +234,10 @@ export function DashboardPage() {
       description="Server-owned runtime state for the local C++ OpenCV backend, remote clients, jobs, logs, and recent media results."
     >
       <Stack spacing={2.5}>
-        {(healthQuery.isError || jobsQuery.isError || logsQuery.isError) && (
+        {(healthQuery.isError ||
+          jobsQuery.isError ||
+          logsQuery.isError ||
+          benchmarksQuery.isError) && (
           <Alert severity="warning">Some backend dashboard data is not available yet.</Alert>
         )}
 
@@ -264,6 +276,19 @@ export function DashboardPage() {
               value={String(errorLogs.length)}
               helper={`${logs.length} recent log entries`}
               color={errorLogs.length > 0 ? 'error' : 'success'}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} lg={3}>
+            <MetricCard
+              icon={SpeedIcon}
+              label="Benchmarks"
+              value={String(benchmarks.length)}
+              helper={
+                latestBenchmark
+                  ? `${latestBenchmark.fastestMethod}, ${latestBenchmark.forEachSpeedupVsPointer.toFixed(2)}x forEach`
+                  : 'No OpenCV pixel samples yet'
+              }
+              color={benchmarks.length > 0 ? 'success' : 'primary'}
             />
           </Grid>
         </Grid>

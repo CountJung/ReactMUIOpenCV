@@ -35,6 +35,10 @@ import { getFileLibrary, type FileLibraryItem } from '../../api/filesApi';
 import { getImageResults, type ImageResult } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
 import {
+  getPerformanceBenchmarks,
+  type PerformanceBenchmarkRecord,
+} from '../../api/performanceApi';
+import {
   getVideoDiagnosticsHistory,
   getVideoTrackingHistory,
   type VideoDiagnosticsRecord,
@@ -42,7 +46,13 @@ import {
 } from '../../api/videoApi';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
 
-type TabKey = 'jobs' | 'results' | 'files' | 'video-diagnostics' | 'video-tracking';
+type TabKey =
+  | 'jobs'
+  | 'results'
+  | 'files'
+  | 'video-diagnostics'
+  | 'video-tracking'
+  | 'performance-benchmarks';
 
 function formatDate(value?: string) {
   if (!value) {
@@ -189,12 +199,18 @@ export function DataGridPage() {
     queryFn: getVideoTrackingHistory,
     refetchInterval: 10000,
   });
+  const benchmarksQuery = useQuery({
+    queryKey: ['performance-benchmarks'],
+    queryFn: getPerformanceBenchmarks,
+    refetchInterval: 10000,
+  });
 
   const jobs = jobsQuery.data?.jobs ?? [];
   const results = resultsQuery.data?.results ?? [];
   const files = filesQuery.data?.files ?? [];
   const diagnostics = diagnosticsQuery.data?.records ?? [];
   const tracking = trackingQuery.data?.records ?? [];
+  const benchmarks = benchmarksQuery.data?.records ?? [];
 
   const jobColumns = useMemo<ColumnDef<JobRecord>[]>(
     () => [
@@ -420,6 +436,57 @@ export function DataGridPage() {
     [],
   );
 
+  const benchmarkColumns = useMemo<ColumnDef<PerformanceBenchmarkRecord>[]>(
+    () => [
+      { accessorKey: 'benchmarkId', header: 'ID' },
+      { accessorKey: 'imageName', header: 'Image' },
+      {
+        id: 'size',
+        header: 'Size',
+        accessorFn: (row) => `${row.width} x ${row.height}`,
+      },
+      { accessorKey: 'iterations', header: 'Iterations' },
+      { accessorKey: 'fastestMethod', header: 'Fastest' },
+      {
+        accessorKey: 'forEachSpeedupVsPointer',
+        header: 'forEach / Pointer',
+        cell: ({ getValue }) => `${getValue<number>().toFixed(2)}x`,
+      },
+      {
+        id: 'methodThroughput',
+        header: 'Method MP/s',
+        cell: ({ row }) => (
+          <Stack spacing={0.25}>
+            {row.original.methods.map((method) => (
+              <Typography key={method.name} variant="caption">
+                {method.label}: {method.megapixelsPerSecond.toFixed(1)}
+              </Typography>
+            ))}
+          </Stack>
+        ),
+      },
+      {
+        id: 'averageMs',
+        header: 'Average ms',
+        cell: ({ row }) => (
+          <Stack spacing={0.25}>
+            {row.original.methods.map((method) => (
+              <Typography key={method.name} variant="caption">
+                {method.name}: {method.averageMs.toFixed(3)}
+              </Typography>
+            ))}
+          </Stack>
+        ),
+      },
+      {
+        accessorKey: 'createdAt',
+        header: 'Created',
+        cell: ({ getValue }) => formatDate(getValue<string>()),
+      },
+    ],
+    [],
+  );
+
   const currentDataCount =
     activeTab === 'jobs'
       ? jobs.length
@@ -429,21 +496,24 @@ export function DataGridPage() {
           ? files.length
           : activeTab === 'video-diagnostics'
             ? diagnostics.length
-            : tracking.length;
+            : activeTab === 'video-tracking'
+              ? tracking.length
+              : benchmarks.length;
 
   return (
     <PlaceholderPage
       title="Data Grid"
       eyebrow="Tables"
       status={`${currentDataCount} rows`}
-      description="Server-owned job history, image results, file library entries, and video diagnostics are browsed in sortable tables."
+      description="Server-owned job history, image results, file library entries, video diagnostics, and OpenCV benchmark records are browsed in sortable tables."
     >
       <Stack spacing={2}>
         {(jobsQuery.isError ||
           resultsQuery.isError ||
           filesQuery.isError ||
           diagnosticsQuery.isError ||
-          trackingQuery.isError) && (
+          trackingQuery.isError ||
+          benchmarksQuery.isError) && (
           <Alert severity="warning">Some table data is not available from the backend.</Alert>
         )}
 
@@ -468,6 +538,7 @@ export function DataGridPage() {
                     value="video-diagnostics"
                   />
                   <Tab label={`Tracking (${tracking.length})`} value="video-tracking" />
+                  <Tab label={`Benchmarks (${benchmarks.length})`} value="performance-benchmarks" />
                 </Tabs>
                 <TextField
                   value={filter}
@@ -522,6 +593,14 @@ export function DataGridPage() {
                   columns={trackingColumns}
                   data={tracking}
                   emptyLabel="Run Track ROI in Video Lab to collect object tracking metadata."
+                  filter={filter}
+                />
+              )}
+              {activeTab === 'performance-benchmarks' && (
+                <ServerTable
+                  columns={benchmarkColumns}
+                  data={benchmarks}
+                  emptyLabel="Assign a performance benchmark job in Charts to collect OpenCV pixel timings."
                   filter={filter}
                 />
               )}

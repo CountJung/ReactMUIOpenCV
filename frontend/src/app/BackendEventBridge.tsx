@@ -17,6 +17,7 @@ const eventInvalidations: Record<string, string[][]> = {
   'video.diagnostics.recorded': [['video-diagnostics']],
   'video.motion.recorded': [['video-diagnostics'], ['jobs']],
   'video.tracking.recorded': [['video-tracking'], ['jobs']],
+  'performance.benchmark.recorded': [['performance-benchmarks'], ['jobs']],
   'pipeline.node.started': [['jobs'], ['pipelines']],
   'pipeline.node.completed': [['jobs'], ['pipelines']],
   'pipeline.node.failed': [['jobs'], ['pipelines']],

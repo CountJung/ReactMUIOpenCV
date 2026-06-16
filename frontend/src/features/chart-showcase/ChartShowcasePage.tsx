@@ -5,6 +5,7 @@ import DonutLargeIcon from '@mui/icons-material/DonutLarge';
 import ImageIcon from '@mui/icons-material/Image';
 import MovieFilterIcon from '@mui/icons-material/MovieFilter';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SpeedIcon from '@mui/icons-material/Speed';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import {
   Alert,
@@ -25,6 +26,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { getImageResults, processImage, type ImageOperation } from '../../api/imageApi';
 import { getJobs, type JobRecord } from '../../api/jobsApi';
+import { getPerformanceBenchmarks, runPerformanceBenchmark } from '../../api/performanceApi';
 import { executePipeline, getPipelines } from '../../api/pipelineApi';
 import {
   exportVideo,
@@ -40,7 +42,12 @@ type ChartDatum = {
   value: number;
 };
 
-type JobTemplate = 'image' | 'video-preview' | 'video-export' | 'pipeline';
+type JobTemplate =
+  | 'image'
+  | 'video-preview'
+  | 'video-export'
+  | 'pipeline'
+  | 'performance-benchmark';
 
 const imageOperationOptions: Array<{ value: ImageOperation; label: string }> = [
   { value: 'grayscale', label: 'Grayscale' },
@@ -180,6 +187,7 @@ export function ChartShowcasePage() {
   const [selectedPipelineId, setSelectedPipelineId] = useState('');
   const [imageOperation, setImageOperation] = useState<ImageOperation>('grayscale');
   const [videoFilter, setVideoFilter] = useState<VideoFilter>('grayscale');
+  const [benchmarkIterations, setBenchmarkIterations] = useState(5);
   const [assignedJob, setAssignedJob] = useState<JobRecord | null>(null);
 
   const jobsQuery = useQuery({ queryKey: ['jobs'], queryFn: getJobs, refetchInterval: 5000 });
@@ -203,12 +211,18 @@ export function ChartShowcasePage() {
     queryFn: getVideoDiagnosticsHistory,
     refetchInterval: 10000,
   });
+  const benchmarksQuery = useQuery({
+    queryKey: ['performance-benchmarks'],
+    queryFn: getPerformanceBenchmarks,
+    refetchInterval: 10000,
+  });
 
   const jobs = jobsQuery.data?.jobs ?? [];
   const results = imageResultsQuery.data?.results ?? [];
   const executions = pipelinesQuery.data?.executions ?? [];
   const videos = videosQuery.data?.videos ?? [];
   const diagnostics = diagnosticsQuery.data?.records ?? [];
+  const benchmarks = benchmarksQuery.data?.records ?? [];
   const pipelines = pipelinesQuery.data?.pipelines ?? [];
   const statusData = toData(countBy(jobs, (job) => job.status));
   const operationData = toData(countBy(results, (result) => result.operation));
@@ -229,6 +243,12 @@ export function ChartShowcasePage() {
         (diagnostic.averageFlowMagnitude ?? diagnostic.trackedFeatures ?? 0).toFixed(1),
       ),
     }));
+  const latestBenchmark = benchmarks[0];
+  const benchmarkMethodData =
+    latestBenchmark?.methods.map((method) => ({
+      label: method.label,
+      value: Number(method.megapixelsPerSecond.toFixed(1)),
+    })) ?? [];
   const effectiveImageId = selectedImageId || results[0]?.resultId || '';
   const effectiveVideoId = selectedVideoId || videos[0]?.videoId || '';
   const effectivePipelineId = selectedPipelineId || pipelines[0]?.id || '';
@@ -242,6 +262,14 @@ export function ChartShowcasePage() {
           resultId: effectiveImageId,
           operation: imageOperation,
           params: defaultImageParams(imageOperation),
+        });
+        return response.job;
+      }
+
+      if (jobTemplate === 'performance-benchmark') {
+        const response = await runPerformanceBenchmark({
+          resultId: effectiveImageId,
+          iterations: benchmarkIterations,
         });
         return response.job;
       }
@@ -278,12 +306,14 @@ export function ChartShowcasePage() {
       void queryClient.invalidateQueries({ queryKey: ['jobs'] });
       void queryClient.invalidateQueries({ queryKey: ['image-results'] });
       void queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      void queryClient.invalidateQueries({ queryKey: ['performance-benchmarks'] });
     },
   });
 
   const canAssignJob =
     !assignJobMutation.isPending &&
     ((jobTemplate === 'image' && Boolean(effectiveImageId)) ||
+      (jobTemplate === 'performance-benchmark' && Boolean(effectiveImageId)) ||
       ((jobTemplate === 'video-preview' || jobTemplate === 'video-export') &&
         Boolean(effectiveVideoId)) ||
       (jobTemplate === 'pipeline' && Boolean(selectedPipeline)));
@@ -293,14 +323,15 @@ export function ChartShowcasePage() {
       title="Chart Showcase"
       eyebrow="Analytics"
       status={`${jobs.length} jobs`}
-      description="Processing statistics are derived from server-owned job records, image results, pipeline executions, and video diagnostics."
+      description="Processing statistics are derived from server-owned job records, image results, pipeline executions, video diagnostics, and OpenCV benchmark samples."
     >
       <Stack spacing={2.5}>
         {(jobsQuery.isError ||
           imageResultsQuery.isError ||
           pipelinesQuery.isError ||
           videosQuery.isError ||
-          diagnosticsQuery.isError) && (
+          diagnosticsQuery.isError ||
+          benchmarksQuery.isError) && (
           <Alert severity="warning">Some chart data is not available from the backend.</Alert>
         )}
         {assignJobMutation.isError && (
@@ -353,6 +384,12 @@ export function ChartShowcasePage() {
                       <Stack direction="row" spacing={1} alignItems="center">
                         <ImageIcon fontSize="small" />
                         <span>Image operation</span>
+                      </Stack>
+                    </MenuItem>
+                    <MenuItem value="performance-benchmark">
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <SpeedIcon fontSize="small" />
+                        <span>Performance benchmark</span>
                       </Stack>
                     </MenuItem>
                     <MenuItem value="video-preview">
@@ -414,6 +451,45 @@ export function ChartShowcasePage() {
                           </MenuItem>
                         ))}
                       </TextField>
+                    </Grid>
+                  </>
+                )}
+
+                {jobTemplate === 'performance-benchmark' && (
+                  <>
+                    <Grid item xs={12} md={5}>
+                      <TextField
+                        select
+                        label="Image Result"
+                        size="small"
+                        fullWidth
+                        value={effectiveImageId}
+                        onChange={(event) => setSelectedImageId(event.target.value)}
+                      >
+                        <MenuItem value="" disabled>
+                          No image result selected
+                        </MenuItem>
+                        {results.map((result) => (
+                          <MenuItem key={result.resultId} value={result.resultId}>
+                            {result.name} - {result.width}x{result.height}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                    <Grid item xs={12} md={2}>
+                      <TextField
+                        label="Iterations"
+                        size="small"
+                        fullWidth
+                        type="number"
+                        value={benchmarkIterations}
+                        inputProps={{ min: 1, max: 20 }}
+                        onChange={(event) =>
+                          setBenchmarkIterations(
+                            Math.max(1, Math.min(20, Number(event.target.value) || 1)),
+                          )
+                        }
+                      />
                     </Grid>
                   </>
                 )}
@@ -582,6 +658,28 @@ export function ChartShowcasePage() {
               </CardContent>
             </Card>
           </Grid>
+          <Grid item xs={12} md={3}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <SpeedIcon color="primary" />
+                    <Typography variant="h6">Pixel Benchmarks</Typography>
+                  </Stack>
+                  <BarList
+                    data={benchmarkMethodData}
+                    emptyLabel="Assign a performance benchmark job to compare pixel loops."
+                  />
+                  {latestBenchmark && (
+                    <Typography variant="caption" color="text.secondary">
+                      Latest: {latestBenchmark.imageName}, {latestBenchmark.width}x
+                      {latestBenchmark.height}, fastest {latestBenchmark.fastestMethod}
+                    </Typography>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
 
         <Card>
@@ -611,6 +709,7 @@ export function ChartShowcasePage() {
                     size="small"
                     variant="outlined"
                   />
+                  <Chip label={`${benchmarks.length} benchmarks`} size="small" variant="outlined" />
                 </Stack>
               </Stack>
               <TimelineBars jobs={jobs} />

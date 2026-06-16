@@ -143,8 +143,8 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 
 ### Pack 9H - Performance Instrumentation
 
-- [ ] Add performance demo for parallel pixel access with OpenCV `forEach` and compare it with existing filter implementations.
-- [ ] Record benchmark samples as jobs and chart them in Dashboard/Charts.
+- [x] Add performance demo for parallel pixel access with OpenCV `forEach` and compare it with existing filter implementations.
+- [x] Record benchmark samples as jobs and chart them in Dashboard/Charts.
 - Agent focus: backend benchmark service, job/event integration, chart visualization.
 
 ### Pack 9I - Interactive Contour Perspective Extraction

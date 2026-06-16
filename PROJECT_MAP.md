@@ -40,6 +40,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `data/video-diagnostics.json`: Backend-owned persisted Video Lab FPS/read diagnostics and motion/stabilization metrics. Created at runtime when Measure FPS or Analyze Motion is executed.
 - `data/video-tracking.json`: Backend-owned persisted object-tracking summaries and per-frame ROI metadata. Created at runtime when Track ROI or a `trackObject` pipeline node is executed.
 - `data/calibration-results.json`: Backend-owned persisted camera calibration artifacts. Created at runtime when Image Lab records a calibration result.
+- `data/performance-benchmarks.json`: Backend-owned persisted OpenCV pixel-access benchmark samples. Created at runtime when Charts assigns a `Performance benchmark` job.
 - `models/dnn/README.md`: Optional OpenCV DNN model-asset guide. Large model/config/label files are ignored by Git; the backend discovers supported files under `models/dnn`, can download approved public catalog packages, and rejects paths outside that folder.
 
 ## Documentation
@@ -49,6 +50,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `docs/USER_GUIDE.md`: Korean end-user guide for desktop app mode, web mode, LAN mode, installation, and troubleshooting.
 - `docs/DEVELOPER_SETUP_GUIDE.md`: Korean step-by-step developer onboarding guide for first setup, VS Code debug preparation, React/C++ resource linking, Release build, and publish bundle creation.
 - `docs/PIPELINE_SCHEMA.md`: Shared Phase 6 pipeline document schema used by React Flow and the C++ `PipelineExecutor`, including optional DNN image operations backed by `models/dnn` assets.
+- `docs/PERFORMANCE_BENCHMARKS.md`: Korean guide for running Pack 9H OpenCV `forEach`/pointer-loop/built-in filter benchmark jobs and inspecting Dashboard, Charts, and Data Grid results.
 - `docs/PUBLISHING.md`: Korean guide for creating `/publish` bundles and uploading zip artifacts to an external web server.
 - `docs/BUILD_AND_DEBUG_POLICY.md`: Korean policy for root Release builds, VS Code debug readiness, executable verification, and publish requirements.
 - `docs/CODING_GUIDE.md`: Korean coding guide for human contributors covering backend structure, frontend structure, API/event rules, UI rules, and verification.
@@ -66,7 +68,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `frontend/src/app/providers.tsx`: Global providers such as TanStack Query and theme.
 - `frontend/src/app/router.tsx`: React Router route tree.
 - `frontend/src/theme/`: MUI theme tokens, component overrides, mode resolution, theme context, and theme provider.
-- `frontend/src/api/`: REST and WebSocket client code. `remoteApi.ts` owns Remote Access and Network Info calls; `imageApi.ts` owns Image Lab open/upload/process/save/result/calibration/DNN model discovery/catalog/download calls; `videoApi.ts` owns Video Lab open/upload/frame/extract/export/motion metrics/tracking calls; `pipelineApi.ts` owns Phase 6 pipeline document, CRUD, execution, and execution result types including image/video/tracking nodes; `jobsApi.ts`, `logsApi.ts`, and `filesApi.ts` feed Dashboard, Charts, Logs, and Data Grid state.
+- `frontend/src/api/`: REST and WebSocket client code. `remoteApi.ts` owns Remote Access and Network Info calls; `imageApi.ts` owns Image Lab open/upload/process/save/result/calibration/DNN model discovery/catalog/download calls; `videoApi.ts` owns Video Lab open/upload/frame/extract/export/motion metrics/tracking calls; `performanceApi.ts` owns OpenCV pixel benchmark job/history calls; `pipelineApi.ts` owns Phase 6 pipeline document, CRUD, execution, and execution result types including image/video/tracking nodes; `jobsApi.ts`, `logsApi.ts`, and `filesApi.ts` feed Dashboard, Charts, Logs, and Data Grid state.
 - `frontend/src/runtime/`: Desktop vs LAN runtime detection and adapters. `fileAdapter.ts` hides local-path vs upload image/video opening.
 - `frontend/src/store/`: Client-owned UI state stores. `useImageLabStore.ts` preserves Image Lab path/result/filter/parameter state across route navigation.
 - `frontend/src/features/`: Route-level pages for dashboard, remote access, image/video lab, pipeline, charts, data grid, logs, and settings. Image Lab keeps reusable operation labels/default parameters in `frontend/src/features/image-lab/imageOperations.ts`, parameter controls in `frontend/src/features/image-lab/ImageOperationControls.tsx`, and an opened/uploaded source picker in `ImageLabPage.tsx`. Video Lab exposes opened/uploaded videos as a reusable library in `VideoLabPage.tsx`. Pipeline Flow keeps reusable node/operation choices in `frontend/src/features/pipeline-flow/pipelineOptions.ts`.
@@ -93,12 +95,14 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/src/storage/VideoDiagnosticsStore.*`: Backend-owned Video Lab diagnostics records persisted to `data/video-diagnostics.json`, including measured read FPS, metadata FPS, sample frames, optical-flow/stabilization metrics, elapsed time, and storage location metadata for loopback clients.
 - `backend/src/storage/VideoTrackingStore.*`: Backend-owned object tracking records persisted to `data/video-tracking.json`, including ROI, per-frame bounding boxes, match scores, status, and storage location metadata for loopback clients. Uses owner-managed `std::shared_mutex` with shared reads and unique writes.
 - `backend/src/storage/CalibrationStore.*`: Backend-owned camera calibration records persisted to `data/calibration-results.json`, including board settings, RMS error, camera matrix, distortion coefficients, and storage location metadata for loopback clients.
+- `backend/src/storage/PerformanceBenchmarkStore.*`: Backend-owned OpenCV benchmark records persisted to `data/performance-benchmarks.json`, including image size, iteration count, method timings, throughput, fastest method, and storage location metadata for loopback clients.
 - `backend/src/image/ImageResultStore.*`: Image open/upload/process/save result storage, `resultId` lookup, and preview retrieval.
 - `backend/src/image/ImageFilters.*`: OpenCV image operation implementations, including alignment previews, calibration-board corner overlay, QR scanner overlay utilities, shape/composition filters, and the README-style `visionSampleBoard` generator.
 - `backend/src/image/DnnModelCatalog.*`: Approved public DNN model package catalog and WinHTTP downloader. Downloads only fixed catalog URLs into `models/dnn`, validates target paths, and reports job progress.
 - `backend/src/image/ImageDnnFilters.*`: Optional OpenCV DNN image operations for face detection, YOLO object detection, EAST text detection, pose estimation, and Mask R-CNN; also owns guarded `models/dnn` asset discovery and relative-path validation.
 - `backend/src/video/VideoService.*`: Video open/upload metadata extraction, preview frame reading, frame extraction, filter preview, optical-flow overlay, LK feature translation stabilization, template-match ROI tracking, motion metrics, and MJPG export.
 - `backend/src/vision/CalibrationService.*`: Camera calibration utility service. Reads Image Lab result previews, detects chessboard corners, runs OpenCV calibration, and stores artifacts through `CalibrationStore`.
+- `backend/src/vision/PerformanceBenchmarkService.*`: OpenCV performance instrumentation service. Reads Image Lab result previews, compares manual pointer pixel access, OpenCV `forEach`, and `bitwise_not`, reports job progress, and records benchmark samples.
 - `backend/src/vision/PipelineExecutor.*`: Phase 6 C++ image/video pipeline execution over React Flow JSON, Image Lab result IDs, Video Lab video IDs, OpenCV operation nodes, node events, and cached intermediate results, motion metrics, or tracking metadata.
 
 ## VSCode
