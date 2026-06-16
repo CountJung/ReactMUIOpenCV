@@ -31,6 +31,7 @@ export const operationLabels: Array<{ value: ImageOperation; label: string }> = 
   { value: 'hdrTonemap', label: 'HDR Tonemap' },
   { value: 'stylization', label: 'Stylization' },
   { value: 'pencilSketch', label: 'Pencil Sketch' },
+  { value: 'visionSampleBoard', label: 'Vision Sample Board' },
 ];
 
 export const alignmentUtilityOperations: ImageOperation[] = ['featureAlign', 'eccAlign', 'qrScan'];
@@ -49,6 +50,7 @@ export const advancedRenderOperations: ImageOperation[] = [
   'stylization',
   'pencilSketch',
 ];
+export const sampleBoardOperations: ImageOperation[] = ['visionSampleBoard'];
 
 export function labelForOperation(operation: ImageOperation) {
   return operationLabels.find((item) => item.value === operation)?.label ?? operation;
@@ -130,6 +132,8 @@ export function defaultParams(operation: ImageOperation, result?: ImageResult): 
       return { sigmaS: 60, sigmaR: 0.45 };
     case 'pencilSketch':
       return { mode: 'color', sigmaS: 60, sigmaR: 0.07, shade: 0.02 };
+    case 'visionSampleBoard':
+      return { tileWidth: 350, tileHeight: 460 };
     default:
       return {};
   }

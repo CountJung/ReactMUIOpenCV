@@ -47,6 +47,7 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 - [x] Add Desktop local image open flow through the runtime file adapter.
 - [x] Add browser upload flow for LAN clients where allowed.
 - [x] Implement OpenCV image operations: open, save, resize, crop, rotate, grayscale, blur, sharpen, threshold, edge detect, contour detect, histogram, color conversion, and compare.
+- [x] Add an Image Lab `Vision Sample Board` operation that generates the README-style 2x3 OpenCV comparison image from a single input.
 - [x] Store image results by `resultId` and expose preview retrieval.
 - [x] Build before/after comparison UI with parameter controls and error states.
 - [x] Ensure mobile can inspect results without arbitrary local file access.
@@ -121,6 +122,7 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 - [x] Add shape-analysis operations for blob centroid, convex hull, Hu moments, and Hough transform based on LearnOpenCV examples.
 - [x] Show result overlays and structured shape metadata in Data Grid.
 - [x] Add corresponding pipeline operation nodes for reusable inspections.
+- [x] Add a reusable pipeline operation for the README-style vision sample board so the same showcase output can be regenerated inside the app.
 - Agent focus: image filters/vision metadata, preview overlays, table schema.
 
 ### Pack 9F - Advanced Image Composition And Rendering

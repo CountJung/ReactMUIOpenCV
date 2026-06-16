@@ -6,11 +6,33 @@
 #include "ImageFilters.h"
 
 #include <algorithm>
+#include <fstream>
+#include <iterator>
 #include <opencv2/imgcodecs.hpp>
 #include <stdexcept>
 #include <vector>
 
 namespace app {
+
+namespace {
+
+cv::Mat read_image_file(const std::filesystem::path& path) {
+  std::ifstream stream(path, std::ios::binary);
+  if (!stream) {
+    throw std::runtime_error("Image file was not found.");
+  }
+
+  const std::vector<unsigned char> bytes{
+      std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
+  const auto image = cv::imdecode(bytes, cv::IMREAD_UNCHANGED);
+  if (image.empty()) {
+    throw std::runtime_error("OpenCV could not decode the image.");
+  }
+
+  return image;
+}
+
+}  // namespace
 
 nlohmann::json image_metadata_to_json(const ImageResultRecord& record) {
   auto metadata = nlohmann::json{
@@ -41,15 +63,12 @@ nlohmann::json ImageResultStore::open_local(const std::filesystem::path& path) {
     throw std::runtime_error("Unsupported image extension.");
   }
 
-  const auto image = cv::imread(path.string(), cv::IMREAD_UNCHANGED);
-  if (image.empty()) {
-    throw std::runtime_error("OpenCV could not decode the image.");
-  }
+  const auto image = read_image_file(path);
 
   return add(
-      path.filename().string(),
+      path_to_utf8(path.filename()),
       "localPath",
-      path.lexically_normal().string(),
+      path_to_utf8(path.lexically_normal()),
       image,
       image,
       "open",

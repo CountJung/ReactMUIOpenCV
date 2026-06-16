@@ -79,6 +79,11 @@ export const operationOptions: Array<{
     label: 'Pencil Sketch',
     defaultParams: { mode: 'color', sigmaS: 60, sigmaR: 0.07, shade: 0.02 },
   },
+  {
+    value: 'visionSampleBoard',
+    label: 'Vision Sample Board',
+    defaultParams: { tileWidth: 350, tileHeight: 460 },
+  },
   { value: 'opticalFlow', label: 'Optical Flow', defaultParams: { sampleFrames: 120 } },
   { value: 'stabilize', label: 'Video Stabilize', defaultParams: { sampleFrames: 120 } },
   {

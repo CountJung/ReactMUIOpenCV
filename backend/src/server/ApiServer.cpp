@@ -3,6 +3,7 @@
 #include "../common/Constants.h"
 #include "../common/HttpUtils.h"
 #include "../common/Random.h"
+#include "../common/StringUtils.h"
 
 #include <fstream>
 #include <filesystem>
@@ -269,7 +270,7 @@ void ApiServer::register_routes() {
     }
 
     try {
-      const auto result = image_store_.open_local(std::filesystem::path(path));
+      const auto result = image_store_.open_local(path_from_utf8(path));
       event_hub_.publish("preview.image.updated", result);
       log_store_.append("info", "Opened local image " + path);
       send_data(response, result, 201);

@@ -30,7 +30,8 @@ export type ImageOperation =
   | 'exposureFusion'
   | 'hdrTonemap'
   | 'stylization'
-  | 'pencilSketch';
+  | 'pencilSketch'
+  | 'visionSampleBoard';
 
 export type ShapeAnalysisMetadata = {
   operation: 'blobCentroid' | 'convexHull' | 'huMoments' | 'houghTransform' | string;
@@ -65,6 +66,14 @@ export type ImageResult = {
     composition?: {
       operation?: string;
       [key: string]: unknown;
+    };
+    sampleBoard?: {
+      operation?: string;
+      tileWidth?: number;
+      tileHeight?: number;
+      contourCount?: number;
+      orbKeypoints?: number;
+      stages?: string[];
     };
     [key: string]: unknown;
   };

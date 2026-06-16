@@ -1,6 +1,6 @@
 # Pipeline JSON Schema
 
-Phase 6 uses one JSON document shape across the React Flow editor and the C++ `PipelineExecutor`. Phase 9B extends the same schema with video input nodes for motion-analysis pipelines. Phase 9C adds ROI object tracking through `trackObject` operation nodes. Phase 9E adds reusable shape-analysis image operations: `blobCentroid`, `convexHull`, `huMoments`, and `houghTransform`. Phase 9F adds advanced image composition and rendering operations such as `inpaint`, `seamlessClone`, `alphaBlend`, `exposureFusion`, `hdrTonemap`, `stylization`, and `pencilSketch`.
+Phase 6 uses one JSON document shape across the React Flow editor and the C++ `PipelineExecutor`. Phase 9B extends the same schema with video input nodes for motion-analysis pipelines. Phase 9C adds ROI object tracking through `trackObject` operation nodes. Phase 9E adds reusable shape-analysis image operations: `blobCentroid`, `convexHull`, `huMoments`, and `houghTransform`. Phase 9F adds advanced image composition and rendering operations such as `inpaint`, `seamlessClone`, `alphaBlend`, `exposureFusion`, `hdrTonemap`, `stylization`, and `pencilSketch`. README showcase generation uses the same operation node shape through `visionSampleBoard`.
 
 ```json
 {
@@ -87,6 +87,22 @@ Shape-analysis operations use the normal image operation node shape and produce 
 ## Advanced Rendering Operations
 
 Advanced Image Lab rendering operations also use normal image operation nodes and produce cached Image Lab results. `inpaint` accepts mask presets such as `edges`, `bright`, `dark`, or `center`; `seamlessClone` accepts a source ROI and target center; `alphaBlend` blends the current result against the original image; `exposureFusion` synthesizes exposure variants; `hdrTonemap` applies a Reinhard tonemap preview; `stylization` and `pencilSketch` use OpenCV non-photorealistic rendering filters.
+
+## README Sample Board Operation
+
+`visionSampleBoard` creates a single Image Lab result containing original, CLAHE, Canny edge overlay, adaptive threshold, contour overlay, and ORB feature-point panels.
+
+```json
+{
+  "operation": "visionSampleBoard",
+  "params": {
+    "tileWidth": 350,
+    "tileHeight": 460
+  }
+}
+```
+
+The result metadata includes `metadata.sampleBoard.contourCount` and `metadata.sampleBoard.orbKeypoints`.
 
 ## Execution
 

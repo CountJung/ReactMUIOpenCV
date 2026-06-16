@@ -43,6 +43,8 @@ Agents must read this file before broad file exploration. Use it to jump directl
 
 ## Documentation
 
+- `docs/assets/readme/`: README에서 GitHub에 바로 렌더링하는 정적 쇼케이스 이미지 자산. 현재 `opencv-vision-sample.png`는 로컬 샘플 이미지를 OpenCV CLAHE, Canny, adaptive threshold, contour detection, ORB feature detection으로 가공한 비교판이다.
+- `docs/OPENCV_README_SAMPLE_GUIDE.md`: Korean step-by-step guide for generating the README OpenCV showcase image through the app's Image Lab `Vision Sample Board` operation and reusing it in Pipeline Flow.
 - `docs/USER_GUIDE.md`: Korean end-user guide for desktop app mode, web mode, LAN mode, installation, and troubleshooting.
 - `docs/DEVELOPER_SETUP_GUIDE.md`: Korean step-by-step developer onboarding guide for first setup, VS Code debug preparation, React/C++ resource linking, Release build, and publish bundle creation.
 - `docs/PIPELINE_SCHEMA.md`: Shared Phase 6 pipeline document schema used by React Flow and the C++ `PipelineExecutor`.
@@ -91,7 +93,7 @@ Agents must read this file before broad file exploration. Use it to jump directl
 - `backend/src/storage/VideoTrackingStore.*`: Backend-owned object tracking records persisted to `data/video-tracking.json`, including ROI, per-frame bounding boxes, match scores, status, and storage location metadata for loopback clients. Uses owner-managed `std::shared_mutex` with shared reads and unique writes.
 - `backend/src/storage/CalibrationStore.*`: Backend-owned camera calibration records persisted to `data/calibration-results.json`, including board settings, RMS error, camera matrix, distortion coefficients, and storage location metadata for loopback clients.
 - `backend/src/image/ImageResultStore.*`: Image open/upload/process/save result storage, `resultId` lookup, and preview retrieval.
-- `backend/src/image/ImageFilters.*`: OpenCV image operation implementations, including alignment previews, calibration-board corner overlay, and QR scanner overlay utilities.
+- `backend/src/image/ImageFilters.*`: OpenCV image operation implementations, including alignment previews, calibration-board corner overlay, QR scanner overlay utilities, shape/composition filters, and the README-style `visionSampleBoard` generator.
 - `backend/src/video/VideoService.*`: Video open/upload metadata extraction, preview frame reading, frame extraction, filter preview, optical-flow overlay, LK feature translation stabilization, template-match ROI tracking, motion metrics, and MJPG export.
 - `backend/src/vision/CalibrationService.*`: Camera calibration utility service. Reads Image Lab result previews, detects chessboard corners, runs OpenCV calibration, and stores artifacts through `CalibrationStore`.
 - `backend/src/vision/PipelineExecutor.*`: Phase 6 C++ image/video pipeline execution over React Flow JSON, Image Lab result IDs, Video Lab video IDs, OpenCV operation nodes, node events, and cached intermediate results, motion metrics, or tracking metadata.

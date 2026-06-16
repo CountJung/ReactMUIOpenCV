@@ -49,6 +49,7 @@ import {
   defaultParams,
   labelForOperation,
   operationLabels,
+  sampleBoardOperations,
   shapeAnalysisOperations,
 } from './imageOperations';
 
@@ -548,6 +549,46 @@ export function ImageLabPage() {
                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                       <Chip
                         label={String(activeResult.metadata.composition.operation ?? 'composition')}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Stack>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Typography variant="h6">README Sample Board</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Generate the same 2x3 OpenCV comparison image shown in the README from the
+                    current Image Lab result.
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {sampleBoardOperations.map((utility) => (
+                      <Chip
+                        key={utility}
+                        label={labelForOperation(utility)}
+                        color={operation === utility ? 'primary' : 'default'}
+                        onClick={() => {
+                          setOperation(utility);
+                          setParams(defaultParams(utility, activeResult ?? undefined));
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                  {activeResult?.metadata?.sampleBoard && (
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                      <Chip
+                        label={`Contours ${activeResult.metadata.sampleBoard.contourCount ?? 0}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                      <Chip
+                        label={`ORB ${activeResult.metadata.sampleBoard.orbKeypoints ?? 0}`}
                         size="small"
                         variant="outlined"
                       />

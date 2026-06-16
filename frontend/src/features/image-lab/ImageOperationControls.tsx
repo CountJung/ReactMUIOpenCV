@@ -400,6 +400,22 @@ export function ImageOperationControls({
           )}
         </>
       )}
+      {operation === 'visionSampleBoard' && (
+        <>
+          <Grid item xs={12}>
+            <Typography variant="body2" color="text.secondary">
+              Creates the README-style 2x3 board from the current image: original, CLAHE, Canny,
+              adaptive threshold, contours, and ORB feature points.
+            </Typography>
+          </Grid>
+          <Grid item xs={6}>
+            {renderNumberField('tileWidth', 'Tile W', 220)}
+          </Grid>
+          <Grid item xs={6}>
+            {renderNumberField('tileHeight', 'Tile H', 260)}
+          </Grid>
+        </>
+      )}
     </Grid>
   );
 }

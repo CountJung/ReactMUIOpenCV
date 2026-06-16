@@ -4,6 +4,14 @@ React + TypeScript + MUI UI, WebView2 desktop host, C++20 + CMake + OpenCV backe
 
 이 문서는 새 Windows PC에 VS Code와 Git만 설치되어 있고, GitHub에서 이 저장소를 내려받은 상태를 기준으로 설명합니다. 모든 실제 작업 스크립트는 `scripts/` 아래에 있습니다. 루트 `build.ps1`은 기존 VS Code/문서 호환을 위한 얇은 위임 스크립트입니다.
 
+## 한눈에 보는 OpenCV 쇼케이스
+
+Image Lab에서 이미지를 열거나 업로드하면 C++ OpenCV 백엔드가 필터, 특징점, 윤곽선, 임계값 처리 같은 결과를 만들고 React UI가 같은 결과를 데스크톱 앱과 브라우저에서 보여줍니다. Pipeline Flow에서는 같은 연산을 노드로 연결해 단계별 미리보기와 메타데이터를 재사용할 수 있습니다.
+
+![OpenCV vision processing sample](docs/assets/readme/opencv-vision-sample.png)
+
+위 샘플은 하나의 입력 이미지에 OpenCV `CLAHE`, `Canny`, adaptive threshold, contour detection, `ORB` feature detection을 적용한 README용 예시입니다. GitHub 저장소 첫 화면에서 이 프로젝트를 이미지 처리 실험실, 비전 파이프라인, LAN 공유 미리보기 도구로 확장할 수 있다는 감을 바로 주기 위한 정적 샘플입니다. 같은 형태의 결과는 앱의 Image Lab에서 `Vision Sample Board` 연산으로 생성할 수 있으며, 조작 방법은 `docs\OPENCV_README_SAMPLE_GUIDE.md`에 정리되어 있습니다.
+
 ## 빠른 시작
 
 PowerShell을 열고 저장소 루트에서 실행합니다.
@@ -241,3 +249,4 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1
 - `docs\BUILD_AND_DEBUG_POLICY.md`: 빌드/디버그 정책
 - `docs\PUBLISHING.md`: 배포 번들 생성 및 검증
 - `docs\CODING_GUIDE.md`: 구현 규칙
+- `docs\OPENCV_README_SAMPLE_GUIDE.md`: README OpenCV 샘플 이미지 재생성 가이드

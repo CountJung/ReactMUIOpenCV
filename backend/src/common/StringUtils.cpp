@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <iterator>
+#include <string>
 #include <utility>
 
 namespace app {
@@ -28,6 +30,20 @@ bool has_supported_extension(const std::filesystem::path& path, std::initializer
   const auto extension = lowercase_copy(path.extension().string());
   return std::any_of(
       extensions.begin(), extensions.end(), [&](std::string_view supported) { return extension == supported; });
+}
+
+std::filesystem::path path_from_utf8(std::string_view value) {
+  std::u8string utf8;
+  utf8.reserve(value.size());
+  std::transform(value.begin(), value.end(), std::back_inserter(utf8), [](char character) {
+    return static_cast<char8_t>(static_cast<unsigned char>(character));
+  });
+  return std::filesystem::path(utf8);
+}
+
+std::string path_to_utf8(const std::filesystem::path& path) {
+  const auto utf8 = path.generic_u8string();
+  return {reinterpret_cast<const char*>(utf8.data()), utf8.size()};
 }
 
 }  // namespace app

@@ -208,6 +208,159 @@ ImageOperationResult apply_pencil_sketch_filter(const cv::Mat& source, const nlo
       {{"composition", {{"operation", "pencilSketch"}, {"mode", mode}}}}};
 }
 
+cv::Mat fit_cover(const cv::Mat& source, int width, int height) {
+  const auto scale =
+      std::max(static_cast<double>(width) / static_cast<double>(source.cols),
+               static_cast<double>(height) / static_cast<double>(source.rows));
+  cv::Mat resized;
+  cv::resize(source, resized, cv::Size(), scale, scale, cv::INTER_AREA);
+
+  const int x = std::max(0, (resized.cols - width) / 2);
+  const int y = std::max(0, (resized.rows - height) / 2);
+  return resized(cv::Rect(x, y, width, height)).clone();
+}
+
+void draw_sample_text(
+    cv::Mat& target,
+    const std::string& text,
+    const cv::Point& origin,
+    double scale,
+    const cv::Scalar& color,
+    int thickness = 1) {
+  cv::putText(target, text, origin, cv::FONT_HERSHEY_SIMPLEX, scale, color, thickness, cv::LINE_AA);
+}
+
+ImageOperationResult apply_vision_sample_board(const cv::Mat& source, const nlohmann::json& params) {
+  const int tile_width = std::clamp(json_int(params, "tileWidth", 350), 220, 640);
+  const int tile_height = std::clamp(json_int(params, "tileHeight", 460), 260, 760);
+  constexpr int label_height = 44;
+  constexpr int pad = 18;
+  constexpr int header_height = 74;
+  constexpr int footer_height = 46;
+  constexpr int cols = 3;
+  constexpr int rows = 2;
+  const int board_width = cols * tile_width + (cols + 1) * pad;
+  const int board_height = header_height + rows * (tile_height + label_height) + (rows + 1) * pad + footer_height;
+
+  cv::Mat board(board_height, board_width, CV_8UC3, cv::Scalar(26, 32, 44));
+  const cv::Scalar text_color(244, 247, 251);
+  const cv::Scalar muted_color(175, 185, 198);
+  const cv::Scalar card_color(38, 47, 62);
+
+  draw_sample_text(board, "OpenCV Vision Samples", cv::Point(pad, 42), 1.08, text_color, 2);
+  draw_sample_text(
+      board,
+      "Image Lab and Pipeline Flow can turn one image into inspectable processing results.",
+      cv::Point(pad, 66),
+      0.48,
+      muted_color);
+
+  const cv::Mat work = fit_cover(to_bgr(source), tile_width, tile_height);
+  const cv::Mat gray = to_gray(work);
+  cv::Mat blur;
+  cv::GaussianBlur(gray, blur, cv::Size(5, 5), 0);
+
+  cv::Mat clahe;
+  cv::createCLAHE(2.2, cv::Size(8, 8))->apply(gray, clahe);
+  cv::Mat clahe_bgr;
+  cv::cvtColor(clahe, clahe_bgr, cv::COLOR_GRAY2BGR);
+
+  cv::Mat edges;
+  cv::Canny(blur, edges, 45, 130);
+  cv::Mat edges_dilated;
+  cv::dilate(edges, edges_dilated, cv::Mat::ones(2, 2, CV_8U), cv::Point(-1, -1), 1);
+  cv::Mat edge_overlay;
+  cv::addWeighted(work, 0.34, cv::Mat::zeros(work.size(), work.type()), 0.66, 0.0, edge_overlay);
+  edge_overlay.setTo(cv::Scalar(36, 215, 255), edges_dilated);
+
+  cv::Mat adaptive;
+  cv::adaptiveThreshold(blur, adaptive, 255, cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY, 31, 4);
+  cv::Mat adaptive_bgr;
+  cv::cvtColor(adaptive, adaptive_bgr, cv::COLOR_GRAY2BGR);
+
+  std::vector<std::vector<cv::Point>> contours;
+  cv::findContours(edges, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  std::vector<std::vector<cv::Point>> filtered;
+  std::copy_if(contours.begin(), contours.end(), std::back_inserter(filtered), [](const auto& contour) {
+    const auto area = cv::contourArea(contour);
+    return area > 55.0 && area < 9000.0;
+  });
+
+  cv::Mat contour_overlay;
+  cv::addWeighted(work, 0.62, cv::Mat::zeros(work.size(), work.type()), 0.38, 0.0, contour_overlay);
+  cv::drawContours(contour_overlay, filtered, -1, cv::Scalar(88, 235, 160), 1, cv::LINE_AA);
+  std::sort(filtered.begin(), filtered.end(), [](const auto& left, const auto& right) {
+    return cv::contourArea(left) > cv::contourArea(right);
+  });
+  for (std::size_t index = 0; index < filtered.size() && index < 8; ++index) {
+    const auto bounds = cv::boundingRect(filtered[index]);
+    if (bounds.width > 10 && bounds.height > 10) {
+      cv::rectangle(contour_overlay, bounds, cv::Scalar(255, 205, 72), 1, cv::LINE_AA);
+    }
+  }
+
+  auto orb = cv::ORB::create(180, 1.2F, 8, 12);
+  std::vector<cv::KeyPoint> keypoints;
+  orb->detect(gray, keypoints);
+  std::sort(keypoints.begin(), keypoints.end(), [](const auto& left, const auto& right) {
+    return left.response > right.response;
+  });
+  if (keypoints.size() > 90) {
+    keypoints.resize(90);
+  }
+  cv::Mat feature_keypoints;
+  cv::drawKeypoints(
+      work,
+      keypoints,
+      feature_keypoints,
+      cv::Scalar(255, 105, 210),
+      cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+  cv::Mat feature_overlay;
+  cv::addWeighted(work, 0.72, feature_keypoints, 0.58, 0.0, feature_overlay);
+
+  const std::array<std::pair<std::string, cv::Mat>, 6> samples = {
+      std::pair<std::string, cv::Mat>{"Original input", work},
+      {"Grayscale + CLAHE", clahe_bgr},
+      {"Canny edge map", edge_overlay},
+      {"Adaptive threshold", adaptive_bgr},
+      {"Contour overlay", contour_overlay},
+      {"ORB feature points", feature_overlay},
+  };
+
+  for (std::size_t index = 0; index < samples.size(); ++index) {
+    const int row = static_cast<int>(index) / cols;
+    const int col = static_cast<int>(index) % cols;
+    const int x = pad + col * (tile_width + pad);
+    const int y = header_height + pad + row * (tile_height + label_height + pad);
+    cv::rectangle(
+        board,
+        cv::Rect(x - 1, y - 1, tile_width + 2, label_height + tile_height + 2),
+        cv::Scalar(58, 70, 89),
+        1,
+        cv::LINE_AA);
+    board(cv::Rect(x, y, tile_width, label_height)).setTo(card_color);
+    draw_sample_text(board, samples[index].first, cv::Point(x + 14, y + 29), 0.55, text_color);
+    samples[index].second.copyTo(board(cv::Rect(x, y + label_height, tile_width, tile_height)));
+  }
+
+  draw_sample_text(
+      board,
+      "Generated inside ReactMUIOpenCV with OpenCV: CLAHE, Canny, adaptive threshold, contours, and ORB.",
+      cv::Point(pad, board_height - 22),
+      0.45,
+      muted_color);
+
+  return {
+      board,
+      {{"sampleBoard",
+        {{"operation", "visionSampleBoard"},
+         {"tileWidth", tile_width},
+         {"tileHeight", tile_height},
+         {"contourCount", filtered.size()},
+         {"orbKeypoints", keypoints.size()},
+         {"stages", {"original", "clahe", "canny", "adaptiveThreshold", "contours", "orb"}}}}}};
+}
+
 std::vector<std::vector<cv::Point>> find_shape_contours(const cv::Mat& source, const nlohmann::json& params) {
   const double threshold = std::clamp(json_double(params, "threshold", 128.0), 0.0, 255.0);
   const int min_area = std::clamp(json_int(params, "minArea", 80), 1, 1000000);
@@ -800,6 +953,10 @@ ImageOperationResult apply_image_operation(
 
   if (operation == "pencilSketch") {
     return apply_pencil_sketch_filter(source, params);
+  }
+
+  if (operation == "visionSampleBoard") {
+    return apply_vision_sample_board(source, params);
   }
 
   throw std::runtime_error("Unsupported image operation: " + operation);
