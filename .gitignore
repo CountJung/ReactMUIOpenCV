@@ -60,6 +60,11 @@ outputs/
 *.log
 reference/
 
+# Optional DNN model assets are large; keep only the local guide tracked.
+models/dnn/*
+!models/dnn/
+!models/dnn/README.md
+
 # Environment files
 .env
 .env.*

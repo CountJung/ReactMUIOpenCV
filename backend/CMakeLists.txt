@@ -24,6 +24,8 @@ add_executable(ReactMUIOpenCV
   src/common/Random.cpp
   src/common/StringUtils.cpp
   src/common/Time.cpp
+  src/image/DnnModelCatalog.cpp
+  src/image/ImageDnnFilters.cpp
   src/image/ImageFilters.cpp
   src/image/ImageResultStore.cpp
   src/jobs/JobQueue.cpp
@@ -54,7 +56,7 @@ target_link_libraries(ReactMUIOpenCV
 )
 
 if(WIN32)
-  target_link_libraries(ReactMUIOpenCV PRIVATE Bcrypt Ws2_32)
+  target_link_libraries(ReactMUIOpenCV PRIVATE Bcrypt Ws2_32 Winhttp)
 endif()
 
 target_compile_definitions(ReactMUIOpenCV

@@ -4,6 +4,8 @@
 #include "../common/HttpUtils.h"
 #include "../common/Random.h"
 #include "../common/StringUtils.h"
+#include "../image/DnnModelCatalog.h"
+#include "../image/ImageDnnFilters.h"
 
 #include <fstream>
 #include <filesystem>
@@ -309,6 +311,55 @@ void ApiServer::register_routes() {
 
   server_.Get("/api/images/results", [&](const httplib::Request&, httplib::Response& response) {
     send_data(response, image_store_.list());
+  });
+
+  server_.Get("/api/dnn/models", [&](const httplib::Request&, httplib::Response& response) {
+    try {
+      send_data(response, list_dnn_model_assets());
+    } catch (const std::exception& error) {
+      log_store_.append("error", "DNN model discovery failed: " + std::string(error.what()));
+      send_error(response, "dnn_model_discovery_failed", error.what(), 500);
+    }
+  });
+
+  server_.Get("/api/dnn/catalog", [&](const httplib::Request&, httplib::Response& response) {
+    try {
+      send_data(response, list_dnn_model_packages());
+    } catch (const std::exception& error) {
+      log_store_.append("error", "DNN model catalog failed: " + std::string(error.what()));
+      send_error(response, "dnn_model_catalog_failed", error.what(), 500);
+    }
+  });
+
+  server_.Post("/api/dnn/download", [&](const httplib::Request& request, httplib::Response& response) {
+    if (!is_loopback_or_control(request, response)) {
+      return;
+    }
+
+    const auto body = parse_body(request);
+    const auto package_id = body.value("packageId", std::string{});
+    if (package_id.empty()) {
+      send_error(response, "invalid_dnn_download_request", "packageId is required.", 400);
+      return;
+    }
+
+    const auto job =
+        job_queue_.create_manual("dnn-model-download", "Downloading DNN model package " + package_id + ".");
+    const auto job_id = job.value("id", std::string{});
+    job_queue_.start(job_id, "DNN model download started.");
+    try {
+      const auto package = download_dnn_model_package(
+          package_id,
+          [&]() { return job_queue_.is_cancelled(job_id); },
+          [&](int progress, const std::string& message) { job_queue_.progress(job_id, progress, message); });
+      const auto completed_job = job_queue_.complete(job_id, "DNN model package downloaded.");
+      log_store_.append("info", "Downloaded DNN model package " + package_id);
+      send_data(response, {{"job", completed_job.value_or(job)}, {"package", package}}, 201);
+    } catch (const std::exception& error) {
+      const auto failed_job = job_queue_.fail(job_id, error.what());
+      log_store_.append("error", "DNN model download failed: " + std::string(error.what()));
+      send_error(response, "dnn_model_download_failed", error.what(), job_queue_.is_cancelled(job_id) ? 409 : 400);
+    }
   });
 
   server_.Post("/api/images/process", [&](const httplib::Request& request, httplib::Response& response) {
@@ -849,8 +900,10 @@ void ApiServer::mount_static_files() {
     server_.set_error_handler(
         [static_root = static_root_](const httplib::Request& request, httplib::Response& response) {
           if (request.method != "GET" || request.path.rfind("/api", 0) == 0) {
-            response.status = 404;
-            response.set_content("Not found", "text/plain");
+            if (response.body.empty()) {
+              response.status = 404;
+              response.set_content("Not found", "text/plain");
+            }
             return;
           }
 

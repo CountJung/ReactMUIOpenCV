@@ -136,8 +136,9 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 
 ### Pack 9G - Optional DNN Examples
 
-- [ ] Add DNN-based examples behind optional model assets: face detection, YOLO object detection, text detection, pose estimation, and Mask R-CNN.
-- [ ] Add model asset discovery, missing-model guidance, and guarded execution so default builds remain lightweight.
+- [x] Add DNN-based examples behind optional model assets: face detection, YOLO object detection, text detection, pose estimation, and Mask R-CNN.
+- [x] Add model asset discovery, missing-model guidance, and guarded execution so default builds remain lightweight.
+- [x] Add an approved public model catalog and Image Lab download/use flow for local `models/dnn` assets.
 - Agent focus: optional model management, backend validation, security/path checks, UI guidance.
 
 ### Pack 9H - Performance Instrumentation

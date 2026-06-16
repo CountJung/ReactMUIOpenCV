@@ -2,6 +2,7 @@
 
 #include "../common/OpenCvUtils.h"
 #include "../common/StringUtils.h"
+#include "ImageDnnFilters.h"
 
 #include <algorithm>
 #include <array>
@@ -949,6 +950,10 @@ ImageOperationResult apply_image_operation(
 
   if (operation == "visionSampleBoard") {
     return apply_vision_sample_board(source, params);
+  }
+
+  if (is_dnn_operation(operation)) {
+    return apply_dnn_operation(source, operation, params);
   }
 
   throw std::runtime_error("Unsupported image operation: " + operation);

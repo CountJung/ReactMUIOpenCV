@@ -10,6 +10,7 @@
       "default-features": false,
       "features": [
         "calib3d",
+        "dnn",
         "dshow",
         "jpeg",
         "msmf",

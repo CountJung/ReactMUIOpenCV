@@ -32,6 +32,11 @@ export const operationLabels: Array<{ value: ImageOperation; label: string }> = 
   { value: 'stylization', label: 'Stylization' },
   { value: 'pencilSketch', label: 'Pencil Sketch' },
   { value: 'visionSampleBoard', label: 'Vision Sample Board' },
+  { value: 'dnnFaceDetection', label: 'DNN Face Detection' },
+  { value: 'dnnYoloDetection', label: 'DNN YOLO Detection' },
+  { value: 'dnnTextDetection', label: 'DNN Text Detection' },
+  { value: 'dnnPoseEstimation', label: 'DNN Pose Estimation' },
+  { value: 'dnnMaskRcnn', label: 'DNN Mask R-CNN' },
 ];
 
 export const alignmentUtilityOperations: ImageOperation[] = ['featureAlign', 'eccAlign', 'qrScan'];
@@ -51,6 +56,13 @@ export const advancedRenderOperations: ImageOperation[] = [
   'pencilSketch',
 ];
 export const sampleBoardOperations: ImageOperation[] = ['visionSampleBoard'];
+export const dnnOperations: ImageOperation[] = [
+  'dnnFaceDetection',
+  'dnnYoloDetection',
+  'dnnTextDetection',
+  'dnnPoseEstimation',
+  'dnnMaskRcnn',
+];
 
 export function labelForOperation(operation: ImageOperation) {
   return operationLabels.find((item) => item.value === operation)?.label ?? operation;
@@ -154,6 +166,68 @@ export function defaultParams(operation: ImageOperation, result?: ImageResult): 
       return { mode: 'color', sigmaS: 60, sigmaR: 0.07, shade: 0.02 };
     case 'visionSampleBoard':
       return sampleBoardTileParams(result);
+    case 'dnnFaceDetection':
+      return {
+        modelPath: '',
+        configPath: '',
+        inputWidth: 300,
+        inputHeight: 300,
+        confidenceThreshold: 0.5,
+        scale: 1,
+        meanB: 104,
+        meanG: 177,
+        meanR: 123,
+        swapRB: 0,
+      };
+    case 'dnnYoloDetection':
+      return {
+        modelPath: '',
+        labelsPath: '',
+        inputWidth: 640,
+        inputHeight: 640,
+        confidenceThreshold: 0.35,
+        nmsThreshold: 0.45,
+        scale: 0.0039215686,
+        meanB: 0,
+        meanG: 0,
+        meanR: 0,
+        swapRB: 1,
+      };
+    case 'dnnTextDetection':
+      return {
+        modelPath: '',
+        inputWidth: 320,
+        inputHeight: 320,
+        confidenceThreshold: 0.5,
+      };
+    case 'dnnPoseEstimation':
+      return {
+        modelPath: '',
+        configPath: '',
+        inputWidth: 368,
+        inputHeight: 368,
+        confidenceThreshold: 0.2,
+        scale: 0.0039215686,
+        meanB: 0,
+        meanG: 0,
+        meanR: 0,
+        swapRB: 1,
+      };
+    case 'dnnMaskRcnn':
+      return {
+        modelPath: '',
+        configPath: '',
+        labelsPath: '',
+        inputWidth: 800,
+        inputHeight: 800,
+        confidenceThreshold: 0.5,
+        maskThreshold: 0.3,
+        scale: 0.0039215686,
+        meanB: 0,
+        meanG: 0,
+        meanR: 0,
+        swapRB: 1,
+      };
     default:
       return {};
   }

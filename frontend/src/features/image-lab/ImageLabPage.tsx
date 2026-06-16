@@ -1,4 +1,5 @@
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
@@ -27,6 +28,9 @@ import {
   absoluteImageUrl,
   createCalibrationResult,
   deleteImageResult,
+  downloadDnnModelPackage,
+  getDnnModelCatalog,
+  getDnnModels,
   getCalibrationResults,
   getImageResult,
   getImageResults,
@@ -47,6 +51,7 @@ import {
   advancedRenderOperations,
   alignmentUtilityOperations,
   defaultParams,
+  dnnOperations,
   labelForOperation,
   operationLabels,
   sampleBoardOperations,
@@ -57,6 +62,21 @@ const imageResultsQueryKey = ['image-results'];
 
 function mutationErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Image operation failed.';
+}
+
+function formatBytes(value: number) {
+  if (value <= 0) {
+    return 'size varies';
+  }
+
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let amount = value;
+  let unitIndex = 0;
+  while (amount >= 1024 && unitIndex < units.length - 1) {
+    amount /= 1024;
+    unitIndex += 1;
+  }
+  return `${amount.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
 function PreviewPanel({
@@ -149,6 +169,18 @@ export function ImageLabPage() {
     refetchInterval: 15000,
   });
 
+  const dnnModelsQuery = useQuery({
+    queryKey: ['dnn-models'],
+    queryFn: getDnnModels,
+    refetchInterval: 15000,
+  });
+
+  const dnnCatalogQuery = useQuery({
+    queryKey: ['dnn-model-catalog'],
+    queryFn: getDnnModelCatalog,
+    refetchInterval: 15000,
+  });
+
   const activeResult = resultQuery.data ?? currentResult;
   const sourceResults = useMemo(
     () => (resultsQuery.data?.results ?? []).filter((result) => result.operation === 'open'),
@@ -220,6 +252,18 @@ export function ImageLabPage() {
     },
   });
 
+  const downloadDnnMutation = useMutation({
+    mutationFn: downloadDnnModelPackage,
+    onSuccess: ({ package: modelPackage }) => {
+      setOperation(modelPackage.operation);
+      setParams(modelPackage.params);
+      setSavePath(null);
+      void queryClient.invalidateQueries({ queryKey: ['dnn-models'] });
+      void queryClient.invalidateQueries({ queryKey: ['dnn-model-catalog'] });
+      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    },
+  });
+
   const beforeUrl = activeResult ? absoluteImageUrl(activeResult.originalPreviewUrl) : undefined;
   const afterUrl = activeResult ? absoluteImageUrl(activeResult.previewUrl) : undefined;
   const busy =
@@ -228,14 +272,16 @@ export function ImageLabPage() {
     processMutation.isPending ||
     calibrationMutation.isPending ||
     saveMutation.isPending ||
-    deleteMutation.isPending;
+    deleteMutation.isPending ||
+    downloadDnnMutation.isPending;
   const currentError =
     openLocalMutation.error ??
     uploadMutation.error ??
     processMutation.error ??
     calibrationMutation.error ??
     saveMutation.error ??
-    deleteMutation.error;
+    deleteMutation.error ??
+    downloadDnnMutation.error;
 
   const changeOperation = (event: ChangeEvent<HTMLInputElement>) => {
     const nextOperation = event.target.value as ImageOperation;
@@ -626,6 +672,145 @@ export function ImageLabPage() {
                       />
                     </Stack>
                   )}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Typography variant="h6">Optional DNN Examples</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Put model, config, and label files under models/dnn, then use the relative file
+                    names in the operation parameters.
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {dnnOperations.map((utility) => (
+                      <Chip
+                        key={utility}
+                        label={labelForOperation(utility)}
+                        color={operation === utility ? 'primary' : 'default'}
+                        onClick={() => {
+                          setOperation(utility);
+                          setParams(defaultParams(utility, activeResult ?? undefined));
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Chip
+                      label={`${dnnModelsQuery.data?.models.length ?? 0} assets`}
+                      size="small"
+                      variant="outlined"
+                    />
+                    <Chip label="models/dnn" size="small" variant="outlined" />
+                    {activeResult?.metadata?.dnn?.detectionCount !== undefined && (
+                      <Chip
+                        label={`Detections ${activeResult.metadata.dnn.detectionCount}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                    {activeResult?.metadata?.dnn?.jointCount !== undefined && (
+                      <Chip
+                        label={`Joints ${activeResult.metadata.dnn.jointCount}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    )}
+                  </Stack>
+                  <Stack spacing={0.75} sx={{ maxHeight: 120, overflowY: 'auto', pr: 0.5 }}>
+                    {(dnnModelsQuery.data?.models ?? []).slice(0, 8).map((asset) => (
+                      <Typography
+                        key={asset.relativePath}
+                        variant="body2"
+                        color="text.secondary"
+                        noWrap
+                      >
+                        {asset.kind}: {asset.relativePath}
+                      </Typography>
+                    ))}
+                    {dnnModelsQuery.data?.models.length === 0 && (
+                      <Typography color="text.secondary">
+                        No model assets found. See models/dnn/README.md for expected filenames.
+                      </Typography>
+                    )}
+                  </Stack>
+                  <Divider />
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2">Downloadable Model Packages</Typography>
+                    <Stack spacing={1} sx={{ maxHeight: 260, overflowY: 'auto', pr: 0.5 }}>
+                      {(dnnCatalogQuery.data?.packages ?? []).map((modelPackage) => (
+                        <Stack
+                          key={modelPackage.id}
+                          spacing={0.75}
+                          sx={{
+                            border: 1,
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            p: 1,
+                          }}
+                        >
+                          <Stack
+                            direction="row"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            gap={1}
+                          >
+                            <Stack minWidth={0}>
+                              <Typography variant="subtitle2" noWrap>
+                                {modelPackage.label}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" noWrap>
+                                {labelForOperation(modelPackage.operation)} ·{' '}
+                                {formatBytes(modelPackage.totalBytes)}
+                              </Typography>
+                            </Stack>
+                            {modelPackage.downloaded ? (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => {
+                                  setOperation(modelPackage.operation);
+                                  setParams(modelPackage.params);
+                                  setSavePath(null);
+                                }}
+                              >
+                                Use
+                              </Button>
+                            ) : (
+                              <Button
+                                size="small"
+                                startIcon={<CloudDownloadIcon />}
+                                onClick={() => downloadDnnMutation.mutate(modelPackage.id)}
+                                disabled={busy}
+                              >
+                                Download
+                              </Button>
+                            )}
+                          </Stack>
+                          <Typography variant="body2" color="text.secondary">
+                            {modelPackage.description}
+                          </Typography>
+                          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                            <Chip
+                              label={modelPackage.downloaded ? 'ready' : 'not downloaded'}
+                              size="small"
+                              color={modelPackage.downloaded ? 'success' : 'default'}
+                              variant="outlined"
+                            />
+                            <Chip label={modelPackage.source} size="small" variant="outlined" />
+                          </Stack>
+                        </Stack>
+                      ))}
+                      {dnnCatalogQuery.data?.packages.length === 0 && (
+                        <Typography color="text.secondary">
+                          No downloadable packages configured.
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Stack>
                 </Stack>
               </CardContent>
             </Card>

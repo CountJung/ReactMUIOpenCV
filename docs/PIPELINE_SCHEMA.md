@@ -1,6 +1,6 @@
 # Pipeline JSON Schema
 
-Phase 6 uses one JSON document shape across the React Flow editor and the C++ `PipelineExecutor`. Phase 9B extends the same schema with video input nodes for motion-analysis pipelines. Phase 9C adds ROI object tracking through `trackObject` operation nodes. Phase 9E adds reusable shape-analysis image operations: `blobCentroid`, `convexHull`, `huMoments`, and `houghTransform`. Phase 9F adds advanced image composition and rendering operations such as `inpaint`, `seamlessClone`, `alphaBlend`, `exposureFusion`, `hdrTonemap`, `stylization`, and `pencilSketch`. README showcase generation uses the same operation node shape through `visionSampleBoard`.
+Phase 6 uses one JSON document shape across the React Flow editor and the C++ `PipelineExecutor`. Phase 9B extends the same schema with video input nodes for motion-analysis pipelines. Phase 9C adds ROI object tracking through `trackObject` operation nodes. Phase 9E adds reusable shape-analysis image operations: `blobCentroid`, `convexHull`, `huMoments`, and `houghTransform`. Phase 9F adds advanced image composition and rendering operations such as `inpaint`, `seamlessClone`, `alphaBlend`, `exposureFusion`, `hdrTonemap`, `stylization`, and `pencilSketch`. README showcase generation uses the same operation node shape through `visionSampleBoard`. Phase 9G adds optional DNN operations that run only when model assets are present under `models/dnn`.
 
 ```json
 {
@@ -103,6 +103,28 @@ Advanced Image Lab rendering operations also use normal image operation nodes an
 ```
 
 The result metadata includes `metadata.sampleBoard.contourCount` and `metadata.sampleBoard.orbKeypoints`.
+
+## Optional DNN Operations
+
+DNN operations use the normal image operation node shape and require model files stored below `models/dnn`. The backend accepts relative paths only and rejects absolute paths or `..` traversal. Available operations are `dnnFaceDetection`, `dnnYoloDetection`, `dnnTextDetection`, `dnnPoseEstimation`, and `dnnMaskRcnn`.
+
+```json
+{
+  "operation": "dnnYoloDetection",
+  "params": {
+    "modelPath": "yolo/yolov8n.onnx",
+    "labelsPath": "yolo/coco.names",
+    "inputWidth": 640,
+    "inputHeight": 640,
+    "confidenceThreshold": 0.35,
+    "nmsThreshold": 0.45,
+    "scale": 0.0039215686,
+    "swapRB": 1
+  }
+}
+```
+
+Model discovery is available through `GET /api/dnn/models`; Image Lab shows the discovered relative paths in the Optional DNN Examples card. Public model packages are listed through `GET /api/dnn/catalog` and downloaded through `POST /api/dnn/download` with `{ "packageId": "yolo11n-coco" }`. The backend only downloads fixed catalog URLs into `models/dnn`; arbitrary URL download is intentionally not supported.
 
 ## Execution
 

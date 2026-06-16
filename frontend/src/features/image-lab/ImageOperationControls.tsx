@@ -13,6 +13,8 @@ export function ImageOperationControls({
   params,
   setParam,
 }: ImageOperationControlsProps) {
+  const isDnnOperation = operation.startsWith('dnn');
+
   const renderNumberField = (key: string, label: string, minimum = 0, step = 1) => (
     <TextField
       key={key}
@@ -40,6 +42,18 @@ export function ImageOperationControls({
         onChange={(_, value) => setParam(key, Array.isArray(value) ? value[0] : value)}
       />
     </Stack>
+  );
+
+  const renderTextField = (key: string, label: string, placeholder?: string) => (
+    <TextField
+      key={key}
+      label={label}
+      value={params[key] ?? ''}
+      onChange={(event) => setParam(key, event.target.value)}
+      placeholder={placeholder}
+      size="small"
+      fullWidth
+    />
   );
 
   return (
@@ -414,6 +428,74 @@ export function ImageOperationControls({
           <Grid item xs={6}>
             {renderNumberField('tileHeight', 'Tile H', 260)}
           </Grid>
+        </>
+      )}
+      {isDnnOperation && (
+        <>
+          <Grid item xs={12}>
+            <Typography variant="body2" color="text.secondary">
+              Select files from models/dnn using relative paths. The backend rejects absolute paths
+              and paths outside that folder.
+            </Typography>
+          </Grid>
+          <Grid item xs={12}>
+            {renderTextField('modelPath', 'Model Path', 'detector.onnx')}
+          </Grid>
+          {operation !== 'dnnTextDetection' && operation !== 'dnnYoloDetection' && (
+            <Grid item xs={12}>
+              {renderTextField('configPath', 'Config Path', 'deploy.prototxt or graph.pbtxt')}
+            </Grid>
+          )}
+          {(operation === 'dnnYoloDetection' || operation === 'dnnMaskRcnn') && (
+            <Grid item xs={12}>
+              {renderTextField('labelsPath', 'Labels Path', 'classes.names')}
+            </Grid>
+          )}
+          <Grid item xs={6}>
+            {renderNumberField('inputWidth', 'Input W', 32)}
+          </Grid>
+          <Grid item xs={6}>
+            {renderNumberField('inputHeight', 'Input H', 32)}
+          </Grid>
+          <Grid item xs={12}>
+            {renderSlider('confidenceThreshold', 'Confidence', 0.01, 1, 0.01)}
+          </Grid>
+          {(operation === 'dnnYoloDetection' || operation === 'dnnMaskRcnn') && (
+            <Grid item xs={12}>
+              {renderSlider(
+                operation === 'dnnYoloDetection' ? 'nmsThreshold' : 'maskThreshold',
+                operation === 'dnnYoloDetection' ? 'NMS' : 'Mask Threshold',
+                0.01,
+                1,
+                0.01,
+              )}
+            </Grid>
+          )}
+          {operation !== 'dnnTextDetection' && (
+            <>
+              <Grid item xs={6}>
+                {renderNumberField('scale', 'Scale', 0.000001, 0.000001)}
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  select
+                  label="Swap RB"
+                  value={params.swapRB ?? 1}
+                  onChange={(event) => setParam('swapRB', Number(event.target.value))}
+                  fullWidth
+                  size="small"
+                >
+                  <MenuItem value={1}>Yes</MenuItem>
+                  <MenuItem value={0}>No</MenuItem>
+                </TextField>
+              </Grid>
+              {(['meanB', 'meanG', 'meanR'] as const).map((key) => (
+                <Grid key={key} item xs={4}>
+                  {renderNumberField(key, key.replace('mean', 'Mean '), -255)}
+                </Grid>
+              ))}
+            </>
+          )}
         </>
       )}
     </Grid>

@@ -31,7 +31,12 @@ export type ImageOperation =
   | 'hdrTonemap'
   | 'stylization'
   | 'pencilSketch'
-  | 'visionSampleBoard';
+  | 'visionSampleBoard'
+  | 'dnnFaceDetection'
+  | 'dnnYoloDetection'
+  | 'dnnTextDetection'
+  | 'dnnPoseEstimation'
+  | 'dnnMaskRcnn';
 
 export type ShapeAnalysisMetadata = {
   operation: 'blobCentroid' | 'convexHull' | 'huMoments' | 'houghTransform' | string;
@@ -75,9 +80,49 @@ export type ImageResult = {
       orbKeypoints?: number;
       stages?: string[];
     };
+    dnn?: {
+      operation?: string;
+      modelRoot?: string;
+      detectionCount?: number;
+      jointCount?: number;
+      detections?: unknown[];
+      joints?: unknown[];
+    };
     [key: string]: unknown;
   };
 };
+
+export type DnnModelAsset = {
+  relativePath: string;
+  name: string;
+  extension: string;
+  kind: 'model' | 'config' | 'labels' | string;
+  sizeBytes: number;
+};
+
+export type DnnModelCatalogAsset = {
+  relativePath: string;
+  url: string;
+  kind: 'model' | 'config' | 'labels' | string;
+  sizeBytes: number;
+  downloaded: boolean;
+};
+
+export type DnnModelPackage = {
+  id: string;
+  label: string;
+  operation: ImageOperation;
+  description: string;
+  source: string;
+  sourceUrl: string;
+  licenseNote: string;
+  params: Record<string, ImageParamValueLike>;
+  totalBytes: number;
+  downloaded: boolean;
+  assets: DnnModelCatalogAsset[];
+};
+
+type ImageParamValueLike = string | number;
 
 export type ProcessImageResponse = {
   job: {
@@ -176,6 +221,24 @@ export function deleteImageResult(resultId: string) {
 
 export function getImageResults() {
   return apiRequest<{ results: ImageResult[] }>('/api/images/results');
+}
+
+export function getDnnModels() {
+  return apiRequest<{ root: string; models: DnnModelAsset[] }>('/api/dnn/models');
+}
+
+export function getDnnModelCatalog() {
+  return apiRequest<{ root: string; packages: DnnModelPackage[] }>('/api/dnn/catalog');
+}
+
+export function downloadDnnModelPackage(packageId: string) {
+  return apiRequest<{
+    job: ProcessImageResponse['job'];
+    package: DnnModelPackage;
+  }>('/api/dnn/download', {
+    method: 'POST',
+    body: JSON.stringify({ packageId }),
+  });
 }
 
 export function getCalibrationResults() {
