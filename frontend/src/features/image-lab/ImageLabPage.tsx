@@ -150,6 +150,10 @@ export function ImageLabPage() {
   });
 
   const activeResult = resultQuery.data ?? currentResult;
+  const sourceResults = useMemo(
+    () => (resultsQuery.data?.results ?? []).filter((result) => result.operation === 'open'),
+    [resultsQuery.data?.results],
+  );
 
   const openLocalMutation = useMutation({
     mutationFn: () => openImageFromLocalPath(localPath, runtimeMode),
@@ -331,6 +335,34 @@ export function ImageLabPage() {
                         }}
                       />
                     </Button>
+                  </Stack>
+
+                  <Divider />
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2">Uploaded / Opened Images</Typography>
+                    <Stack spacing={1} sx={{ maxHeight: 180, overflowY: 'auto', pr: 0.5 }}>
+                      {sourceResults.map((result) => (
+                        <Button
+                          key={result.resultId}
+                          variant={
+                            result.resultId === activeResult?.resultId ? 'contained' : 'outlined'
+                          }
+                          onClick={() => {
+                            setCurrentResult(result);
+                            setParams(defaultParams(operation, result));
+                            setSavePath(null);
+                          }}
+                          sx={{ justifyContent: 'flex-start', textAlign: 'left' }}
+                        >
+                          {result.name} - {result.width}x{result.height}
+                        </Button>
+                      ))}
+                      {sourceResults.length === 0 && (
+                        <Typography color="text.secondary">
+                          Open or upload an image once, then reuse it here.
+                        </Typography>
+                      )}
+                    </Stack>
                   </Stack>
 
                   {activeResult && (

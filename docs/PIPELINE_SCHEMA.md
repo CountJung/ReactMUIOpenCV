@@ -90,7 +90,7 @@ Advanced Image Lab rendering operations also use normal image operation nodes an
 
 ## README Sample Board Operation
 
-`visionSampleBoard` creates a single Image Lab result containing original, CLAHE, Canny edge overlay, adaptive threshold, contour overlay, and ORB feature-point panels.
+`visionSampleBoard` creates a single Image Lab result containing original, CLAHE, Canny edge overlay, adaptive threshold, contour overlay, and ORB feature-point panels. If `tileWidth` or `tileHeight` is omitted, the backend chooses a default tile size from the input image aspect ratio.
 
 ```json
 {

@@ -54,7 +54,7 @@ D:\ArielNetworks\Media\ChatGPT Image 2025년 3월 31일 오후 05_40_00.png
 3. `Open Path`를 누릅니다.
 4. `README Sample Board` 카드에서 `Vision Sample Board` 칩을 누릅니다.
 5. `Operation` 카드의 `Filter` 값이 `Vision Sample Board`로 바뀐 것을 확인합니다.
-6. README와 같은 기본 결과를 원하면 `Tile W = 350`, `Tile H = 460`을 그대로 둡니다.
+6. `Tile W`, `Tile H`는 열린 이미지의 가로/세로 비율에 맞춰 자동으로 채워집니다. 다른 비율의 이미지를 올려도 보드가 자연스럽게 나오며, 필요하면 값을 직접 조정합니다.
 7. `Apply`를 누릅니다.
 8. 오른쪽 또는 아래쪽 `After` 미리보기에서 2x3 비교판을 확인합니다.
 9. 파일로 저장하려면 `Save PNG`를 누릅니다.
@@ -88,7 +88,7 @@ GitHub는 저장소 안의 상대 경로 이미지를 README에서 바로 렌더
 1. `Pipeline Flow`로 이동합니다.
 2. `Image Input` 노드에 Image Lab에서 만든 원본 `resultId`를 지정합니다.
 3. `Operation` 노드의 operation을 `Vision Sample Board`로 선택합니다.
-4. 기본 params는 다음 값으로 둡니다.
+4. params를 비워두면 백엔드가 입력 이미지 비율로 타일 크기를 자동 산정합니다. 직접 고정하려면 다음처럼 지정합니다.
 
 ```json
 {
@@ -116,5 +116,6 @@ GitHub는 저장소 안의 상대 경로 이미지를 README에서 바로 렌더
 
 - `Open Path`가 비활성화되어 있으면 LAN 모드 또는 브라우저 업로드 흐름일 수 있습니다. 앱 모드에서 실행하거나 `Upload`로 이미지를 올립니다.
 - 결과가 README와 다르게 보이면 원본 이미지에서 바로 `Vision Sample Board`를 실행했는지 확인합니다. 이미 필터가 적용된 결과에서 실행하면 그 결과를 다시 입력으로 사용합니다.
-- `Tile W`, `Tile H`를 바꾸면 전체 보드 크기와 crop 구성이 달라집니다. README와 같은 형식을 원하면 기본값 `350`, `460`을 사용합니다.
+- `Tile W`, `Tile H`를 바꾸면 전체 보드 크기와 crop 구성이 달라집니다. 여러 이미지 비율을 비교하려면 먼저 자동값을 사용하고, 같은 크기로 맞춰 비교해야 할 때만 수동으로 고정합니다.
+- 이미 올린 이미지는 `Image Lab`의 `Uploaded / Opened Images` 목록에서 다시 선택할 수 있습니다. 이미 올린 동영상도 `Video Lab`의 `Uploaded / Opened Videos` 목록에서 다시 선택할 수 있습니다.
 - 저장 위치가 궁금하면 `Save PNG` 후 표시되는 성공 메시지의 경로를 확인합니다.

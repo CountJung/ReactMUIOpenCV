@@ -25,7 +25,9 @@ Use this skill to keep the backend responsible for serving the React app, exposi
 8. Keep route handlers thin. Put processing, security, and storage logic in services.
 9. Prefer RAII value members for simple concrete services, but use heap ownership when objects are heavy, polymorphic, replaceable, or need stable lifetime. Prefer `std::unique_ptr` for exclusive heap ownership.
 10. In multi-threaded owner classes, keep lock ownership in the class that owns the mutable state. Prefer `std::shared_mutex` with `std::shared_lock` for reads and `std::unique_lock` for writes when read concurrency is useful.
-11. Before adding file-local utility helpers, check `backend/src/common/*Utils.*`. Shared helpers such as OpenCV color conversion, ROI/rect JSON, extension checks, filename sanitizing, and safe JSON extraction belong there instead of being reimplemented per `.cpp`.
+11. Before adding file-local utility helpers, check `backend/src/common/*Utils.*`. Shared helpers such as OpenCV color conversion, ROI/rect JSON, extension checks, filename sanitizing, UTF-8 path handling, and safe JSON extraction belong there instead of being reimplemented per `.cpp`.
+12. When similar backend behavior already exists, prefer calling or extending the shared utility or owning service helper if that improves reuse without hurting readability, safety, or ownership clarity. Do not force an abstraction when a local helper is materially clearer.
+13. Follow the repository root `.clang-format` for C++ source/header edits. If `clang-format` is available, format touched C++ files with `clang-format -i --style=file`.
 
 ## API And Events
 

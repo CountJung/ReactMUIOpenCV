@@ -48,7 +48,9 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 - [x] Add browser upload flow for LAN clients where allowed.
 - [x] Implement OpenCV image operations: open, save, resize, crop, rotate, grayscale, blur, sharpen, threshold, edge detect, contour detect, histogram, color conversion, and compare.
 - [x] Add an Image Lab `Vision Sample Board` operation that generates the README-style 2x3 OpenCV comparison image from a single input.
+- [x] Make `Vision Sample Board` choose default tile width/height from the uploaded image aspect ratio while still allowing manual override.
 - [x] Store image results by `resultId` and expose preview retrieval.
+- [x] Show opened/uploaded image sources in Image Lab so users can reuse a previous upload without uploading again.
 - [x] Build before/after comparison UI with parameter controls and error states.
 - [x] Ensure mobile can inspect results without arbitrary local file access.
 
@@ -59,6 +61,7 @@ This TODO is derived from `MasterPlan.md` and is ordered by dependency, not by s
 - [x] Stream progress over WebSocket.
 - [x] Add export flow with codec failure logging.
 - [x] Separate preview-frame processing from full-video export.
+- [x] Show opened/uploaded videos in Video Lab as a reusable UI library so users do not need to upload the same video for every operation.
 
 ## Phase 6 - Vision Pipeline Flow
 

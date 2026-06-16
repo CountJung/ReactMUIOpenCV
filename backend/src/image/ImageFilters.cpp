@@ -49,13 +49,8 @@ ImageOperationResult image_only(cv::Mat image) {
   return {std::move(image), nlohmann::json::object()};
 }
 
-template <typename T>
-nlohmann::json point_to_json(const cv::Point_<T>& point) {
+template <typename T> nlohmann::json point_to_json(const cv::Point_<T>& point) {
   return {{"x", point.x}, {"y", point.y}};
-}
-
-nlohmann::json rect_to_json(const cv::Rect& rect) {
-  return {{"x", rect.x}, {"y", rect.y}, {"width", rect.width}, {"height", rect.height}};
 }
 
 cv::Rect centered_rect(const cv::Mat& source, const nlohmann::json& params, double scale = 0.35) {
@@ -137,8 +132,8 @@ ImageOperationResult apply_seamless_clone_filter(const cv::Mat& source, const nl
          {"mode", mode}}}}};
 }
 
-ImageOperationResult apply_alpha_blend_filter(
-    const cv::Mat& original, const cv::Mat& source, const nlohmann::json& params) {
+ImageOperationResult
+apply_alpha_blend_filter(const cv::Mat& original, const cv::Mat& source, const nlohmann::json& params) {
   const double alpha = std::clamp(json_double(params, "alpha", 0.5), 0.0, 1.0);
   cv::Mat baseline = to_bgr(original.empty() ? source : original);
   cv::Mat candidate = to_bgr(source);
@@ -203,21 +198,7 @@ ImageOperationResult apply_pencil_sketch_filter(const cv::Mat& source, const nlo
       static_cast<float>(std::clamp(json_double(params, "sigmaR", 0.07), 0.01, 1.0)),
       static_cast<float>(std::clamp(json_double(params, "shade", 0.02), 0.0, 0.2)));
   const auto mode = params.value("mode", std::string{"color"});
-  return {
-      mode == "gray" ? grayscale : color,
-      {{"composition", {{"operation", "pencilSketch"}, {"mode", mode}}}}};
-}
-
-cv::Mat fit_cover(const cv::Mat& source, int width, int height) {
-  const auto scale =
-      std::max(static_cast<double>(width) / static_cast<double>(source.cols),
-               static_cast<double>(height) / static_cast<double>(source.rows));
-  cv::Mat resized;
-  cv::resize(source, resized, cv::Size(), scale, scale, cv::INTER_AREA);
-
-  const int x = std::max(0, (resized.cols - width) / 2);
-  const int y = std::max(0, (resized.rows - height) / 2);
-  return resized(cv::Rect(x, y, width, height)).clone();
+  return {mode == "gray" ? grayscale : color, {{"composition", {{"operation", "pencilSketch"}, {"mode", mode}}}}};
 }
 
 void draw_sample_text(
@@ -230,9 +211,27 @@ void draw_sample_text(
   cv::putText(target, text, origin, cv::FONT_HERSHEY_SIMPLEX, scale, color, thickness, cv::LINE_AA);
 }
 
+cv::Size default_sample_tile_size(const cv::Mat& source) {
+  if (source.empty()) {
+    return {350, 460};
+  }
+
+  const double aspect = static_cast<double>(source.cols) / static_cast<double>(std::max(1, source.rows));
+  if (aspect >= 1.0) {
+    const int width = std::clamp(520, 220, 640);
+    const int height = std::clamp(static_cast<int>(std::round(width / aspect)), 260, 760);
+    return {width, height};
+  }
+
+  const int height = 460;
+  const int width = std::clamp(static_cast<int>(std::round(height * aspect)), 220, 640);
+  return {width, height};
+}
+
 ImageOperationResult apply_vision_sample_board(const cv::Mat& source, const nlohmann::json& params) {
-  const int tile_width = std::clamp(json_int(params, "tileWidth", 350), 220, 640);
-  const int tile_height = std::clamp(json_int(params, "tileHeight", 460), 260, 760);
+  const cv::Size default_tile = default_sample_tile_size(source);
+  const int tile_width = std::clamp(json_int(params, "tileWidth", default_tile.width), 220, 640);
+  const int tile_height = std::clamp(json_int(params, "tileHeight", default_tile.height), 260, 760);
   constexpr int label_height = 44;
   constexpr int pad = 18;
   constexpr int header_height = 74;
@@ -255,7 +254,7 @@ ImageOperationResult apply_vision_sample_board(const cv::Mat& source, const nloh
       0.48,
       muted_color);
 
-  const cv::Mat work = fit_cover(to_bgr(source), tile_width, tile_height);
+  const cv::Mat work = fit_cover(source, tile_width, tile_height);
   const cv::Mat gray = to_gray(work);
   cv::Mat blur;
   cv::GaussianBlur(gray, blur, cv::Size(5, 5), 0);
@@ -310,11 +309,7 @@ ImageOperationResult apply_vision_sample_board(const cv::Mat& source, const nloh
   }
   cv::Mat feature_keypoints;
   cv::drawKeypoints(
-      work,
-      keypoints,
-      feature_keypoints,
-      cv::Scalar(255, 105, 210),
-      cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+      work, keypoints, feature_keypoints, cv::Scalar(255, 105, 210), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
   cv::Mat feature_overlay;
   cv::addWeighted(work, 0.72, feature_keypoints, 0.58, 0.0, feature_overlay);
 
@@ -368,11 +363,7 @@ std::vector<std::vector<cv::Point>> find_shape_contours(const cv::Mat& source, c
 
   cv::Mat binary;
   cv::threshold(
-      to_gray(source),
-      binary,
-      threshold,
-      255,
-      polarity == "light" ? cv::THRESH_BINARY : cv::THRESH_BINARY_INV);
+      to_gray(source), binary, threshold, 255, polarity == "light" ? cv::THRESH_BINARY : cv::THRESH_BINARY_INV);
 
   std::vector<std::vector<cv::Point>> contours;
   cv::findContours(binary, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
@@ -575,7 +566,8 @@ ImageOperationResult apply_hough_transform(const cv::Mat& source, const nlohmann
     const cv::Point end(line[2], line[3]);
     const double length = cv::norm(start - end);
     cv::line(output, start, end, cv::Scalar(194, 65, 12), 2, cv::LINE_AA);
-    items.push_back({{"index", index + 1}, {"start", point_to_json(start)}, {"end", point_to_json(end)}, {"length", length}});
+    items.push_back(
+        {{"index", index + 1}, {"start", point_to_json(start)}, {"end", point_to_json(end)}, {"length", length}});
   }
 
   return {

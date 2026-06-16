@@ -56,6 +56,26 @@ export function labelForOperation(operation: ImageOperation) {
   return operationLabels.find((item) => item.value === operation)?.label ?? operation;
 }
 
+function sampleBoardTileParams(result?: ImageResult) {
+  const width = result?.width ?? 350;
+  const height = result?.height ?? 460;
+  const aspect = width / Math.max(1, height);
+
+  if (aspect >= 1) {
+    const tileWidth = 520;
+    return {
+      tileWidth,
+      tileHeight: Math.min(760, Math.max(260, Math.round(tileWidth / aspect))),
+    };
+  }
+
+  const tileHeight = 460;
+  return {
+    tileWidth: Math.min(640, Math.max(220, Math.round(tileHeight * aspect))),
+    tileHeight,
+  };
+}
+
 export function defaultParams(operation: ImageOperation, result?: ImageResult): ImageParams {
   const width = result?.width ?? 640;
   const height = result?.height ?? 480;
@@ -133,7 +153,7 @@ export function defaultParams(operation: ImageOperation, result?: ImageResult): 
     case 'pencilSketch':
       return { mode: 'color', sigmaS: 60, sigmaR: 0.07, shade: 0.02 };
     case 'visionSampleBoard':
-      return { tileWidth: 350, tileHeight: 460 };
+      return sampleBoardTileParams(result);
     default:
       return {};
   }

@@ -22,8 +22,7 @@ cv::Mat read_image_file(const std::filesystem::path& path) {
     throw std::runtime_error("Image file was not found.");
   }
 
-  const std::vector<unsigned char> bytes{
-      std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
+  const std::vector<unsigned char> bytes{std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>()};
   const auto image = cv::imdecode(bytes, cv::IMREAD_UNCHANGED);
   if (image.empty()) {
     throw std::runtime_error("OpenCV could not decode the image.");

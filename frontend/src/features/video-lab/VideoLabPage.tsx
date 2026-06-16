@@ -749,7 +749,7 @@ export function VideoLabPage() {
               <CardContent>
                 <Stack spacing={1.5}>
                   <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
-                    <Typography variant="h6">Library</Typography>
+                    <Typography variant="h6">Uploaded / Opened Videos</Typography>
                     <Button
                       variant="outlined"
                       startIcon={<DownloadIcon />}
@@ -780,7 +780,9 @@ export function VideoLabPage() {
                       </Button>
                     ))}
                     {videosQuery.data?.videos.length === 0 && (
-                      <Typography color="text.secondary">No videos opened yet.</Typography>
+                      <Typography color="text.secondary">
+                        Open or upload a video once, then reuse it here.
+                      </Typography>
                     )}
                   </Stack>
                 </Stack>

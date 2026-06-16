@@ -58,6 +58,15 @@ Project defaults:
 - Prefer a named shared utility in the owning project namespace over repeating the same helper in multiple `.cpp` files.
 - Keep file-local helpers for truly local behavior only. If a helper is useful to image, video, storage, or server code, move it to a shared header/source pair.
 - Keep shared utility functions stateless and explicit about ownership. Return values such as `std::string`, `std::vector`, `cv::Mat`, or JSON objects by value when that is the clearest RAII boundary.
+- Before adding a helper that resembles existing behavior, look for an existing common or owner-level utility and use or extend it when the readability, safety, and ownership trade-off is positive. Avoid forced abstraction when a local helper is genuinely clearer.
+
+### Formatting
+
+Project defaults:
+
+- Follow the repository root `.clang-format` for C++ files.
+- When `clang-format` is available, format touched C++ source/header files with `clang-format -i --style=file <file>`.
+- Do not hand-align code against `.clang-format`; prefer the formatter when it is installed.
 
 ### Smart Pointers
 

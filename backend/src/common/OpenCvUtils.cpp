@@ -34,6 +34,23 @@ cv::Mat to_gray(const cv::Mat& input) {
   return output;
 }
 
+cv::Mat fit_cover(const cv::Mat& input, int width, int height) {
+  if (input.empty() || width <= 0 || height <= 0) {
+    throw std::runtime_error("Cannot fit an empty image or non-positive target size.");
+  }
+
+  const cv::Mat source = to_bgr(input);
+  const auto scale = std::max(
+      static_cast<double>(width) / static_cast<double>(source.cols),
+      static_cast<double>(height) / static_cast<double>(source.rows));
+  cv::Mat resized;
+  cv::resize(source, resized, cv::Size(), scale, scale, cv::INTER_AREA);
+
+  const int x = std::max(0, (resized.cols - width) / 2);
+  const int y = std::max(0, (resized.rows - height) / 2);
+  return resized(cv::Rect(x, y, width, height)).clone();
+}
+
 cv::Rect roi_from_json(const nlohmann::json& roi, int frame_width, int frame_height, int min_size) {
   const int x = json_value_or<int>(roi, "x", 0);
   const int y = json_value_or<int>(roi, "y", 0);
