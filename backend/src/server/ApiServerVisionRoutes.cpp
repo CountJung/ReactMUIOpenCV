@@ -86,6 +86,32 @@ void ApiServer::register_contour_routes(RequestGuard is_loopback_or_control) {
       });
 
   server_.Post(
+      "/api/contours/ocr",
+      [this, is_loopback_or_control](const httplib::Request& request, httplib::Response& response) {
+        if (!is_loopback_or_control(request, response)) {
+          return;
+        }
+
+        const auto body = parse_body(request);
+        const auto result_id = body.value("resultId", std::string{});
+        const auto candidate =
+            body.contains("candidate") && body["candidate"].is_object() ? body["candidate"] : nlohmann::json::object();
+        if (result_id.empty()) {
+          send_error(response, "invalid_contour_ocr_request", "resultId is required.", 400);
+          return;
+        }
+
+        try {
+          const auto ocr = contour_extraction_service_.recognize_candidate_text(result_id, candidate);
+          log_store_.append("info", "Recognized contour text from image " + result_id);
+          send_data(response, ocr);
+        } catch (const std::exception& error) {
+          log_store_.append("error", "Contour OCR failed: " + std::string(error.what()));
+          send_error(response, "contour_ocr_failed", error.what(), 400);
+        }
+      });
+
+  server_.Post(
       "/api/contours/extract",
       [this, is_loopback_or_control](const httplib::Request& request, httplib::Response& response) {
         if (!is_loopback_or_control(request, response)) {

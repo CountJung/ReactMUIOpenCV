@@ -38,6 +38,49 @@ export type ContourCandidateResponse = {
   candidates: ContourCandidate[];
 };
 
+export type ContourOcrCharacter = {
+  text: string;
+  confidence: number;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+};
+
+export type ContourOcrLine = {
+  text: string;
+  confidence: number;
+  boundingBox: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  characters: ContourOcrCharacter[];
+};
+
+export type ContourOcrResponse = {
+  sourceResultId: string;
+  candidateId: string;
+  text: string;
+  confidence: number;
+  lineCount: number;
+  componentCount: number;
+  imageSize: {
+    width: number;
+    height: number;
+  };
+  method: {
+    engine: string;
+    preprocessing: string;
+    alphabet: string;
+    note?: string;
+  };
+  lines: ContourOcrLine[];
+};
+
 export function getContourCandidates(resultId: string, params: ContourDetectionParams) {
   const search = new URLSearchParams({
     resultId,
@@ -69,6 +112,16 @@ export async function previewContourCandidate(request: {
   }
 
   return response.blob();
+}
+
+export function recognizeContourCandidateText(request: {
+  resultId: string;
+  candidate: ContourCandidate;
+}) {
+  return apiRequest<ContourOcrResponse>('/api/contours/ocr', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
 }
 
 export function extractContourCandidate(request: {

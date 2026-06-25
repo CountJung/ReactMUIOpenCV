@@ -4,6 +4,7 @@ import FileOpenIcon from '@mui/icons-material/FileOpen';
 import ImageSearchIcon from '@mui/icons-material/ImageSearch';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SaveIcon from '@mui/icons-material/Save';
+import TextFieldsIcon from '@mui/icons-material/TextFields';
 import TuneIcon from '@mui/icons-material/Tune';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
@@ -35,8 +36,10 @@ import {
   extractContourCandidate,
   getContourCandidates,
   previewContourCandidate,
+  recognizeContourCandidateText,
   type ContourCandidate,
   type ContourDetectionParams,
+  type ContourOcrResponse,
 } from '../../api/contourApi';
 import {
   absoluteImageUrl,
@@ -300,6 +303,67 @@ function DetectionControls({
   );
 }
 
+function OcrResultPanel({ result }: { result: ContourOcrResponse | null }) {
+  if (!result) {
+    return (
+      <Typography color="text.secondary">
+        Select a contour and run OCR to recognize high-contrast printed text.
+      </Typography>
+    );
+  }
+
+  return (
+    <Stack spacing={1.25}>
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Chip label={`Confidence ${(result.confidence * 100).toFixed(0)}%`} size="small" />
+        <Chip label={`${result.lineCount} lines`} size="small" />
+        <Chip label={`${result.componentCount} glyphs`} size="small" />
+      </Stack>
+      <Box
+        sx={{
+          bgcolor: 'background.default',
+          border: 1,
+          borderColor: 'divider',
+          borderRadius: 1,
+          minHeight: 72,
+          p: 1.5,
+        }}
+      >
+        <Typography
+          component="pre"
+          sx={{
+            fontFamily: 'monospace',
+            fontSize: '1rem',
+            m: 0,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+        >
+          {result.text || '(no text recognized)'}
+        </Typography>
+      </Box>
+      {result.lines.length > 0 && (
+        <Stack spacing={0.5}>
+          {result.lines.map((line, index) => (
+            <Stack key={`${line.text}-${index}`} direction="row" spacing={1} alignItems="center">
+              <Chip label={`L${index + 1}`} size="small" variant="outlined" />
+              <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                {line.text}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {(line.confidence * 100).toFixed(0)}%
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+      )}
+      <Typography variant="caption" color="text.secondary">
+        {result.method.engine} - {result.method.preprocessing} - {result.method.alphabet}
+      </Typography>
+    </Stack>
+  );
+}
+
 function ExtractionHistory({
   results,
   selectedId,
@@ -410,6 +474,7 @@ export function ContourExtractorPage() {
   const [selectedCandidateId, setSelectedCandidateId] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [latestExtracted, setLatestExtracted] = useState<ImageResult | null>(null);
+  const [latestOcr, setLatestOcr] = useState<ContourOcrResponse | null>(null);
   const [lastSaved, setLastSaved] = useState<SaveImageResponse | null>(null);
   const [detectionParams, setDetectionParams] = useState<ContourDetectionParams | null>(null);
   const [detectionParamsCustomized, setDetectionParamsCustomized] = useState(false);
@@ -527,11 +592,13 @@ export function ContourExtractorPage() {
   useEffect(() => {
     setSelectedCandidateId('');
     setLatestExtracted(null);
+    setLatestOcr(null);
     clearPreview();
   }, [clearPreview, effectiveResultId]);
 
   const selectCandidate = (candidateId: string) => {
     setSelectedCandidateId(candidateId);
+    setLatestOcr(null);
     const candidate = candidates.find((item) => item.candidateId === candidateId);
     if (candidate) {
       previewMutation.mutate(candidate);
@@ -550,6 +617,21 @@ export function ContourExtractorPage() {
       setLastSaved(null);
       void queryClient.invalidateQueries({ queryKey: ['image-results'] });
       void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    },
+  });
+
+  const ocrMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedCandidate) {
+        throw new Error('Select a contour candidate before OCR.');
+      }
+      return recognizeContourCandidateText({
+        resultId: effectiveResultId,
+        candidate: selectedCandidate,
+      });
+    },
+    onSuccess: (response) => {
+      setLatestOcr(response);
     },
   });
 
@@ -573,6 +655,7 @@ export function ContourExtractorPage() {
   const clearCandidates = () => {
     candidatesMutation.reset();
     setSelectedCandidateId('');
+    setLatestOcr(null);
     clearPreview();
   };
 
@@ -594,6 +677,7 @@ export function ContourExtractorPage() {
     settingsQuery.isLoading ||
     candidatesMutation.isPending ||
     previewMutation.isPending ||
+    ocrMutation.isPending ||
     extractMutation.isPending ||
     saveExtractionMutation.isPending ||
     deleteExtractionMutation.isPending;
@@ -604,6 +688,7 @@ export function ContourExtractorPage() {
     uploadMutation.error ??
     candidatesMutation.error ??
     previewMutation.error ??
+    ocrMutation.error ??
     extractMutation.error ??
     saveExtractionMutation.error ??
     deleteExtractionMutation.error;
@@ -809,6 +894,27 @@ export function ContourExtractorPage() {
                   >
                     Extract
                   </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={
+                      ocrMutation.isPending ? (
+                        <CircularProgress color="inherit" size={16} />
+                      ) : (
+                        <TextFieldsIcon />
+                      )
+                    }
+                    disabled={!selectedCandidate || ocrMutation.isPending}
+                    onClick={() => ocrMutation.mutate()}
+                  >
+                    OCR
+                  </Button>
+                  <Box>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                      <TextFieldsIcon color="primary" fontSize="small" />
+                      <Typography variant="subtitle2">OCR Result</Typography>
+                    </Stack>
+                    <OcrResultPanel result={latestOcr} />
+                  </Box>
                 </Stack>
               </CardContent>
             </Card>

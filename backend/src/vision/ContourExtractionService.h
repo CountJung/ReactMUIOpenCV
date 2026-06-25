@@ -14,6 +14,7 @@ public:
 
   nlohmann::json detect_candidates(const std::string& image_result_id, const nlohmann::json& params) const;
   cv::Mat preview_candidate(const std::string& image_result_id, const nlohmann::json& candidate) const;
+  nlohmann::json recognize_candidate_text(const std::string& image_result_id, const nlohmann::json& candidate) const;
   nlohmann::json extract_candidate(const std::string& image_result_id, const nlohmann::json& candidate) const;
 
 private:
