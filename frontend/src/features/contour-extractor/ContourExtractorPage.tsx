@@ -9,6 +9,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -35,6 +36,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   extractContourCandidate,
   getContourCandidates,
+  getContourOcrLanguages,
   previewContourCandidate,
   recognizeContourCandidateText,
   type ContourCandidate,
@@ -53,6 +55,14 @@ import {
 } from '../../api/imageApi';
 import { getSettings } from '../../api/settingsApi';
 import { PlaceholderPage } from '../../shared/components/PlaceholderPage';
+
+const OCR_PAGE_SEG_MODES = [
+  { value: 'auto', label: 'Auto' },
+  { value: 'single-block', label: 'Single Block' },
+  { value: 'single-line', label: 'Single Line' },
+  { value: 'single-word', label: 'Single Word' },
+  { value: 'sparse', label: 'Sparse Text' },
+];
 
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(1)}%`;
@@ -317,7 +327,8 @@ function OcrResultPanel({ result }: { result: ContourOcrResponse | null }) {
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
         <Chip label={`Confidence ${(result.confidence * 100).toFixed(0)}%`} size="small" />
         <Chip label={`${result.lineCount} lines`} size="small" />
-        <Chip label={`${result.componentCount} glyphs`} size="small" />
+        <Chip label={`${result.wordCount} words`} size="small" />
+        <Chip label={result.method.language} size="small" />
       </Stack>
       <Box
         sx={{
@@ -358,7 +369,7 @@ function OcrResultPanel({ result }: { result: ContourOcrResponse | null }) {
         </Stack>
       )}
       <Typography variant="caption" color="text.secondary">
-        {result.method.engine} - {result.method.preprocessing} - {result.method.alphabet}
+        {result.method.engine} - {result.method.pageSegMode} - {result.method.preprocessing}
       </Typography>
     </Stack>
   );
@@ -478,6 +489,9 @@ export function ContourExtractorPage() {
   const [lastSaved, setLastSaved] = useState<SaveImageResponse | null>(null);
   const [detectionParams, setDetectionParams] = useState<ContourDetectionParams | null>(null);
   const [detectionParamsCustomized, setDetectionParamsCustomized] = useState(false);
+  const [ocrLanguages, setOcrLanguages] = useState<string[]>(['eng', 'kor']);
+  const [ocrLanguagesCustomized, setOcrLanguagesCustomized] = useState(false);
+  const [ocrPageSegMode, setOcrPageSegMode] = useState('auto');
 
   const imageResultsQuery = useQuery({
     queryKey: ['image-results'],
@@ -487,6 +501,11 @@ export function ContourExtractorPage() {
   const settingsQuery = useQuery({
     queryKey: ['settings'],
     queryFn: getSettings,
+    refetchInterval: 30000,
+  });
+  const ocrLanguagesQuery = useQuery({
+    queryKey: ['contour-ocr-languages'],
+    queryFn: getContourOcrLanguages,
     refetchInterval: 30000,
   });
 
@@ -515,6 +534,13 @@ export function ContourExtractorPage() {
       setDetectionParams(contourDefaults);
     }
   }, [contourDefaults, detectionParamsCustomized]);
+
+  useEffect(() => {
+    const defaults = ocrLanguagesQuery.data?.defaultLanguages;
+    if (defaults?.length && !ocrLanguagesCustomized) {
+      setOcrLanguages(defaults);
+    }
+  }, [ocrLanguagesCustomized, ocrLanguagesQuery.data?.defaultLanguages]);
 
   useEffect(
     () => () => {
@@ -628,6 +654,8 @@ export function ContourExtractorPage() {
       return recognizeContourCandidateText({
         resultId: effectiveResultId,
         candidate: selectedCandidate,
+        languages: ocrLanguages,
+        pageSegMode: ocrPageSegMode,
       });
     },
     onSuccess: (response) => {
@@ -684,6 +712,7 @@ export function ContourExtractorPage() {
   const error =
     imageResultsQuery.error ??
     settingsQuery.error ??
+    ocrLanguagesQuery.error ??
     openLocalMutation.error ??
     uploadMutation.error ??
     candidatesMutation.error ??
@@ -871,6 +900,51 @@ export function ContourExtractorPage() {
                     onClear={clearCandidates}
                   />
 
+                  <Autocomplete
+                    multiple
+                    freeSolo
+                    size="small"
+                    options={
+                      ocrLanguagesQuery.data?.availableLanguages.map((item) => item.code) ?? []
+                    }
+                    value={ocrLanguages}
+                    onChange={(_event, value) => {
+                      setOcrLanguagesCustomized(true);
+                      setOcrLanguages(
+                        value
+                          .map((item) => item.trim())
+                          .filter((item, index, items) => item && items.indexOf(item) === index),
+                      );
+                      setLatestOcr(null);
+                    }}
+                    renderInput={(params) => <TextField {...params} label="OCR Languages" />}
+                  />
+
+                  <TextField
+                    select
+                    label="Page Segmentation"
+                    size="small"
+                    fullWidth
+                    value={ocrPageSegMode}
+                    onChange={(event) => {
+                      setOcrPageSegMode(event.target.value);
+                      setLatestOcr(null);
+                    }}
+                  >
+                    {OCR_PAGE_SEG_MODES.map((mode) => (
+                      <MenuItem key={mode.value} value={mode.value}>
+                        {mode.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  {ocrLanguagesQuery.data && !ocrLanguagesQuery.data.tessdataAvailable && (
+                    <Alert severity="info">
+                      Add Tesseract traineddata files under models/tessdata or set TESSDATA_PREFIX
+                      before running OCR.
+                    </Alert>
+                  )}
+
                   {selectedCandidate && (
                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                       <Chip
@@ -903,7 +977,9 @@ export function ContourExtractorPage() {
                         <TextFieldsIcon />
                       )
                     }
-                    disabled={!selectedCandidate || ocrMutation.isPending}
+                    disabled={
+                      !selectedCandidate || ocrLanguages.length === 0 || ocrMutation.isPending
+                    }
                     onClick={() => ocrMutation.mutate()}
                   >
                     OCR

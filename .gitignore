@@ -65,6 +65,11 @@ models/dnn/*
 !models/dnn/
 !models/dnn/README.md
 
+# Optional Tesseract language assets are large; keep only the local guide tracked.
+models/tessdata/*
+!models/tessdata/
+!models/tessdata/README.md
+
 # Environment files
 .env
 .env.*

@@ -153,7 +153,7 @@ These packs are selected from `spmallick/learnopencv` because they fit this proj
 - [x] Add backend support to detect contour candidates, expose candidate quadrilateral metadata, and perspective-warp a selected contour into an independent Image Lab result.
 - [x] Add a Contour Extractor overlay UI for mouse/touch candidate selection, selected-contour highlighting, click-to-preview perspective view, and extraction history controls.
 - [x] Store selected contour metadata so extracted documents/labels/parts can be inspected in Data Grid and reused by pipeline operation nodes.
-- [x] Add OpenCV-only OCR for selected contour regions and show recognized text, line details, and confidence in the Contour Extractor UI.
+- [x] Add Tesseract OCR for selected contour regions with selectable language combinations, line details, and confidence in the Contour Extractor UI.
 - Agent focus: contour candidate ranking, perspective transform service, interactive preview overlay, result metadata schema.
 
 ## Guardrails

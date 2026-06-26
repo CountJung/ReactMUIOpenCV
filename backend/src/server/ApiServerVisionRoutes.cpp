@@ -9,6 +9,19 @@
 namespace app {
 
 void ApiServer::register_contour_routes(RequestGuard is_loopback_or_control) {
+  server_.Get("/api/contours/ocr/languages", [this](const httplib::Request& request, httplib::Response& response) {
+    try {
+      auto data = contour_extraction_service_.available_ocr_languages();
+      if (!is_loopback_request(request)) {
+        data["tessdataPath"] = "";
+      }
+      send_data(response, data);
+    } catch (const std::exception& error) {
+      log_store_.append("error", "Tesseract language discovery failed: " + std::string(error.what()));
+      send_error(response, "contour_ocr_language_discovery_failed", error.what(), 400);
+    }
+  });
+
   server_.Get("/api/contours/candidates", [this](const httplib::Request& request, httplib::Response& response) {
     const auto result_id = request.has_param("resultId") ? request.get_param_value("resultId") : std::string{};
     if (result_id.empty()) {
@@ -96,13 +109,23 @@ void ApiServer::register_contour_routes(RequestGuard is_loopback_or_control) {
         const auto result_id = body.value("resultId", std::string{});
         const auto candidate =
             body.contains("candidate") && body["candidate"].is_object() ? body["candidate"] : nlohmann::json::object();
+        nlohmann::json ocr_params = nlohmann::json::object();
+        if (body.contains("languages")) {
+          ocr_params["languages"] = body["languages"];
+        }
+        if (body.contains("language")) {
+          ocr_params["language"] = body["language"];
+        }
+        if (body.contains("pageSegMode")) {
+          ocr_params["pageSegMode"] = body["pageSegMode"];
+        }
         if (result_id.empty()) {
           send_error(response, "invalid_contour_ocr_request", "resultId is required.", 400);
           return;
         }
 
         try {
-          const auto ocr = contour_extraction_service_.recognize_candidate_text(result_id, candidate);
+          const auto ocr = contour_extraction_service_.recognize_candidate_text(result_id, candidate, ocr_params);
           log_store_.append("info", "Recognized contour text from image " + result_id);
           send_data(response, ocr);
         } catch (const std::exception& error) {

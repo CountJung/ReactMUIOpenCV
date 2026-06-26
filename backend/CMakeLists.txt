@@ -12,6 +12,7 @@ find_package(ixwebsocket CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+find_package(Tesseract CONFIG REQUIRED)
 
 set(WEBVIEW2_SDK_ROOT "$ENV{USERPROFILE}/.nuget/packages/microsoft.web.webview2/1.0.3800.47/build/native" CACHE PATH "Microsoft WebView2 native SDK root")
 set(WEBVIEW2_INCLUDE_DIR "${WEBVIEW2_SDK_ROOT}/include")
@@ -48,6 +49,7 @@ add_executable(ReactMUIOpenCV
   src/vision/ContourExtractionService.cpp
   src/vision/PerformanceBenchmarkService.cpp
   src/vision/PipelineExecutor.cpp
+  src/vision/TesseractOcr.cpp
 )
 
 target_link_libraries(ReactMUIOpenCV
@@ -57,6 +59,7 @@ target_link_libraries(ReactMUIOpenCV
     nlohmann_json::nlohmann_json
     ${OpenCV_LIBS}
     spdlog::spdlog
+    Tesseract::libtesseract
 )
 
 if(WIN32)
@@ -66,6 +69,7 @@ endif()
 target_compile_definitions(ReactMUIOpenCV
   PRIVATE
     APP_STATIC_ROOT="${CMAKE_SOURCE_DIR}/../frontend/dist"
+    APP_TESSDATA_ROOT="${CMAKE_SOURCE_DIR}/../models/tessdata"
 )
 
 if(MSVC)

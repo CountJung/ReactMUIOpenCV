@@ -38,17 +38,6 @@ export type ContourCandidateResponse = {
   candidates: ContourCandidate[];
 };
 
-export type ContourOcrCharacter = {
-  text: string;
-  confidence: number;
-  boundingBox: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-};
-
 export type ContourOcrLine = {
   text: string;
   confidence: number;
@@ -58,7 +47,6 @@ export type ContourOcrLine = {
     width: number;
     height: number;
   };
-  characters: ContourOcrCharacter[];
 };
 
 export type ContourOcrResponse = {
@@ -67,19 +55,39 @@ export type ContourOcrResponse = {
   text: string;
   confidence: number;
   lineCount: number;
-  componentCount: number;
+  wordCount: number;
   imageSize: {
     width: number;
     height: number;
   };
   method: {
     engine: string;
+    languages: string[];
+    language: string;
     preprocessing: string;
-    alphabet: string;
+    pageSegMode: string;
+    tessdataPath: string;
     note?: string;
   };
   lines: ContourOcrLine[];
 };
+
+export type ContourOcrLanguage = {
+  code: string;
+  label: string;
+};
+
+export type ContourOcrLanguageResponse = {
+  tessdataPath: string;
+  tessdataAvailable: boolean;
+  availableLanguages: ContourOcrLanguage[];
+  defaultLanguages: string[];
+  recommendedLanguages: string[][];
+};
+
+export function getContourOcrLanguages() {
+  return apiRequest<ContourOcrLanguageResponse>('/api/contours/ocr/languages');
+}
 
 export function getContourCandidates(resultId: string, params: ContourDetectionParams) {
   const search = new URLSearchParams({
@@ -117,6 +125,8 @@ export async function previewContourCandidate(request: {
 export function recognizeContourCandidateText(request: {
   resultId: string;
   candidate: ContourCandidate;
+  languages: string[];
+  pageSegMode: string;
 }) {
   return apiRequest<ContourOcrResponse>('/api/contours/ocr', {
     method: 'POST',
